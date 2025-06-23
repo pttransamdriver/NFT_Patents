@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { WalletProvider } from './contexts/WalletContext';
+import { Web3Provider } from './contexts/Web3Context';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
@@ -16,32 +17,34 @@ import CreateListingPage from './pages/CreateListingPage';
 function App() {
   return (
     <ThemeProvider>
-      <WalletProvider>
-        <Router>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-            <Header />
-            <main className="pt-16">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/marketplace" element={<MarketplacePage />} />
-                <Route path="/search" element={<PatentSearchPage />} />
-                <Route path="/mint" element={<MintNFTPage />} />
-                <Route path="/nft/:id" element={<NFTDetailPage />} />
-                <Route path="/profile/:address" element={<UserProfilePage />} />
-                <Route path="/create-listing/:id" element={<CreateListingPage />} />
-              </Routes>
-            </main>
-            <Footer />
-            <Toaster 
-              position="bottom-right"
-              toastOptions={{
-                duration: 4000,
-                className: 'dark:bg-gray-800 dark:text-white',
-              }}
-            />
-          </div>
-        </Router>
-      </WalletProvider>
+      <Web3Provider>
+        <WalletProvider>
+          <Router>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+              <Header />
+              <main className="pt-16">
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/marketplace" element={<MarketplacePage />} />
+                  <Route path="/search" element={<PatentSearchPage />} />
+                  <Route path="/mint" element={<MintNFTPage />} />
+                  <Route path="/nft/:id" element={<NFTDetailPage />} />
+                  <Route path="/profile/:address" element={<UserProfilePage />} />
+                  <Route path="/create-listing/:id" element={<CreateListingPage />} />
+                </Routes>
+              </main>
+              <Footer />
+              <Toaster 
+                position="bottom-right"
+                toastOptions={{
+                  duration: 4000,
+                  className: 'dark:bg-gray-800 dark:text-white',
+                }}
+              />
+            </div>
+          </Router>
+        </WalletProvider>
+      </Web3Provider>
     </ThemeProvider>
   );
 }

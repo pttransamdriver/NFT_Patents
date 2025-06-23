@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { FileText, Search, CheckCircle, AlertCircle, Upload, Eye, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useWallet } from '../contexts/WalletContext';
+import { useWeb3 } from '../contexts/Web3Context';
+import { ethers } from 'ethers';
 
 interface MintingStep {
   id: number;
@@ -27,6 +29,7 @@ const MintNFTPage: React.FC = () => {
     { id: 3, title: 'Mint NFT', description: 'Create and mint your patent NFT', completed: false, active: false },
   ]);
   const { isConnected, connectWallet } = useWallet();
+  const { provider, signer, account } = useWeb3();
 
   const mockPatentData = {
     patentNumber: 'US-12325364-B1',
@@ -116,7 +119,7 @@ const MintNFTPage: React.FC = () => {
   };
 
   const handleMintNFT = async () => {
-    if (!isConnected) {
+    if (!isConnected || !signer) {
       toast.error('Please connect your wallet first');
       await connectWallet();
       return;
@@ -124,11 +127,32 @@ const MintNFTPage: React.FC = () => {
 
     toast.success('NFT minting initiated! This may take a few minutes...');
     
-    // Simulate minting process
-    setTimeout(() => {
-      updateStep(3, true);
-      toast.success('Patent NFT minted successfully!');
-    }, 3000);
+    try {
+      // In a real implementation, you would:
+      // 1. Upload metadata to IPFS
+      // 2. Get the IPFS hash/URI
+      // 3. Call the smart contract to mint the NFT
+      
+      // For now, we'll simulate the process
+      // const PatentNFTContract = getPatentNFTContract(signer);
+      // const tx = await PatentNFTContract.mintPatent(
+      //   account,
+      //   "ipfs://QmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      //   verificationResult?.patent.title,
+      //   verificationResult?.patent.inventors[0],
+      //   verificationResult?.patent.patentNumber
+      // );
+      // await tx.wait();
+      
+      // Simulate minting process
+      setTimeout(() => {
+        updateStep(3, true);
+        toast.success('Patent NFT minted successfully!');
+      }, 3000);
+    } catch (error) {
+      console.error("Error minting NFT:", error);
+      toast.error('Failed to mint NFT. Please try again.');
+    }
   };
 
   return (
