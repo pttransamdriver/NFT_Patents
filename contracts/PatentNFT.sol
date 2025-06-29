@@ -61,6 +61,12 @@ contract PatentNFT is ERC721URIStorage, Ownable {
         string memory inventor,
         string memory patentNumber
     ) public returns (uint256) {
+        // Input validation for security
+        require(recipient != address(0), "Invalid recipient address");
+        require(bytes(tokenURI).length > 0, "Token URI required");
+        require(bytes(title).length > 0, "Title required");
+        require(bytes(inventor).length > 0, "Inventor required");
+        require(bytes(patentNumber).length > 0, "Patent number required");
         // Increment the counter to get next available token ID
         _tokenIds.increment();
         
