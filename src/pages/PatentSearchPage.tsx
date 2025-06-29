@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Bot, Filter, FileText, Calendar, User, Building, Zap, Sparkles } from 'lucide-react';
-import { mockPatents } from '../data/mockData';
+import { usptoApi } from '../services/usptoApi';
 import type { Patent } from '../types';
 
 const PatentSearchPage: React.FC = () => {
@@ -20,28 +20,65 @@ const PatentSearchPage: React.FC = () => {
   ];
 
   const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setSearchResults(mockPatents);
+    try {
+      const results = await usptoApi.searchPatents({
+        query: searchQuery,
+        rows: 20
+      });
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setSearchResults([]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleAiSearch = async (query: string) => {
+    if (!query.trim()) return;
+    
     setAiQuery(query);
     setIsAiMode(true);
     setIsLoading(true);
     
-    // Simulate AI processing
-    setTimeout(() => {
-      const aiResults = mockPatents.filter(patent => 
-        patent.title.toLowerCase().includes('water') || 
-        patent.title.toLowerCase().includes('wireless')
-      );
-      setSearchResults(aiResults);
+    try {
+      // Convert natural language to USPTO search terms
+      const searchTerms = convertAiQueryToSearchTerms(query);
+      const results = await usptoApi.searchPatents({
+        query: searchTerms,
+        rows: 20
+      });
+      setSearchResults(results);
+    } catch (error) {
+      console.error('AI search failed:', error);
+      setSearchResults([]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
+  };
+
+  const convertAiQueryToSearchTerms = (query: string): string => {
+    // Simple AI query conversion - can be enhanced with NLP
+    const lowerQuery = query.toLowerCase();
+    
+    if (lowerQuery.includes('renewable energy') || lowerQuery.includes('solar') || lowerQuery.includes('wind')) {
+      return 'renewable energy OR solar OR wind OR photovoltaic';
+    }
+    if (lowerQuery.includes('ai') || lowerQuery.includes('artificial intelligence') || lowerQuery.includes('machine learning')) {
+      return 'artificial intelligence OR machine learning OR neural network';
+    }
+    if (lowerQuery.includes('battery') || lowerQuery.includes('energy storage')) {
+      return 'battery OR energy storage OR lithium';
+    }
+    if (lowerQuery.includes('quantum')) {
+      return 'quantum computing OR quantum';
+    }
+    
+    // Default: use the query as-is
+    return query;
   };
 
   return (

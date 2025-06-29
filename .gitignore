@@ -10,7 +10,6 @@ out/
 .next/
 .nuxt/
 .cache/
-coverage/
 
 # Environment variables
 .env
@@ -47,3 +46,19 @@ yarn-error.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+node_modules
+
+# Hardhat files
+/cache
+/artifacts
+
+# TypeChain files
+/typechain
+/typechain-types
+
+# solidity-coverage files
+/coverage
+/coverage.json
+
+# Hardhat Ignition default folder for deployments against a local node
+ignition/deployments/chain-31337

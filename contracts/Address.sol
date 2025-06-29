@@ -2,31 +2,29 @@
 pragma solidity ^0.8.20;
 
 /**
- * Outline: 
- * The Address.sol contract is a stand alone library that uses only functions from OpenZepplin. It does the fillowing in order
- * 1) Declairs the contract to be a "Library". 
- * 2) Makes a function called "isContract" to determine if the address is a smart contract. A wallet it wouldn't contain code
- *    Since this is a library contract this function can be used by other functions. 
- * 3) Runs the "sendValue" function to send ETH to an address from (this) contract address.
- * 4) Uses an Overload function (two seperate functions that have different sets of inputs) called "functionCall". Both make 
- *    a function call with an error message. The first one is just more basic then the rest follow. 
- *    functionCall (basic)
-    └─→ functionCall (with error message)
-           └─→ functionCallWithValue
-                   └─→ verifyCallResult
-    functionCall: Regular mail delivery
-    functionCallWithValue: Mail with money order
-    functionStaticCall: Reading mail without opening it
-    functionDelegateCall: Letting someone else handle mail on your behalf
+ * @title Address Utility Library
+ * @dev A standalone library providing safe address operations and contract interactions.
+ * 
+ * This library offers:
+ * - Contract detection: Distinguish between EOAs (wallets) and smart contracts
+ * - Safe ETH transfers: Secure value transfers with proper error handling
+ * - Function calls: Execute contract functions with various call types
+ * - Error handling: Comprehensive validation and revert management
+ * 
+ * Call Types:
+ * - functionCall: Standard contract function execution
+ * - functionCallWithValue: Contract calls that send ETH
+ * - functionStaticCall: Read-only calls that don't modify state
+ * - functionDelegateCall: Execute code in current contract's context
  */
 
 library Address {
     /**
-     * @dev Returns true if `account` is a contract.
-     *
-     * This test is non-exhaustive, and there may be false-negatives: during the
-     * execution of a contract's constructor, its address will be reported as
-     * not containing a contract.
+     * @dev Determines if an address contains a smart contract.
+     * @param account The address to check
+     * @return bool True if the address is a contract, false if it's an EOA (wallet)
+     * 
+     * Note: Returns false during contract construction since code isn't deployed yet.
      */
     function isContract(address account) internal view returns (bool) {
         // This method relies on extcodesize/address.code.length, which returns 0
@@ -36,13 +34,12 @@ library Address {
     }
 
     /**
-     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to
-     * `recipient`, forwarding all available gas and reverting on errors.
-     *
-     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
-     * of certain opcodes, possibly making contracts go over the 2300 gas limit
-     * imposed by `transfer`, making them unable to receive funds via
-     * `transfer`. {sendValue} removes this limitation.
+     * @dev Safely sends ETH to a recipient address with full gas forwarding.
+     * @param recipient The address to receive ETH
+     * @param amount The amount of wei to send
+     * 
+     * Safer than Solidity's transfer() which has a 2300 gas limit.
+     * This function forwards all available gas, preventing failed transfers.
      */
     function sendValue(address payable recipient, uint256 amount) internal {
         require(address(this).balance >= amount, "Address: insufficient balance");
@@ -52,19 +49,21 @@ library Address {
     }
 
     /**
-     * @dev Performs a Solidity function call using a low level `call`. A
-     * plain `call` is an unsafe replacement for a function call: use this
-     * function instead.
-     *
-     * If `target` reverts with a revert reason, it is bubbled up by this
-     * function (like regular Solidity function calls).
+     * @dev Executes a function call on a target contract with safety checks.
+     * @param target The contract address to call
+     * @param data The encoded function call data
+     * @return bytes The return data from the function call
      */
     function functionCall(address target, bytes memory data) internal returns (bytes memory) {
         return functionCall(target, data, "Address: low-level call failed");
     }
 
     /**
-     * @dev Same as {functionCall}, but with `errorMessage` as a fallback revert reason when `target` reverts.
+     * @dev Executes a function call with a custom error message.
+     * @param target The contract address to call
+     * @param data The encoded function call data
+     * @param errorMessage Custom error message if the call fails
+     * @return bytes The return data from the function call
      */
     function functionCall(
         address target,
@@ -75,7 +74,11 @@ library Address {
     }
 
     /**
-     * @dev Same as {functionCall}, but also transferring `value` wei to `target`.
+     * @dev Executes a function call while sending ETH to the target contract.
+     * @param target The contract address to call
+     * @param data The encoded function call data
+     * @param value The amount of wei to send with the call
+     * @return bytes The return data from the function call
      */
     function functionCallWithValue(
         address target,
@@ -86,7 +89,12 @@ library Address {
     }
 
     /**
-     * @dev Same as {functionCallWithValue}, but with `errorMessage` as a fallback revert reason when `target` reverts.
+     * @dev Executes a payable function call with custom error handling.
+     * @param target The contract address to call
+     * @param data The encoded function call data
+     * @param value The amount of wei to send with the call
+     * @param errorMessage Custom error message if the call fails
+     * @return bytes The return data from the function call
      */
     function functionCallWithValue(
         address target,
@@ -102,14 +110,21 @@ library Address {
     }
 
     /**
-     * @dev Same as {functionCall}, but performing a static call.
+     * @dev Executes a read-only function call that cannot modify contract state.
+     * @param target The contract address to call
+     * @param data The encoded function call data
+     * @return bytes The return data from the static call
      */
     function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
         return functionStaticCall(target, data, "Address: low-level static call failed");
     }
 
     /**
-     * @dev Same as {functionStaticCall}, but with `errorMessage` as a fallback revert reason when `target` reverts.
+     * @dev Executes a static call with custom error handling.
+     * @param target The contract address to call
+     * @param data The encoded function call data
+     * @param errorMessage Custom error message if the call fails
+     * @return bytes The return data from the static call
      */
     function functionStaticCall(
         address target,
@@ -123,14 +138,21 @@ library Address {
     }
 
     /**
-     * @dev Same as {functionCall}, but performing a delegate call.
+     * @dev Executes code from target contract in the current contract's context.
+     * @param target The contract containing the code to execute
+     * @param data The encoded function call data
+     * @return bytes The return data from the delegate call
      */
     function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {
         return functionDelegateCall(target, data, "Address: low-level delegate call failed");
     }
 
     /**
-     * @dev Same as {functionDelegateCall}, but with `errorMessage` as a fallback revert reason when `target` reverts.
+     * @dev Executes a delegate call with custom error handling.
+     * @param target The contract containing the code to execute
+     * @param data The encoded function call data
+     * @param errorMessage Custom error message if the call fails
+     * @return bytes The return data from the delegate call
      */
     function functionDelegateCall(
         address target,
@@ -144,8 +166,11 @@ library Address {
     }
 
     /**
-     * @dev Tool to verify that a low level call was successful, and revert if it wasn't, either by bubbling the
-     * revert reason or using the provided one.
+     * @dev Validates the result of a low-level call and handles failures.
+     * @param success Whether the call succeeded
+     * @param returndata The data returned from the call
+     * @param errorMessage Fallback error message if no revert reason is provided
+     * @return bytes The validated return data
      */
     function verifyCallResult(
         bool success,
