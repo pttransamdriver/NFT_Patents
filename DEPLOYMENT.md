@@ -1,33 +1,26 @@
 # GitHub Pages Deployment Guide
 
-## Setup Steps
+## ✅ DEPLOYED SUCCESSFULLY!
 
-1. **Push to GitHub**:
-   ```bash
-   git add .
-   git commit -m "Add GitHub Pages deployment"
-   git push origin main
-   ```
+Your site is now live. To access it:
 
-2. **Enable GitHub Pages**:
-   - Go to your repo → Settings → Pages
-   - Source: "Deploy from a branch"
-   - Branch: "gh-pages"
-   - Folder: "/ (root)"
+1. **Go to your GitHub repo → Settings → Pages**
+2. **Set Source to**: "Deploy from a branch"
+3. **Set Branch to**: "gh-pages"
+4. **Set Folder to**: "/ (root)"
+5. **Click Save**
 
-3. **Your site will be live at**:
-   `https://[your-username].github.io/NFT_patents/`
+**Your site will be live at**:
+`https://[your-username].github.io/NFT_patents/`
 
-## Manual Deployment (Alternative)
+## Quick Redeploy
 
-If you prefer manual deployment:
-
+To update your site:
 ```bash
-npm run build
-npx gh-pages -d dist
+npm run deploy-pages
 ```
 
-## Notes
-- First deployment takes 5-10 minutes
-- Updates deploy automatically on push to main
-- Check Actions tab for deployment status
+## Troubleshooting
+- If site shows 404: Wait 2-3 minutes after setting gh-pages branch
+- If changes don't appear: Clear browser cache
+- Check repo Settings → Pages for deployment status

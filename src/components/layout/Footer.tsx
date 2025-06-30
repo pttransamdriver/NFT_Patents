@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Twitter, Github, Disc as Discord } from 'lucide-react';
+import { Search, Twitter, Github, Disc as Discord, ExternalLink } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -88,13 +88,31 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
-              © 2024 PatentNFT. All rights reserved.
-            </p>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 md:mt-0">
-              Built with ❤️ for innovation and IP protection
-            </p>
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6">
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                © 2024 PatentNFT. All rights reserved.
+              </p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                Built with ❤️ for innovation and IP protection
+              </p>
+            </div>
+            
+            {/* Bolt.new Attribution */}
+            <div className="flex items-center space-x-2">
+              <a 
+                href="https://bolt.new" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 text-sm"
+              >
+                <span>Built with</span>
+                <span className="font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  bolt.new
+                </span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </div>
       </div>
