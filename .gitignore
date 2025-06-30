@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+.cache/
+coverage/
+
+# Environment variables
+.env*
+!.env.example
+
+# Hardhat
+cache/
+artifacts/
+typechain/
+typechain-types/
+ignition/deployments/chain-31337
+
+# Logs
+*.log
+
+# Editor/IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+.DS_Store
+._*
+Thumbs.db
