@@ -51,31 +51,67 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Check if already connected
-    if (window.ethereum) {
-      window.ethereum.request({ method: 'eth_accounts' })
-        .then((accounts: string[]) => {
-          if (accounts.length > 0) {
-            connectWallet();
-          }
-        })
-        .catch(console.error);
+    let mounted = true;
+    
+    const initializeWeb3 = async () => {
+      if (!window.ethereum || !mounted) return;
       
-      // Listen for account changes
-      window.ethereum.on('accountsChanged', (accounts: string[]) => {
-        if (accounts.length > 0) {
-          connectWallet();
-        } else {
-          setAccount(null);
-          setIsConnected(false);
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0 && mounted) {
+          const browserProvider = new BrowserProvider(window.ethereum);
+          const web3Signer = await browserProvider.getSigner();
+          const network = await browserProvider.getNetwork();
+          
+          if (mounted) {
+            setProvider(browserProvider);
+            setSigner(web3Signer);
+            setAccount(accounts[0]);
+            setChainId(Number(network.chainId));
+            setIsConnected(true);
+          }
         }
-      });
+      } catch (error) {
+        console.error("Error initializing Web3:", error);
+      }
+    };
 
-      // Listen for chain changes
-      window.ethereum.on('chainChanged', () => {
-        window.location.reload();
-      });
-    }
+    initializeWeb3();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!window.ethereum) return;
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length > 0) {
+        setAccount(accounts[0]);
+        setIsConnected(true);
+      } else {
+        setAccount(null);
+        setIsConnected(false);
+        setProvider(null);
+        setSigner(null);
+        setChainId(null);
+      }
+    };
+
+    const handleChainChanged = () => {
+      window.location.reload();
+    };
+
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      }
+    };
   }, []);
 
   return (

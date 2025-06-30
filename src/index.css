@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Chrome performance optimizations */
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prevent Chrome loading issues */
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100vh;
+}
