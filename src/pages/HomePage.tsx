@@ -55,7 +55,7 @@ const HomePage: React.FC = () => {
                 Patent NFTs
               </span>
               <br />
-              <span className="text-gray-900 dark:text-white">Reimagined</span>
+              <span className="text-gray-900 dark:text-white">IP Reimagined On-Chain</span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
               Discover, mint, and trade USPTO patent NFTs on the world's first AI-powered patent marketplace. 
@@ -118,7 +118,9 @@ const HomePage: React.FC = () => {
               Why Choose PatentNFT?
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Revolutionary features that make patent trading accessible, secure, and profitable.
+              Revolutionary Decentalized Intellectual Property. 
+              Our features make patent trading accessible, secure, and profitable.
+              Join us in redefining global patent ownership and innovation.
             </p>
           </motion.div>
 
