@@ -25,6 +25,13 @@ export interface USPTOPatentData {
 
 export class USPTOApiService {
   private static instance: USPTOApiService;
+
+  // Validate API key configuration
+  private validateApiKey(): void {
+    if (!USPTO_API_KEY || USPTO_API_KEY === 'your_uspto_api_key') {
+      throw new Error('USPTO API key not configured. Please add VITE_USPTO_API_KEY to your .env file. Get your key from https://developer.uspto.gov/');
+    }
+  }
   
   public static getInstance(): USPTOApiService {
     if (!USPTOApiService.instance) {
@@ -34,6 +41,8 @@ export class USPTOApiService {
   }
 
   async searchPatents(params: USPTOSearchParams): Promise<Patent[]> {
+    this.validateApiKey();
+
     try {
       const response = await axios.get(`${USPTO_BASE_URL}/search/publications`, {
         params: {
@@ -50,13 +59,31 @@ export class USPTOApiService {
       });
 
       return this.transformUSPTOData(response.data.results || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('USPTO API Error:', error);
-      throw new Error('Failed to fetch patents from USPTO API');
+
+      // Provide specific error messages based on response
+      if (error.response?.status === 401) {
+        throw new Error('USPTO API authentication failed. Please check your API key.');
+      } else if (error.response?.status === 403) {
+        throw new Error('USPTO API access forbidden. Your API key may not have proper permissions.');
+      } else if (error.response?.status === 429) {
+        throw new Error('USPTO API rate limit exceeded. Please try again later.');
+      } else if (error.response?.status === 500) {
+        throw new Error('USPTO API server error. Please try again later.');
+      } else if (error.code === 'ECONNABORTED') {
+        throw new Error('USPTO API request timed out. Please try again.');
+      } else if (error.message.includes('Network Error')) {
+        throw new Error('Network error. Please check your internet connection.');
+      } else {
+        throw new Error(`USPTO API error: ${error.message || 'Unknown error occurred'}`);
+      }
     }
   }
 
   async getPatentByNumber(patentNumber: string): Promise<Patent | null> {
+    this.validateApiKey();
+
     try {
       const response = await axios.get(`${USPTO_BASE_URL}/search/publications`, {
         params: {
@@ -75,8 +102,16 @@ export class USPTOApiService {
 
       const transformed = this.transformUSPTOData(results);
       return transformed[0] || null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('USPTO API Error:', error);
+
+      // Log specific error but don't throw for individual patent lookup
+      if (error.response?.status === 401) {
+        console.error('USPTO API authentication failed');
+      } else if (error.response?.status === 404) {
+        console.log(`Patent ${patentNumber} not found`);
+      }
+
       return null;
     }
   }

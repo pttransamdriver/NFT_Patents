@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CreditCard, Key, Brain, Shield, Zap, DollarSign } from 'lucide-react';
+import { X, CreditCard, Key, Brain, Shield, Zap, DollarSign, Sparkles, Lock } from 'lucide-react';
 import { Web3Context } from '../contexts/Web3Context';
 import { paymentService } from '../services/paymentService';
 
@@ -19,7 +19,7 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
   onSearchWithPayment,
   searchQuery
 }) => {
-  const [selectedOption, setSelectedOption] = useState<'user-key' | 'payment' | null>(null);
+  const [activeTab, setActiveTab] = useState<'integrated' | 'user-key'>('integrated');
   const [userApiKey, setUserApiKey] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [searchCredits, setSearchCredits] = useState(0);
@@ -69,11 +69,11 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
         }
       }
 
-      // Create payment intent for new search
+      // Create payment intent for new search (3 searches for $15)
       const paymentIntent = await paymentService.createSearchPaymentIntent({
-        amount: 1500, // $15.00 in cents
+        amount: 1500, // $15.00 in cents for 3 searches
         currency: 'usd',
-        description: `AI Patent Search: "${searchQuery.substring(0, 50)}..."`,
+        description: `AI Patent Search Package: 3 searches for $15`,
         searchQuery,
         userAddress: account
       });
@@ -110,14 +110,21 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
-              <Brain className="w-6 h-6 text-purple-600" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                AI-Powered Patent Search
-              </h2>
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <Brain className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  AI-Powered Patent Search
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Choose your preferred search method
+                </p>
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -125,150 +132,293 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
 
           {/* Content */}
           <div className="p-6">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Choose Your AI Search Option
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Query: "<span className="font-medium">{searchQuery}</span>"
-              </p>
-            </div>
-
-            {/* Search Credits Display */}
-            {searchCredits > 0 && (
-              <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-5 h-5 text-green-600" />
-                  <span className="text-green-800 dark:text-green-200 font-medium">
-                    You have {searchCredits} search credit{searchCredits !== 1 ? 's' : ''} remaining
-                  </span>
+            {/* Query Display */}
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="flex items-start space-x-3">
+                <Sparkles className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    Your Search Query
+                  </h3>
+                  <p className="text-gray-700 dark:text-gray-300 font-medium">
+                    "{searchQuery}"
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    AI will convert this to optimized patent search terms
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
 
-            <div className="space-y-4">
-              {/* Option 1: Use Own API Key */}
-              <div
-                className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                  selectedOption === 'user-key'
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'
+            {/* Tab Navigation */}
+            <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+              <button
+                onClick={() => setActiveTab('integrated')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === 'integrated'
+                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
-                onClick={() => setSelectedOption('user-key')}
               >
-                <div className="flex items-start space-x-3">
-                  <Key className="w-6 h-6 text-blue-600 mt-1" />
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      Use Your Own API Key
-                    </h4>
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">
-                      Use your own OpenAI API key for unlimited searches. You pay OpenAI directly (~$0.002 per search).
-                    </p>
-                    <div className="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400">
-                      <Shield className="w-4 h-4" />
-                      <span>Your key is never stored</span>
+                <div className="flex items-center justify-center space-x-2">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Integrated AI Search</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('user-key')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === 'user-key'
+                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <Key className="w-4 h-4" />
+                  <span>Use Your Own AI API Key</span>
+                </div>
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <AnimatePresence mode="wait">
+              {activeTab === 'integrated' && (
+                <motion.div
+                  key="integrated"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {/* Search Credits Display */}
+                  {searchCredits > 0 && (
+                    <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Zap className="w-5 h-5 text-green-600" />
+                        <span className="text-green-800 dark:text-green-200 font-medium">
+                          You have {searchCredits} search credit{searchCredits !== 1 ? 's' : ''} remaining
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Integrated AI Search Content */}
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                        Integrated AI Search
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        Our premium AI service with the best integration and results
+                      </p>
+                    </div>
+
+                    {/* Pricing */}
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-700">
+                      <div className="text-center mb-4">
+                        <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+                          $15
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          for 3 AI searches
+                        </div>
+                        <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                          Best value • Only $5 per search
+                        </div>
+                      </div>
+
+                      {/* Features */}
+                      <div className="space-y-2 mb-6">
+                        <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                          <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                          <span>Advanced AI patent search optimization</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                          <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                          <span>Instant results with confidence scoring</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                          <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                          <span>No API key setup required</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                          <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                          <span>Premium support included</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handlePaymentSearch}
+                        disabled={isProcessingPayment}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
+                        {isProcessingPayment ? (
+                          <div className="flex items-center justify-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>Processing...</span>
+                          </div>
+                        ) : searchCredits > 0 ? (
+                          <div className="flex items-center justify-center space-x-2">
+                            <Zap className="w-4 h-4" />
+                            <span>Use Search Credit</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center space-x-2">
+                            <CreditCard className="w-4 h-4" />
+                            <span>Get 3 Searches for $15</span>
+                          </div>
+                        )}
+                      </button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
+              )}
 
-                {selectedOption === 'user-key' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600"
-                  >
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      OpenAI API Key
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="sk-..."
-                      value={userApiKey}
-                      onChange={(e) => setUserApiKey(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">OpenAI Platform</a>
-                    </p>
+              {activeTab === 'user-key' && (
+                <motion.div
+                  key="user-key"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {/* User API Key Content */}
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Key className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                        Use Your Own AI API Key
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        Use your personal OpenAI API key for unlimited searches
+                      </p>
+                    </div>
+
+                    {/* Privacy Assurance */}
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <Shield className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">
+                            Your Privacy is Protected
+                          </h4>
+                          <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
+                            <li>• Your API key is never stored on our servers</li>
+                            <li>• Used only for this search session</li>
+                            <li>• Automatically cleared when you close this window</li>
+                            <li>• All communication is encrypted</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cost Comparison */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">
+                        Cost Comparison
+                      </h4>
+                      <div className="space-y-2 text-xs text-blue-700 dark:text-blue-300">
+                        <div className="flex justify-between">
+                          <span>Your API key cost:</span>
+                          <span className="font-medium">~$0.002 per search</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Our integrated service:</span>
+                          <span className="font-medium">$5.00 per search</span>
+                        </div>
+                        <div className="pt-1 border-t border-blue-200 dark:border-blue-600">
+                          <span className="text-green-600 dark:text-green-400 font-medium">
+                            Save 99.96% with your own key!
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* API Key Input */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        OpenAI API Key
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Lock className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <input
+                          type="password"
+                          placeholder="sk-..."
+                          value={userApiKey}
+                          onChange={(e) => setUserApiKey(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <p className="text-gray-500 dark:text-gray-400">
+                          Get your API key from{' '}
+                          <a
+                            href="https://platform.openai.com/api-keys"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            OpenAI Platform
+                          </a>
+                        </p>
+                        <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
+                          <Shield className="w-3 h-3" />
+                          <span>Secure</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Search Button */}
                     <button
                       onClick={handleUserKeySearch}
-                      className="mt-3 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                      disabled={!userApiKey.trim()}
+                      className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
                     >
-                      Search with My API Key
+                      <Brain className="w-4 h-4" />
+                      <span>Search with My API Key</span>
                     </button>
-                  </motion.div>
-                )}
-              </div>
 
-              {/* Option 2: Pay for Search */}
-              <div
-                className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                  selectedOption === 'payment'
-                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
-                }`}
-                onClick={() => setSelectedOption('payment')}
-              >
-                <div className="flex items-start space-x-3">
-                  <CreditCard className="w-6 h-6 text-purple-600 mt-1" />
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                      Pay Per Search
-                    </h4>
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">
-                      Pay $15 per AI search. No setup required, just search and pay.
-                    </p>
-                    <div className="flex items-center space-x-4 text-sm">
-                      <div className="flex items-center space-x-1 text-purple-600 dark:text-purple-400">
-                        <DollarSign className="w-4 h-4" />
-                        <span>$15.00 per search</span>
-                      </div>
-                      <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
-                        <Shield className="w-4 h-4" />
-                        <span>Secure payment via Stripe</span>
+                    {/* Benefits */}
+                    <div className="text-center">
+                      <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                        Perfect for Power Users
+                      </h5>
+                      <div className="grid grid-cols-2 gap-3 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          <span>Unlimited searches</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          <span>Lowest cost per search</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          <span>Full control</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          <span>No monthly limits</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-
-                {selectedOption === 'payment' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600"
-                  >
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700 dark:text-gray-300">AI Patent Search</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">$15.00</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handlePaymentSearch}
-                      disabled={isProcessingPayment}
-                      className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
-                    >
-                      {isProcessingPayment ? (
-                        <div className="flex items-center justify-center space-x-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Processing...</span>
-                        </div>
-                      ) : searchCredits > 0 ? (
-                        'Use Search Credit'
-                      ) : (
-                        'Pay $15 & Search'
-                      )}
-                    </button>
-                  </motion.div>
-                )}
-              </div>
-            </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Info Section */}
-            <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h5 className="font-medium text-gray-900 dark:text-white mb-2">
-                Why AI-Powered Search?
+            <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <h5 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center space-x-2">
+                <Brain className="w-4 h-4" />
+                <span>Why AI-Powered Search?</span>
               </h5>
               <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                 <li>• Natural language queries: "Find renewable energy patents from 2020-2023"</li>

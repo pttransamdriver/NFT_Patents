@@ -10,11 +10,11 @@ This guide will help you set up the dual payment system for AI-powered patent se
 - No revenue for you, but no costs either
 - Good for power users
 
-### **Option 2: Pay-Per-Search ($15)**
-- Users pay $15 per AI search through Stripe
+### **Option 2: Pay-Per-Search ($15 for 3 searches)**
+- Users pay $15 for 3 AI searches through Stripe
 - You handle the AI costs and keep the profit
-- Estimated profit: ~$14.99 per search
-- Good for casual users
+- Estimated profit: ~$14.98 per package ($4.99 per search)
+- Good for casual users who want multiple searches
 
 ## 🚀 **Quick Setup (15 minutes)**
 
@@ -75,14 +75,14 @@ npm run dev
 ## 💰 **Revenue Model**
 
 ### **Cost Analysis:**
-- **OpenAI API cost**: ~$0.002-0.005 per search
+- **OpenAI API cost**: ~$0.015 per 3 searches (3 × $0.005)
 - **Stripe fee**: 2.9% + $0.30 = ~$0.74 per $15 transaction
-- **Your profit**: ~$14.25 per search
+- **Your profit**: ~$14.24 per package ($4.75 per search)
 
 ### **Break-even Analysis:**
-- **1 search/day**: $5,200/year profit
-- **10 searches/day**: $52,000/year profit
-- **100 searches/day**: $520,000/year profit
+- **1 package/day**: $5,200/year profit (365 packages × $14.24)
+- **10 packages/day**: $52,000/year profit
+- **100 packages/day**: $520,000/year profit
 
 ## 🔧 **Advanced Configuration**
 

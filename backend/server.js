@@ -60,15 +60,15 @@ app.post('/api/payments/confirm-search-payment', async (req, res) => {
       if (storedIntent) {
         const userAddress = storedIntent.userAddress;
         
-        // Add search credit to user account
+        // Add 3 search credits to user account ($15 for 3 searches)
         const currentCredits = userCredits.get(userAddress) || 0;
-        userCredits.set(userAddress, currentCredits + 1);
+        userCredits.set(userAddress, currentCredits + 3);
         
         // Update stored intent status
         storedIntent.status = 'completed';
         paymentIntents.set(paymentIntentId, storedIntent);
         
-        res.json({ success: true, credits: currentCredits + 1 });
+        res.json({ success: true, credits: currentCredits + 3 });
       } else {
         res.status(404).json({ error: 'Payment intent not found' });
       }
@@ -134,7 +134,7 @@ app.post('/api/webhooks/stripe', express.raw({type: 'application/json'}), (req, 
       if (storedIntent && storedIntent.status === 'pending') {
         const userAddress = storedIntent.userAddress;
         const currentCredits = userCredits.get(userAddress) || 0;
-        userCredits.set(userAddress, currentCredits + 1);
+        userCredits.set(userAddress, currentCredits + 3);
         
         storedIntent.status = 'completed';
         paymentIntents.set(paymentIntent.id, storedIntent);
