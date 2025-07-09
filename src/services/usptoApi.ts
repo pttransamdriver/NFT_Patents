@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { Patent } from '../types';
 
 const USPTO_BASE_URL = 'https://developer.uspto.gov/ds-api';
+const USPTO_API_KEY = import.meta.env.VITE_USPTO_API_KEY;
 
 export interface USPTOSearchParams {
   query: string;
@@ -41,6 +42,10 @@ export class USPTOApiService {
           rows: params.rows || 20,
           sort: params.sort || 'date desc'
         },
+        headers: {
+          'X-API-Key': USPTO_API_KEY,
+          'Accept': 'application/json'
+        },
         timeout: 10000
       });
 
@@ -57,6 +62,10 @@ export class USPTOApiService {
         params: {
           criteria: `patentNumber:${patentNumber}`,
           rows: 1
+        },
+        headers: {
+          'X-API-Key': USPTO_API_KEY,
+          'Accept': 'application/json'
         },
         timeout: 10000
       });

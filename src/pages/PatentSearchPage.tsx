@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Bot, Filter, FileText, Calendar, User, Building, Zap, Sparkles } from 'lucide-react';
+import { Search, Bot, Filter, FileText, Calendar, User, Building, Zap, Sparkles, Brain } from 'lucide-react';
 import { usptoApi } from '../services/usptoApi';
+import { aiSearchService } from '../services/aiSearchService';
+import AISearchModal from '../components/AISearchModal';
 import type { Patent } from '../types';
 
 const PatentSearchPage: React.FC = () => {
@@ -11,6 +13,10 @@ const PatentSearchPage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Patent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [aiExplanation, setAiExplanation] = useState<string>('');
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [pendingAIQuery, setPendingAIQuery] = useState<string>('');
 
   const aiSuggestions = [
     "Find patents about renewable energy from 2020-2023",
@@ -39,25 +45,60 @@ const PatentSearchPage: React.FC = () => {
 
   const handleAiSearch = async (query: string) => {
     if (!query.trim()) return;
-    
+
+    // Show payment/API key modal instead of direct search
+    setPendingAIQuery(query);
+    setShowAIModal(true);
+  };
+
+  const executeAISearch = async (query: string, userApiKey?: string) => {
     setAiQuery(query);
     setIsAiMode(true);
     setIsLoading(true);
-    
+
     try {
-      // Convert natural language to USPTO search terms
+      // Use real AI to convert natural language to USPTO search terms
+      const aiResponse = await aiSearchService.convertNaturalLanguageToSearch({
+        naturalLanguageQuery: query,
+        maxResults: 20
+      });
+
+      setAiExplanation(aiResponse.explanation);
+      setAiConfidence(aiResponse.confidence);
+
+      const results = await usptoApi.searchPatents({
+        query: aiResponse.searchTerms,
+        rows: 20
+      });
+      setSearchResults(results);
+    } catch (error) {
+      console.error('AI search failed:', error);
+      // Fallback to rule-based search
       const searchTerms = convertAiQueryToSearchTerms(query);
       const results = await usptoApi.searchPatents({
         query: searchTerms,
         rows: 20
       });
       setSearchResults(results);
-    } catch (error) {
-      console.error('AI search failed:', error);
-      setSearchResults([]);
+      setAiExplanation('Using fallback search method');
+      setAiConfidence(60);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSearchWithUserKey = async (apiKey: string) => {
+    // Store user's API key temporarily for this search
+    // Note: In production, you might want to encrypt this
+    sessionStorage.setItem('temp_openai_key', apiKey);
+    await executeAISearch(pendingAIQuery, apiKey);
+    sessionStorage.removeItem('temp_openai_key');
+  };
+
+  const handleSearchWithPayment = async () => {
+    // Payment will be handled in the modal
+    // Once payment is confirmed, execute the search
+    await executeAISearch(pendingAIQuery);
   };
 
   const convertAiQueryToSearchTerms = (query: string): string => {
@@ -287,6 +328,37 @@ const PatentSearchPage: React.FC = () => {
               </p>
             </div>
 
+            {/* AI Search Explanation */}
+            {isAiMode && aiExplanation && (
+              <div className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <Brain className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-1">
+                      AI Search Analysis
+                    </h3>
+                    <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">
+                      {aiExplanation}
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-purple-600 dark:text-purple-400">
+                        Confidence:
+                      </span>
+                      <div className="flex-1 bg-purple-200 dark:bg-purple-800 rounded-full h-2 max-w-24">
+                        <div
+                          className="bg-purple-600 dark:bg-purple-400 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${aiConfidence}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-xs text-purple-600 dark:text-purple-400">
+                        {aiConfidence}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-6">
               {searchResults.map((patent, index) => (
                 <motion.div
@@ -386,6 +458,15 @@ const PatentSearchPage: React.FC = () => {
           </motion.div>
         )}
       </div>
+
+      {/* AI Search Modal */}
+      <AISearchModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onSearchWithUserKey={handleSearchWithUserKey}
+        onSearchWithPayment={handleSearchWithPayment}
+        searchQuery={pendingAIQuery}
+      />
     </div>
   );
 };

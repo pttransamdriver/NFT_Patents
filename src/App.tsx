@@ -13,6 +13,7 @@ import MintNFTPage from './pages/MintNFTPage';
 import NFTDetailPage from './pages/NFTDetailPage';
 import UserProfilePage from './pages/UserProfilePage';
 import CreateListingPage from './pages/CreateListingPage';
+import PaymentCheckoutPage from './pages/PaymentCheckoutPage';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
                   <Route path="/nft/:id" element={<NFTDetailPage />} />
                   <Route path="/profile/:address" element={<UserProfilePage />} />
                   <Route path="/create-listing/:id" element={<CreateListingPage />} />
+                  <Route path="/payment-checkout" element={<PaymentCheckoutPage />} />
                 </Routes>
               </main>
               <Footer />
