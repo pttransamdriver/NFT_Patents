@@ -11,17 +11,18 @@ async function main() {
   const ethPriceUSD = 2000;
   const usdPrice = 15;
   const initialPriceETH = usdPrice / ethPriceUSD;
-  const initialPriceWei = ethers.utils.parseEther(initialPriceETH.toString());
+  const initialPriceWei = ethers.parseEther(initialPriceETH.toString());
 
   console.log(`💰 Setting initial price: ${initialPriceETH} ETH (~$${usdPrice} USD)`);
 
   // Deploy the contract
   const searchPayment = await SearchPayment.deploy(initialPriceWei);
-  await searchPayment.deployed();
+  await searchPayment.waitForDeployment();
+  const searchPaymentAddress = await searchPayment.getAddress();
 
-  console.log("✅ SearchPayment deployed to:", searchPayment.address);
+  console.log("✅ SearchPayment deployed to:", searchPaymentAddress);
   console.log("📋 Contract details:");
-  console.log("   - Initial price:", ethers.utils.formatEther(initialPriceWei), "ETH");
+  console.log("   - Initial price:", ethers.formatEther(initialPriceWei), "ETH");
   console.log("   - Searches per payment:", 3);
   console.log("   - Owner:", await searchPayment.owner());
 
@@ -33,7 +34,7 @@ async function main() {
     console.log("🔍 Verifying contract on Etherscan...");
     try {
       await hre.run("verify:verify", {
-        address: searchPayment.address,
+        address: searchPaymentAddress,
         constructorArguments: [initialPriceWei],
       });
       console.log("✅ Contract verified on Etherscan");
@@ -44,7 +45,7 @@ async function main() {
 
   // Save deployment info
   const deploymentInfo = {
-    contractAddress: searchPayment.address,
+    contractAddress: searchPaymentAddress,
     network: network.name,
     initialPrice: initialPriceWei.toString(),
     initialPriceETH: initialPriceETH,
@@ -61,7 +62,7 @@ async function main() {
   console.log("📄 Deployment info saved to deployment-info.json");
   console.log("\n🔧 Next steps:");
   console.log("1. Add contract address to .env file:");
-  console.log(`   VITE_PAYMENT_CONTRACT_ADDRESS=${searchPayment.address}`);
+  console.log(`   VITE_PAYMENT_CONTRACT_ADDRESS=${searchPaymentAddress}`);
   console.log("2. Update your frontend to use the contract");
   console.log("3. Test payments on testnet before mainnet deployment");
 }

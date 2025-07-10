@@ -1,7 +1,7 @@
 import { ethers, BrowserProvider, JsonRpcSigner, Contract } from 'ethers';
 
 // Import contract ABIs
-import PatentNFTAbi from '../artifacts/contracts/PatentNFT.sol/PatentNFT.json';
+import PatentNFTAbi from '../../artifacts/contracts/PatentNFT.sol/PatentNFT.json';
 import contractAddresses from '../contracts/contract-address.json';
 
 // Contract addresses from deployment

@@ -3,6 +3,7 @@ import type { Patent, NFT } from '../types';
 
 // USPTO Patent Examination Research Dataset API
 const USPTO_BASE_URL = 'https://developer.uspto.gov/ds-api';
+const USPTO_SEARCH_URL = 'https://developer.uspto.gov/ds-api';
 const USPTO_API_KEY = import.meta.env.VITE_USPTO_API_KEY;
 
 export interface USPTOSearchParams {
@@ -81,8 +82,6 @@ export class USPTOApiService {
       } else {
         throw new Error(`USPTO API error: ${error.message || 'Unknown error occurred'}`);
       }
-    }
-  }
     }
   }
 

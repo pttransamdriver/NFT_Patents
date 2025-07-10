@@ -38,12 +38,12 @@ export class CryptoPaymentService {
       
       // Calculate ETH amount for $15 USD
       const ethAmount = usdAmount / ethPrice;
-      return ethers.utils.parseEther(ethAmount.toFixed(6)).toString();
+      return ethers.parseEther(ethAmount.toFixed(6)).toString();
     } catch (error) {
       console.error('Failed to get ETH price:', error);
       // Fallback: assume ETH = $2000 (adjust as needed)
       const fallbackEthAmount = usdAmount / 2000;
-      return ethers.utils.parseEther(fallbackEthAmount.toFixed(6)).toString();
+      return ethers.parseEther(fallbackEthAmount.toFixed(6)).toString();
     }
   }
 
@@ -66,7 +66,7 @@ export class CryptoPaymentService {
         return { success: false, error: 'MetaMask not installed' };
       }
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = provider.getSigner();
 
       // Get the ETH amount for $15 USD
@@ -126,7 +126,7 @@ export class CryptoPaymentService {
         return { success: false, error: 'Payment contract not deployed' };
       }
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = provider.getSigner();
 
       // Connect to the payment contract
@@ -189,7 +189,7 @@ export class CryptoPaymentService {
     try {
       if (!window.ethereum) return false;
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const receipt = await provider.getTransactionReceipt(transactionHash);
       
       return receipt && receipt.status === 1;
@@ -210,7 +210,7 @@ export class CryptoPaymentService {
     try {
       if (!window.ethereum) return null;
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const [transaction, receipt] = await Promise.all([
         provider.getTransaction(transactionHash),
         provider.getTransactionReceipt(transactionHash)
@@ -219,7 +219,7 @@ export class CryptoPaymentService {
       if (!transaction || !receipt) return null;
 
       return {
-        amount: ethers.utils.formatEther(transaction.value),
+        amount: ethers.formatEther(transaction.value),
         from: transaction.from,
         to: transaction.to || '',
         gasUsed: receipt.gasUsed.toString(),
@@ -234,7 +234,7 @@ export class CryptoPaymentService {
   // Format ETH amount for display
   formatETHAmount(weiAmount: string): string {
     try {
-      return parseFloat(ethers.utils.formatEther(weiAmount)).toFixed(6);
+      return parseFloat(ethers.formatEther(weiAmount)).toFixed(6);
     } catch (error) {
       return '0.000000';
     }
@@ -245,10 +245,10 @@ export class CryptoPaymentService {
     try {
       if (!window.ethereum) return false;
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum);
       const balance = await provider.getBalance(userAddress);
       
-      return balance.gte(ethers.BigNumber.from(requiredAmount));
+      return balance >= BigInt(requiredAmount);
     } catch (error) {
       console.error('Balance check failed:', error);
       return false;

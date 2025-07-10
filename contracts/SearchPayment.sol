@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title SearchPayment
@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
  */
 contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
     // Events
-    event SearchPayment(
+    event PaymentReceived(
         address indexed user,
         uint256 amount,
         uint256 timestamp,
@@ -33,7 +33,7 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
      * @dev Constructor sets initial search price
      * @param _initialPrice Initial price in wei for 3 searches
      */
-    constructor(uint256 _initialPrice) {
+    constructor(uint256 _initialPrice) Ownable(msg.sender) {
         searchPrice = _initialPrice;
     }
 
@@ -49,7 +49,7 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
         userSearchesPurchased[msg.sender] += SEARCHES_PER_PAYMENT;
         
         // Emit event for backend to process
-        emit SearchPayment(
+        emit PaymentReceived(
             msg.sender,
             msg.value,
             block.timestamp,
@@ -165,7 +165,7 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
         userTotalPaid[msg.sender] += msg.value;
         userSearchesPurchased[msg.sender] += SEARCHES_PER_PAYMENT;
         
-        emit SearchPayment(
+        emit PaymentReceived(
             msg.sender,
             msg.value,
             block.timestamp,

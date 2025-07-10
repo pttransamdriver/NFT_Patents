@@ -5,7 +5,7 @@ pragma solidity ^0.8.20; // Specify minimum Solidity compiler version
 // Import OpenZeppelin contracts for NFT functionality
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol"; // NFT with metadata URI storage
 import "@openzeppelin/contracts/access/Ownable.sol"; // Access control for admin functions
-import "@openzeppelin/contracts/utils/Counters.sol"; // Safe counter for token IDs
+// Counters library removed in newer OpenZeppelin versions - using uint256 instead
 
 /**
  * @title PatentNFT
@@ -13,11 +13,8 @@ import "@openzeppelin/contracts/utils/Counters.sol"; // Safe counter for token I
  * Inherits from ERC721URIStorage (NFT with metadata) and Ownable (access control)
  */
 contract PatentNFT is ERC721URIStorage, Ownable {
-    // Use Counters library for safe increment/decrement operations
-    using Counters for Counters.Counter;
-    
     // Private counter to track and assign unique token IDs
-    Counters.Counter private _tokenIds;
+    uint256 private _tokenIds;
     
     /**
      * @dev Structure to store patent information for each NFT
@@ -43,7 +40,7 @@ contract PatentNFT is ERC721URIStorage, Ownable {
      * @dev Contract constructor - runs once when contract is deployed
      * Sets NFT collection name to "PatentNFT" and symbol to "PNFT"
      */
-    constructor() ERC721("PatentNFT", "PNFT") Ownable() {}
+    constructor() ERC721("PatentNFT", "PNFT") Ownable(msg.sender) {}
     
     /**
      * @dev Creates a new patent NFT and assigns it to a recipient
@@ -71,10 +68,10 @@ contract PatentNFT is ERC721URIStorage, Ownable {
         require(validatePatentNumber(patentNumber), "Invalid patent number format"); // Validates the patent number format
 
         // Increment the counter to get next available token ID
-        _tokenIds.increment();
-        
+        _tokenIds++;
+
         // Get the current counter value as the new token ID
-        uint256 newTokenId = _tokenIds.current();
+        uint256 newTokenId = _tokenIds;
         
         // Create the NFT and assign ownership to recipient
         _mint(recipient, newTokenId);
@@ -106,7 +103,7 @@ contract PatentNFT is ERC721URIStorage, Ownable {
      */
     function verifyPatent(uint256 tokenId) public onlyOwner {
         // Check that the token actually exists before trying to verify it
-        require(_exists(tokenId), "Patent does not exist");
+        require(_ownerOf(tokenId) != address(0), "Patent does not exist");
         
         // Set the verification status to true
         patents[tokenId].isVerified = true;
@@ -141,7 +138,7 @@ contract PatentNFT is ERC721URIStorage, Ownable {
         bool isVerified
     ) {
         // Ensure the token exists before trying to read its data
-        require(_exists(tokenId), "Patent does not exist");
+        require(_ownerOf(tokenId) != address(0), "Patent does not exist");
         
         // Load the patent data from storage into memory for efficiency
         Patent memory patent = patents[tokenId];

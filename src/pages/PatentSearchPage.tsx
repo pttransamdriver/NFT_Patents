@@ -163,41 +163,6 @@ const PatentSearchPage: React.FC = () => {
     return query;
   };
 
-  const handleMintNFT = async (patent: Patent) => {
-    if (!isConnected || !address) {
-      toast.error('Please connect your wallet first');
-      return;
-    }
-
-    setMintingPatent(patent.patentNumber);
-    
-    try {
-      const result = await mintingService.mintPatentNFT({
-        patentNumber: patent.patentNumber,
-        price: 0.1, // Default price in ETH
-        userAddress: address
-      });
-
-      if (result.success) {
-        toast.success(`NFT minted successfully! Token ID: ${result.tokenId}`);
-        // Update the patent availability
-        setSearchResults(prev => 
-          prev.map(p => 
-            p.patentNumber === patent.patentNumber 
-              ? { ...p, isAvailableForMinting: false }
-              : p
-          )
-        );
-      } else {
-        toast.error(result.error || 'Minting failed');
-      }
-    } catch (error) {
-      toast.error('Minting failed. Please try again.');
-    } finally {
-      setMintingPatent(null);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
