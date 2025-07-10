@@ -8,12 +8,12 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { mockNFTs } from '../data/mockData';
-import { useWallet } from '../contexts/WalletContext';
+import { useWeb3 } from '../contexts/Web3Context';
 import toast from 'react-hot-toast';
 
 const NFTDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { isConnected, connectWallet, address } = useWallet();
+  const { isConnected, connectWallet, account } = useWeb3();
   const [isLiked, setIsLiked] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
@@ -34,7 +34,7 @@ const NFTDetailPage: React.FC = () => {
     );
   }
 
-  const isOwner = address === nft.owner;
+  const isOwner = account === nft.owner;
   const priceHistory = [
     { date: '2024-01-15', price: 10.2 },
     { date: '2024-01-10', price: 8.7 },

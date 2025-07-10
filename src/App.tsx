@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { WalletProvider } from './contexts/WalletContext';
+
 import { Web3Provider } from './contexts/Web3Context';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -18,8 +18,7 @@ function App() {
   return (
     <ThemeProvider>
       <Web3Provider>
-        <WalletProvider>
-          <Router>
+        <Router>
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
               <Header />
               <main className="pt-16">
@@ -42,8 +41,7 @@ function App() {
                 }}
               />
             </div>
-          </Router>
-        </WalletProvider>
+        </Router>
       </Web3Provider>
     </ThemeProvider>
   );

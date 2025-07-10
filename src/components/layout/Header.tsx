@@ -3,12 +3,17 @@ import { Link, useLocation } from 'react-router-dom';
 import { Search, Moon, Sun, Menu, X, Wallet, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useWallet } from '../../contexts/WalletContext';
+import { useWeb3 } from '../../contexts/Web3Context';
 
 const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
-  const { isConnected, address, connectWallet, disconnectWallet } = useWallet();
+  const { isConnected, account, connectWallet } = useWeb3();
+  
+  const disconnectWallet = () => {
+    // For now, just reload the page to disconnect
+    window.location.reload();
+  };
   const location = useLocation();
 
   const navigation = [
@@ -69,11 +74,16 @@ const Header: React.FC = () => {
             {isConnected ? (
               <div className="flex items-center space-x-2">
                 <Link
+<<<<<<< HEAD
                   to={`/profile/${address}`}
                   className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 text-gray-900 dark:text-white"
+=======
+                  to={`/profile/${account}`}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+>>>>>>> 79dcfab (Pulled mock data)
                 >
                   <User className="w-4 h-4" />
-                  <span className="text-sm font-medium">{formatAddress(address!)}</span>
+                  <span className="text-sm font-medium">{formatAddress(account!)}</span>
                 </Link>
                 <button
                   onClick={disconnectWallet}
@@ -139,12 +149,12 @@ const Header: React.FC = () => {
                 {isConnected ? (
                   <div className="flex items-center space-x-2">
                     <Link
-                      to={`/profile/${address}`}
+                      to={`/profile/${account}`}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
                     >
                       <User className="w-4 h-4" />
-                      <span className="text-sm font-medium">{formatAddress(address!)}</span>
+                      <span className="text-sm font-medium">{formatAddress(account!)}</span>
                     </Link>
                     <button
                       onClick={disconnectWallet}

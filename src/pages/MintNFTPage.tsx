@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Search, CheckCircle, AlertCircle, Upload, Eye, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useWallet } from '../contexts/WalletContext';
 import { useWeb3 } from '../contexts/Web3Context';
 import { ethers } from 'ethers';
 
@@ -28,8 +27,7 @@ const MintNFTPage: React.FC = () => {
     { id: 2, title: 'Preview NFT', description: 'Review NFT metadata and appearance', completed: false, active: false },
     { id: 3, title: 'Mint NFT', description: 'Create and mint your patent NFT', completed: false, active: false },
   ]);
-  const { isConnected, connectWallet } = useWallet();
-  const { provider, signer, account } = useWeb3();
+  const { provider, signer, account, connectWallet, isConnected } = useWeb3();
 
   const mockPatentData = {
     patentNumber: 'US-12325364-B1',
