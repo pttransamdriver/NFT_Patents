@@ -98,7 +98,7 @@ app.post('/api/users/:address/deduct-credit', (req, res) => {
   try {
     const { address } = req.params;
     const currentCredits = userCredits.get(address.toLowerCase()) || 0;
-    
+
     if (currentCredits > 0) {
       userCredits.set(address.toLowerCase(), currentCredits - 1);
       res.json({ success: true, remainingCredits: currentCredits - 1 });
@@ -108,6 +108,51 @@ app.post('/api/users/:address/deduct-credit', (req, res) => {
   } catch (error) {
     console.error('Deduct credit error:', error);
     res.status(500).json({ error: 'Failed to deduct credit' });
+  }
+});
+
+// Handle crypto payment notification
+app.post('/api/payments/crypto-payment', async (req, res) => {
+  try {
+    const { userAddress, transactionHash, amount, currency, contractAddress } = req.body;
+
+    // In production, you should verify the transaction on-chain
+    // For now, we'll trust the frontend verification
+    console.log('Crypto payment received:', {
+      userAddress,
+      transactionHash,
+      amount,
+      currency
+    });
+
+    // Add 3 search credits to user account
+    const currentCredits = userCredits.get(userAddress.toLowerCase()) || 0;
+    userCredits.set(userAddress.toLowerCase(), currentCredits + 3);
+
+    // Store transaction record (in production, use a database)
+    const transactionRecord = {
+      userAddress: userAddress.toLowerCase(),
+      transactionHash,
+      amount,
+      currency,
+      contractAddress,
+      timestamp: new Date().toISOString(),
+      creditsAdded: 3,
+      status: 'completed'
+    };
+
+    // In production, store this in your database
+    console.log('Transaction recorded:', transactionRecord);
+
+    res.json({
+      success: true,
+      credits: currentCredits + 3,
+      transactionHash
+    });
+
+  } catch (error) {
+    console.error('Crypto payment processing error:', error);
+    res.status(500).json({ error: 'Failed to process crypto payment' });
   }
 });
 

@@ -225,7 +225,7 @@ const PatentSearchPage: React.FC = () => {
             /* Standard Search Mode */
             <div>
               <div className="relative mb-6">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-6 h-6" />
                 <input
                   type="text"
                   placeholder="Search by patent number, title, inventor, or keywords..."
@@ -237,7 +237,7 @@ const PatentSearchPage: React.FC = () => {
                 <button
                   onClick={handleSearch}
                   disabled={isLoading}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors duration-200"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
@@ -420,7 +420,7 @@ const PatentSearchPage: React.FC = () => {
                     </div>
                     
                     {patent.isAvailableForMinting && (
-                      <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200">
+                      <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200">
                         Mint NFT
                       </button>
                     )}
@@ -443,7 +443,7 @@ const PatentSearchPage: React.FC = () => {
               {isAiMode ? (
                 <Bot className="w-12 h-12 text-purple-500" />
               ) : (
-                <Search className="w-12 h-12 text-gray-400" />
+                <Search className="w-12 h-12 text-gray-400 dark:text-gray-500" />
               )}
             </div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
