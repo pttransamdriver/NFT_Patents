@@ -70,7 +70,7 @@ const Header: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Link
                   to={`/profile/${address}`}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 text-gray-900 dark:text-white"
                 >
                   <User className="w-4 h-4" />
                   <span className="text-sm font-medium">{formatAddress(address!)}</span>
@@ -141,7 +141,7 @@ const Header: React.FC = () => {
                     <Link
                       to={`/profile/${address}`}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800"
+                      className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
                     >
                       <User className="w-4 h-4" />
                       <span className="text-sm font-medium">{formatAddress(address!)}</span>
