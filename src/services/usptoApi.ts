@@ -1,6 +1,7 @@
 import axios from 'axios';
-import type { Patent } from '../types';
+import type { Patent, NFT } from '../types';
 
+// USPTO Patent Examination Research Dataset API
 const USPTO_BASE_URL = 'https://developer.uspto.gov/ds-api';
 const USPTO_API_KEY = import.meta.env.VITE_USPTO_API_KEY;
 
@@ -15,7 +16,7 @@ export interface USPTOPatentData {
   patentNumber: string;
   patentTitle: string;
   patentAbstract: string;
-  inventorName: string[];
+  inventorName: string | string[];
   assigneeName: string;
   filingDate: string;
   publicationDate: string;
@@ -44,7 +45,8 @@ export class USPTOApiService {
     this.validateApiKey();
 
     try {
-      const response = await axios.get(`${USPTO_BASE_URL}/search/publications`, {
+      // Use USPTO's public search API
+      const response = await axios.get(`${USPTO_SEARCH_URL}/search/publications`, {
         params: {
           criteria: params.query,
           start: params.start || 0,
@@ -53,9 +55,10 @@ export class USPTOApiService {
         },
         headers: {
           'X-API-Key': USPTO_API_KEY,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'PatentNFT-App/1.0'
         },
-        timeout: 10000
+        timeout: 15000
       });
 
       return this.transformUSPTOData(response.data.results || []);
@@ -80,24 +83,27 @@ export class USPTOApiService {
       }
     }
   }
+    }
+  }
 
   async getPatentByNumber(patentNumber: string): Promise<Patent | null> {
     this.validateApiKey();
 
     try {
-      const response = await axios.get(`${USPTO_BASE_URL}/search/publications`, {
+      const response = await axios.get(`${USPTO_SEARCH_URL}/search/publications`, {
         params: {
           criteria: `patentNumber:${patentNumber}`,
           rows: 1
         },
         headers: {
           'X-API-Key': USPTO_API_KEY,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'PatentNFT-App/1.0'
         },
-        timeout: 10000
+        timeout: 15000
       });
 
-      const results = response.data.results || [];
+      const results = response.data?.results || [];
       if (results.length === 0) return null;
 
       const transformed = this.transformUSPTOData(results);
@@ -112,8 +118,32 @@ export class USPTOApiService {
         console.log(`Patent ${patentNumber} not found`);
       }
 
-      return null;
+      // Fallback to mock data if available
+      try {
+        return this.getMockPatentByNumber(patentNumber);
+      } catch {
+        return null;
+      }
     }
+  }
+
+  async convertPatentToNFT(patent: Patent, price: number = 0.1): Promise<Partial<NFT>> {
+    return {
+      patentNumber: patent.patentNumber,
+      title: patent.title,
+      description: patent.abstract,
+      inventor: patent.inventors.join(', '),
+      assignee: patent.assignee,
+      filingDate: patent.filingDate,
+      category: patent.category,
+      status: patent.status,
+      price: price,
+      priceChange: 0,
+      isListed: true,
+      views: 0,
+      likes: 0,
+      transactionHistory: []
+    };
   }
 
   private transformUSPTOData(usptoData: USPTOPatentData[]): Patent[] {
@@ -127,9 +157,50 @@ export class USPTOApiService {
       publicationDate: patent.publicationDate || '',
       status: this.determinePatentStatus(patent.filingDate),
       category: this.categorizePatent(patent.patentTitle, patent.patentAbstract),
-      claims: [], // USPTO API doesn't provide claims in search results
+      claims: [],
       isAvailableForMinting: true
     }));
+  }
+
+  private getMockPatents(query: string): Patent[] {
+    const mockPatents = [
+      {
+        patentNumber: 'US10123456B2',
+        title: 'Advanced Solar Cell Technology',
+        abstract: 'A novel photovoltaic cell design that increases efficiency by 25% through innovative semiconductor layering.',
+        inventors: ['Dr. Sarah Johnson', 'Michael Chen'],
+        assignee: 'SolarTech Industries',
+        filingDate: '2020-03-15',
+        publicationDate: '2022-11-08',
+        status: 'active' as const,
+        category: 'Clean Energy',
+        claims: [],
+        isAvailableForMinting: true
+      },
+      {
+        patentNumber: 'US10234567B2',
+        title: 'AI-Powered Medical Diagnostic System',
+        abstract: 'Machine learning algorithm for early detection of cardiovascular diseases using non-invasive imaging.',
+        inventors: ['Dr. Emily Rodriguez', 'James Park'],
+        assignee: 'MedTech Solutions',
+        filingDate: '2019-08-22',
+        publicationDate: '2021-12-14',
+        status: 'active' as const,
+        category: 'Healthcare',
+        claims: [],
+        isAvailableForMinting: true
+      }
+    ];
+    
+    return mockPatents.filter(patent => 
+      patent.title.toLowerCase().includes(query.toLowerCase()) ||
+      patent.abstract.toLowerCase().includes(query.toLowerCase())
+    );
+  }
+
+  private getMockPatentByNumber(patentNumber: string): Patent | null {
+    const mockPatents = this.getMockPatents('');
+    return mockPatents.find(p => p.patentNumber === patentNumber) || null;
   }
 
   private determinePatentStatus(filingDate: string): 'active' | 'expired' | 'pending' {
@@ -150,16 +221,19 @@ export class USPTOApiService {
       return 'Healthcare';
     }
     if (text.includes('energy') || text.includes('solar') || text.includes('battery') || text.includes('renewable')) {
-      return 'Energy';
+      return 'Clean Energy';
     }
     if (text.includes('computer') || text.includes('software') || text.includes('algorithm') || text.includes('ai') || text.includes('artificial intelligence')) {
-      return 'Technology';
+      return 'Computing';
     }
     if (text.includes('vehicle') || text.includes('automotive') || text.includes('transportation')) {
       return 'Transportation';
     }
     if (text.includes('material') || text.includes('chemical') || text.includes('polymer')) {
       return 'Materials';
+    }
+    if (text.includes('storage') || text.includes('memory') || text.includes('data')) {
+      return 'Energy Storage';
     }
     
     return 'Other';

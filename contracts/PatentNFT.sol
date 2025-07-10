@@ -54,19 +54,22 @@ contract PatentNFT is ERC721URIStorage, Ownable {
      * @param patentNumber Official USPTO patent number
      * @return uint256 The ID of the newly created token
      */
+    // Function to mint the patents
     function mintPatent(
-        address recipient,
-        string memory tokenURI,
-        string memory title,
-        string memory inventor,
-        string memory patentNumber
-    ) public returns (uint256) {
+        address recipient, // This id the address of the user who is minting the patent
+        string memory tokenURI, // This is the URL that points to the metadata of the patent
+        string memory title, // This is the NFT title/name of the patent
+        string memory inventor, // This variable "inventor" is the name of the person who invented the patent
+        string memory patentNumber // This is the official USPTO patent number
+    ) public returns (uint256) { // Returns a publicly visible variable of type uint256
         // Input validation for security
-        require(recipient != address(0), "Invalid recipient address");
-        require(bytes(tokenURI).length > 0, "Token URI required");
-        require(bytes(title).length > 0, "Title required");
-        require(bytes(inventor).length > 0, "Inventor required");
-        require(bytes(patentNumber).length > 0, "Patent number required");
+        require(recipient != address(0), "Invalid recipient address"); // This checks that the recipient address is not the zero address
+        require(bytes(tokenURI).length > 0, "Token URI required"); // Requires a non-empty token URI
+        require(bytes(title).length > 0, "Title required"); // Requires a non-empty title for the patent
+        require(bytes(inventor).length > 0, "Inventor required"); // Requires a non-empty inventor name
+        require(bytes(patentNumber).length > 0, "Patent number required"); // Requires a non-empty patent number
+        require(validatePatentNumber(patentNumber), "Invalid patent number format"); // Validates the patent number format
+
         // Increment the counter to get next available token ID
         _tokenIds.increment();
         
@@ -111,6 +114,13 @@ contract PatentNFT is ERC721URIStorage, Ownable {
         // Emit event to notify that patent has been verified
         emit PatentVerified(tokenId, patents[tokenId].patentNumber);
     }
+    /**
+     * @dev Internal function to validate the format of a patent number.
+     * This is a placeholder and should be replaced with robust validation logic.
+     */
+    function validatePatentNumber(string memory _patentNumber) internal pure returns (bool) {
+        return bytes(_patentNumber).length > 0; // Simple check for non-empty string
+    }
     
     /**
      * @dev Retrieves all patent information for a given token ID
@@ -145,4 +155,5 @@ contract PatentNFT is ERC721URIStorage, Ownable {
             patent.isVerified
         );
     }
+
 }

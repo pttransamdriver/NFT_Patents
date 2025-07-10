@@ -1,9 +1,17 @@
+<<<<<<< HEAD
 import React, { useState, useContext, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CreditCard, Key, Brain, Shield, Zap, DollarSign, Sparkles, Lock, Wallet } from 'lucide-react';
-import { Web3Context } from '../contexts/Web3Context';
+import { useWeb3 } from '../contexts/Web3Context';
 import { paymentService } from '../services/paymentService';
 import { cryptoPaymentService } from '../services/cryptoPaymentService';
+=======
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, CreditCard, Key, Brain, Shield, Zap, DollarSign, Sparkles, Lock } from 'lucide-react';
+import { useWeb3 } from '../contexts/Web3Context';
+import { paymentService } from '../services/paymentService';
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
 
 interface AISearchModalProps {
   isOpen: boolean;
@@ -23,16 +31,22 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
   const [activeTab, setActiveTab] = useState<'integrated' | 'user-key'>('integrated');
   const [userApiKey, setUserApiKey] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+<<<<<<< HEAD
   const [isProcessingCrypto, setIsProcessingCrypto] = useState(false);
   const [searchCredits, setSearchCredits] = useState(0);
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [ethAmount, setEthAmount] = useState<string>('0.000000');
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'crypto'>('crypto');
-  const { account } = useContext(Web3Context);
+  const { account } = useWeb3();
+=======
+  const [searchCredits, setSearchCredits] = useState(0);
+  const { account } = useWeb3();
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
 
   React.useEffect(() => {
     if (isOpen && account) {
       loadSearchCredits();
+<<<<<<< HEAD
       loadETHPrice();
     }
   }, [isOpen, account]);
@@ -48,6 +62,11 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
     }
   };
 
+=======
+    }
+  }, [isOpen, account]);
+
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
   const loadSearchCredits = async () => {
     if (!account) return;
     try {
@@ -73,10 +92,17 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
       return;
     }
 
+<<<<<<< HEAD
     // Check if user has existing credits first
     if (searchCredits > 0) {
       setIsProcessingPayment(true);
       try {
+=======
+    setIsProcessingPayment(true);
+    try {
+      // Check if user has existing credits
+      if (searchCredits > 0) {
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
         const success = await paymentService.deductSearchCredit(account);
         if (success) {
           setSearchCredits(prev => prev - 1);
@@ -84,6 +110,7 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
           onClose();
           return;
         }
+<<<<<<< HEAD
       } catch (error) {
         console.error('Credit deduction failed:', error);
       } finally {
@@ -124,11 +151,17 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
   const handleStripePayment = async () => {
     setIsProcessingPayment(true);
     try {
+=======
+      }
+
+      // Create payment intent for new search (3 searches for $15)
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
       const paymentIntent = await paymentService.createSearchPaymentIntent({
         amount: 1500, // $15.00 in cents for 3 searches
         currency: 'usd',
         description: `AI Patent Search Package: 3 searches for $15`,
         searchQuery,
+<<<<<<< HEAD
         userAddress: account!
       });
 
@@ -137,6 +170,16 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
 
     } catch (error) {
       console.error('Stripe payment failed:', error);
+=======
+        userAddress: account
+      });
+
+      // Redirect to Stripe Checkout or handle payment
+      window.open(`/payment-checkout?client_secret=${paymentIntent.clientSecret}`, '_blank');
+      
+    } catch (error) {
+      console.error('Payment failed:', error);
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
       alert('Payment processing failed. Please try again.');
     } finally {
       setIsProcessingPayment(false);
@@ -270,6 +313,7 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                       </p>
                     </div>
 
+<<<<<<< HEAD
                     {/* Payment Method Selection */}
                     <div className="mb-6">
                       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -315,16 +359,23 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                       </div>
                     </div>
 
+=======
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
                     {/* Pricing */}
                     <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-700">
                       <div className="text-center mb-4">
                         <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
+<<<<<<< HEAD
                           {paymentMethod === 'crypto' ? `${ethAmount} ETH` : '$15'}
+=======
+                          $15
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
                           for 3 AI searches
                         </div>
                         <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+<<<<<<< HEAD
                           Best value • Only {paymentMethod === 'crypto' ? `${(parseFloat(ethAmount) / 3).toFixed(6)} ETH` : '$5'} per search
                         </div>
                         {paymentMethod === 'crypto' && ethPrice > 0 && (
@@ -332,6 +383,10 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                             ≈ $15.00 USD (ETH @ ${ethPrice.toLocaleString()})
                           </div>
                         )}
+=======
+                          Best value • Only $5 per search
+                        </div>
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
                       </div>
 
                       {/* Features */}
@@ -356,6 +411,7 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
 
                       <button
                         onClick={handlePaymentSearch}
+<<<<<<< HEAD
                         disabled={isProcessingPayment || isProcessingCrypto}
                         className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
                       >
@@ -365,6 +421,15 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                             <span>
                               {isProcessingCrypto ? 'Confirming Transaction...' : 'Processing...'}
                             </span>
+=======
+                        disabled={isProcessingPayment}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
+                        {isProcessingPayment ? (
+                          <div className="flex items-center justify-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>Processing...</span>
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
                           </div>
                         ) : searchCredits > 0 ? (
                           <div className="flex items-center justify-center space-x-2">
@@ -373,6 +438,7 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                           </div>
                         ) : (
                           <div className="flex items-center justify-center space-x-2">
+<<<<<<< HEAD
                             {paymentMethod === 'crypto' ? (
                               <>
                                 <Wallet className="w-4 h-4" />
@@ -400,6 +466,13 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                           </div>
                         )}
                       </div>
+=======
+                            <CreditCard className="w-4 h-4" />
+                            <span>Get 3 Searches for $15</span>
+                          </div>
+                        )}
+                      </button>
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
                     </div>
                   </div>
                 </motion.div>
@@ -474,7 +547,11 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<<<<<<< HEAD
                           <Lock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+=======
+                          <Lock className="h-4 w-4 text-gray-400" />
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
                         </div>
                         <input
                           type="password"
@@ -507,7 +584,11 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                     <button
                       onClick={handleUserKeySearch}
                       disabled={!userApiKey.trim()}
+<<<<<<< HEAD
                       className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+=======
+                      className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+>>>>>>> 5770051402e7ca673a1ac054e8b09f317953f25f
                     >
                       <Brain className="w-4 h-4" />
                       <span>Search with My API Key</span>

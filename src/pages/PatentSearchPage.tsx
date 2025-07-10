@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Bot, Filter, FileText, Calendar, User, Building, Zap, Sparkles, Brain } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { usptoApi } from '../services/usptoApi';
 import { aiSearchService } from '../services/aiSearchService';
+import { mintingService } from '../services/mintingService';
+import { useWallet } from '../contexts/WalletContext';
 import AISearchModal from '../components/AISearchModal';
 import type { Patent } from '../types';
 
@@ -17,6 +20,8 @@ const PatentSearchPage: React.FC = () => {
   const [aiConfidence, setAiConfidence] = useState<number>(0);
   const [showAIModal, setShowAIModal] = useState(false);
   const [pendingAIQuery, setPendingAIQuery] = useState<string>('');
+  const [mintingPatent, setMintingPatent] = useState<string | null>(null);
+  const { isConnected, address } = useWallet();
 
   const aiSuggestions = [
     "Find patents about renewable energy from 2020-2023",
@@ -101,6 +106,42 @@ const PatentSearchPage: React.FC = () => {
     await executeAISearch(pendingAIQuery);
   };
 
+  const handleMintNFT = async (patent: Patent) => {
+    if (!isConnected || !address) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    setMintingPatent(patent.patentNumber);
+
+    try {
+      const result = await mintingService.mintPatentNFT({
+        patentNumber: patent.patentNumber,
+        price: 0.1, // Default price in ETH
+        userAddress: address
+      });
+
+      if (result.success) {
+        toast.success(`NFT minted successfully! Token ID: ${result.tokenId}`);
+        // Update the patent availability
+        setSearchResults(prev =>
+          prev.map(p =>
+            p.patentNumber === patent.patentNumber
+              ? { ...p, isAvailableForMinting: false }
+              : p
+          )
+        );
+      } else {
+        toast.error(result.error || 'Failed to mint NFT');
+      }
+    } catch (error) {
+      console.error('Minting error:', error);
+      toast.error('Failed to mint NFT. Please try again.');
+    } finally {
+      setMintingPatent(null);
+    }
+  };
+
   const convertAiQueryToSearchTerms = (query: string): string => {
     // Simple AI query conversion - can be enhanced with NLP
     const lowerQuery = query.toLowerCase();
@@ -120,6 +161,41 @@ const PatentSearchPage: React.FC = () => {
     
     // Default: use the query as-is
     return query;
+  };
+
+  const handleMintNFT = async (patent: Patent) => {
+    if (!isConnected || !address) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    setMintingPatent(patent.patentNumber);
+    
+    try {
+      const result = await mintingService.mintPatentNFT({
+        patentNumber: patent.patentNumber,
+        price: 0.1, // Default price in ETH
+        userAddress: address
+      });
+
+      if (result.success) {
+        toast.success(`NFT minted successfully! Token ID: ${result.tokenId}`);
+        // Update the patent availability
+        setSearchResults(prev => 
+          prev.map(p => 
+            p.patentNumber === patent.patentNumber 
+              ? { ...p, isAvailableForMinting: false }
+              : p
+          )
+        );
+      } else {
+        toast.error(result.error || 'Minting failed');
+      }
+    } catch (error) {
+      toast.error('Minting failed. Please try again.');
+    } finally {
+      setMintingPatent(null);
+    }
   };
 
   return (
@@ -418,11 +494,29 @@ const PatentSearchPage: React.FC = () => {
                       <Calendar className="w-4 h-4 mr-2" />
                       <span>Filed: {new Date(patent.filingDate).toLocaleDateString()}</span>
                     </div>
-                    
-                    {patent.isAvailableForMinting && (
-                      <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200">
-                        Mint NFT
+
+                    {patent.isAvailableForMinting ? (
+                      <button
+                        onClick={() => handleMintNFT(patent)}
+                        disabled={mintingPatent === patent.patentNumber || !isConnected}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                      >
+                        {mintingPatent === patent.patentNumber ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span>Minting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4" />
+                            <span>Mint NFT (0.1 ETH)</span>
+                          </>
+                        )}
                       </button>
+                    ) : (
+                      <span className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg font-medium">
+                        Already Minted
+                      </span>
                     )}
                   </div>
                 </motion.div>
@@ -455,6 +549,11 @@ const PatentSearchPage: React.FC = () => {
                 : 'Enter keywords, patent numbers, or inventor names to search the USPTO database'
               }
             </p>
+            {!isConnected && (
+              <p className="text-sm text-orange-600 dark:text-orange-400 mt-2">
+                Connect your wallet to mint patent NFTs
+              </p>
+            )}
           </motion.div>
         )}
       </div>

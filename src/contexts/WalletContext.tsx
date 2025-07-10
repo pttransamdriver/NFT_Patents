@@ -26,13 +26,19 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const connectWallet = useCallback(async () => {
     try {
-      // Simulate wallet connection
-      const mockAddress = '0x742d35Cc6634C0532925a3b8D1750d15DbfED4C6';
-      setAddress(mockAddress);
-      setIsConnected(true);
-      setBalance('12.5');
-      toast.success('Wallet connected successfully!');
-    } catch (error) {
+      if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          setAddress(accounts[0]);
+          setIsConnected(true);
+          setBalance('1.5');
+          toast.success('Wallet connected successfully!');
+        }
+      } else {
+        toast.error('Please install MetaMask');
+      }
+    } catch (error: any) {
+      console.error('Connection error:', error);
       toast.error('Failed to connect wallet');
     }
   }, []);
@@ -56,3 +62,9 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     </WalletContext.Provider>
   );
 };
+
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}

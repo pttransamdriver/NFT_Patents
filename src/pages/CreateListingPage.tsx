@@ -3,13 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tag, Calendar, DollarSign, Clock, ArrowLeft, CheckCircle } from 'lucide-react';
 import { mockNFTs } from '../data/mockData';
-import { useWallet } from '../contexts/WalletContext';
+import { useWeb3 } from '../contexts/Web3Context';
 import toast from 'react-hot-toast';
 
 const CreateListingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isConnected, address } = useWallet();
+  const { isConnected, account } = useWeb3();
   
   const [listingType, setListingType] = useState<'fixed' | 'auction'>('fixed');
   const [price, setPrice] = useState('');
@@ -31,7 +31,7 @@ const CreateListingPage: React.FC = () => {
     );
   }
 
-  if (address !== nft.owner) {
+  if (account !== nft.owner) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">

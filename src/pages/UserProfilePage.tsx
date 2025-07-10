@@ -5,12 +5,12 @@ import { User, Calendar, TrendingUp, Grid, List, Filter, Copy, ExternalLink } fr
 import { format } from 'date-fns';
 import NFTCard from '../components/marketplace/NFTCard';
 import { mockNFTs, mockUsers } from '../data/mockData';
-import { useWallet } from '../contexts/WalletContext';
+import { useWeb3 } from '../contexts/Web3Context';
 import toast from 'react-hot-toast';
 
 const UserProfilePage: React.FC = () => {
   const { address } = useParams<{ address: string }>();
-  const { address: currentUserAddress } = useWallet();
+  const { account: currentUserAddress } = useWeb3();
   const [activeTab, setActiveTab] = useState<'owned' | 'listed' | 'activity'>('owned');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
