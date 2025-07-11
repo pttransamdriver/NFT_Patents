@@ -1,0 +1,21 @@
+{
+  "network": "localhost",
+  "deploymentTime": "2025-07-11T18:27:37.000Z",
+  "contracts": {
+    "PSPToken": {
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "name": "Patent Search Pennies",
+      "symbol": "PSP",
+      "decimals": 18
+    },
+    "SearchPayment": {
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "searchPrice": "500 PSP",
+      "searchPriceUSD": "$5.00"
+    }
+  },
+  "environmentVariables": {
+    "VITE_PSP_TOKEN_ADDRESS": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    "VITE_SEARCH_PAYMENT_ADDRESS": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+  }
+}
