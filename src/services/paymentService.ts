@@ -1,24 +1,23 @@
 import axios from 'axios';
 
-const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
-export interface PaymentIntent {
-  clientSecret: string;
-  paymentIntentId: string;
+export interface PSPPayment {
+  userAddress: string;
+  transactionHash: string;
+  tokenAmount: number; // Amount of PSP tokens (500 PSP = 1 search)
 }
 
-export interface SearchPayment {
-  amount: number; // $15.00 = 1500 cents
-  currency: string;
-  description: string;
-  searchQuery: string;
-  userAddress: string;
+export interface PaymentResult {
+  success: boolean;
+  creditsAdded?: number;
+  totalCredits?: number;
+  error?: string;
 }
 
 export class PaymentService {
   private static instance: PaymentService;
-  
+
   public static getInstance(): PaymentService {
     if (!PaymentService.instance) {
       PaymentService.instance = new PaymentService();
@@ -26,41 +25,29 @@ export class PaymentService {
     return PaymentService.instance;
   }
 
-  async createSearchPaymentIntent(searchPayment: SearchPayment): Promise<PaymentIntent> {
+  async verifyPSPPayment(payment: PSPPayment): Promise<PaymentResult> {
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/payments/create-search-intent`, {
-        amount: searchPayment.amount,
-        currency: searchPayment.currency,
-        description: searchPayment.description,
-        metadata: {
-          searchQuery: searchPayment.searchQuery,
-          userAddress: searchPayment.userAddress,
-          searchType: 'ai_patent_search'
-        }
+      const response = await axios.post(`${BACKEND_URL}/api/payments/verify-psp-payment`, {
+        userAddress: payment.userAddress,
+        transactionHash: payment.transactionHash,
+        tokenAmount: payment.tokenAmount
       });
 
       return {
-        clientSecret: response.data.clientSecret,
-        paymentIntentId: response.data.paymentIntentId
+        success: response.data.success,
+        creditsAdded: response.data.creditsAdded,
+        totalCredits: response.data.totalCredits
       };
     } catch (error) {
-      console.error('Payment intent creation failed:', error);
-      throw new Error('Failed to create payment intent');
+      console.error('PSP payment verification failed:', error);
+      return {
+        success: false,
+        error: 'Failed to verify PSP payment'
+      };
     }
   }
 
-  async confirmPayment(paymentIntentId: string): Promise<boolean> {
-    try {
-      const response = await axios.post(`${BACKEND_URL}/api/payments/confirm-search-payment`, {
-        paymentIntentId
-      });
 
-      return response.data.success;
-    } catch (error) {
-      console.error('Payment confirmation failed:', error);
-      return false;
-    }
-  }
 
   async getUserSearchCredits(userAddress: string): Promise<number> {
     try {

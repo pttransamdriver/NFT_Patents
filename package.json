@@ -11,6 +11,12 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy.js --network localhost",
+    "deploy-psp": "hardhat run scripts/deployPSP.js --network localhost",
+    "deploy-search-payment": "hardhat run scripts/deploySearchPayment.js --network localhost",
+    "setup-psp-auth": "hardhat run scripts/setupPSPAuthorization.js --network localhost",
+    "deploy-psp-testnet": "hardhat run scripts/deployPSP.js --network sepolia",
+    "deploy-search-payment-testnet": "hardhat run scripts/deploySearchPayment.js --network sepolia",
+    "setup-psp-auth-testnet": "hardhat run scripts/setupPSPAuthorization.js --network sepolia",
     "node": "hardhat node",
     "deploy-pages": "npm run build && gh-pages -d dist"
   },

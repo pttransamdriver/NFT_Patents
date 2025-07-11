@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
 const app = express();
@@ -12,74 +11,45 @@ app.use(express.json());
 
 // In-memory storage for demo (use database in production)
 const userCredits = new Map();
-const paymentIntents = new Map();
+const pspPayments = new Map(); // Track PSP token payments
 
-// Create payment intent for AI search
-app.post('/api/payments/create-search-intent', async (req, res) => {
+// Verify PSP token payment
+app.post('/api/payments/verify-psp-payment', async (req, res) => {
   try {
-    const { amount, currency, description, metadata } = req.body;
+    const { userAddress, transactionHash, tokenAmount } = req.body;
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency,
-      description,
-      metadata,
-      automatic_payment_methods: {
-        enabled: true,
-      },
+    if (!userAddress || !transactionHash || !tokenAmount) {
+      return res.status(400).json({ error: 'Missing required payment data' });
+    }
+
+    // In production, verify the transaction on blockchain
+    // For now, we'll trust the frontend verification
+
+    // Store payment record
+    pspPayments.set(transactionHash, {
+      userAddress,
+      tokenAmount,
+      timestamp: Date.now(),
+      status: 'confirmed'
     });
 
-    // Store payment intent for later confirmation
-    paymentIntents.set(paymentIntent.id, {
-      userAddress: metadata.userAddress,
-      searchQuery: metadata.searchQuery,
-      amount,
-      status: 'pending'
-    });
+    // Add search credits (1 search per 500 PSP tokens)
+    const searchCredits = Math.floor(tokenAmount / 500);
+    const currentCredits = userCredits.get(userAddress) || 0;
+    userCredits.set(userAddress, currentCredits + searchCredits);
 
     res.json({
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id
+      success: true,
+      creditsAdded: searchCredits,
+      totalCredits: userCredits.get(userAddress)
     });
   } catch (error) {
-    console.error('Payment intent creation error:', error);
-    res.status(500).json({ error: 'Failed to create payment intent' });
+    console.error('PSP payment verification error:', error);
+    res.status(500).json({ error: 'Failed to verify PSP payment' });
   }
 });
 
-// Confirm payment and add search credit
-app.post('/api/payments/confirm-search-payment', async (req, res) => {
-  try {
-    const { paymentIntentId } = req.body;
 
-    // Retrieve payment intent from Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    
-    if (paymentIntent.status === 'succeeded') {
-      const storedIntent = paymentIntents.get(paymentIntentId);
-      if (storedIntent) {
-        const userAddress = storedIntent.userAddress;
-        
-        // Add 3 search credits to user account ($15 for 3 searches)
-        const currentCredits = userCredits.get(userAddress) || 0;
-        userCredits.set(userAddress, currentCredits + 3);
-        
-        // Update stored intent status
-        storedIntent.status = 'completed';
-        paymentIntents.set(paymentIntentId, storedIntent);
-        
-        res.json({ success: true, credits: currentCredits + 3 });
-      } else {
-        res.status(404).json({ error: 'Payment intent not found' });
-      }
-    } else {
-      res.status(400).json({ error: 'Payment not completed' });
-    }
-  } catch (error) {
-    console.error('Payment confirmation error:', error);
-    res.status(500).json({ error: 'Failed to confirm payment' });
-  }
-});
 
 // Get user search credits
 app.get('/api/users/:address/search-credits', (req, res) => {
@@ -111,42 +81,33 @@ app.post('/api/users/:address/deduct-credit', (req, res) => {
   }
 });
 
-// Handle crypto payment notification
+// Handle PSP token payment notification (legacy endpoint for compatibility)
 app.post('/api/payments/crypto-payment', async (req, res) => {
   try {
-    const { userAddress, transactionHash, amount, currency, contractAddress } = req.body;
+    const { userAddress, transactionHash, amount, currency } = req.body;
 
-    // In production, you should verify the transaction on-chain
-    // For now, we'll trust the frontend verification
-    console.log('Crypto payment received:', {
+    // Redirect to PSP payment verification
+    if (currency === 'PSP' || currency === 'psp') {
+      return res.redirect(307, '/api/payments/verify-psp-payment');
+    }
+
+    // For backward compatibility, treat other crypto payments as PSP
+    console.log('Legacy crypto payment received, treating as PSP:', {
       userAddress,
       transactionHash,
       amount,
       currency
     });
 
-    // Add 3 search credits to user account
+    // Assume 500 PSP per search for legacy payments
+    const tokenAmount = amount || 500;
+    const searchCredits = Math.floor(tokenAmount / 500);
     const currentCredits = userCredits.get(userAddress.toLowerCase()) || 0;
-    userCredits.set(userAddress.toLowerCase(), currentCredits + 3);
-
-    // Store transaction record (in production, use a database)
-    const transactionRecord = {
-      userAddress: userAddress.toLowerCase(),
-      transactionHash,
-      amount,
-      currency,
-      contractAddress,
-      timestamp: new Date().toISOString(),
-      creditsAdded: 3,
-      status: 'completed'
-    };
-
-    // In production, store this in your database
-    console.log('Transaction recorded:', transactionRecord);
+    userCredits.set(userAddress.toLowerCase(), currentCredits + searchCredits);
 
     res.json({
       success: true,
-      credits: currentCredits + 3,
+      credits: currentCredits + searchCredits,
       transactionHash
     });
 
@@ -156,48 +117,7 @@ app.post('/api/payments/crypto-payment', async (req, res) => {
   }
 });
 
-// Stripe webhook for payment events
-app.post('/api/webhooks/stripe', express.raw({type: 'application/json'}), (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  let event;
 
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Handle the event
-  switch (event.type) {
-    case 'payment_intent.succeeded':
-      const paymentIntent = event.data.object;
-      console.log('Payment succeeded:', paymentIntent.id);
-      
-      // Auto-confirm payment and add credits
-      const storedIntent = paymentIntents.get(paymentIntent.id);
-      if (storedIntent && storedIntent.status === 'pending') {
-        const userAddress = storedIntent.userAddress;
-        const currentCredits = userCredits.get(userAddress) || 0;
-        userCredits.set(userAddress, currentCredits + 3);
-        
-        storedIntent.status = 'completed';
-        paymentIntents.set(paymentIntent.id, storedIntent);
-        
-        console.log(`Added search credit to ${userAddress}`);
-      }
-      break;
-      
-    case 'payment_intent.payment_failed':
-      console.log('Payment failed:', event.data.object.id);
-      break;
-      
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-
-  res.json({received: true});
-});
 
 // Health check
 app.get('/api/health', (req, res) => {

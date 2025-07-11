@@ -1,9 +1,9 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CreditCard, Key, Brain, Shield, Zap, DollarSign, Sparkles, Lock, Wallet } from 'lucide-react';
+import { X, CreditCard, Key, Brain, Shield, Zap, DollarSign, Sparkles, Lock, Wallet, Coins } from 'lucide-react';
 import { useWeb3 } from '../contexts/Web3Context';
 import { paymentService } from '../services/paymentService';
-import { cryptoPaymentService } from '../services/cryptoPaymentService';
+import { pspTokenService, PSPTokenInfo } from '../services/pspTokenService';
 
 interface AISearchModalProps {
   isOpen: boolean;
@@ -23,28 +23,35 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
   const [activeTab, setActiveTab] = useState<'integrated' | 'user-key'>('integrated');
   const [userApiKey, setUserApiKey] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [isProcessingCrypto, setIsProcessingCrypto] = useState(false);
   const [searchCredits, setSearchCredits] = useState(0);
-  const [ethPrice, setEthPrice] = useState<number>(0);
-  const [ethAmount, setEthAmount] = useState<string>('0.000000');
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'crypto'>('crypto');
+  const [pspTokenInfo, setPspTokenInfo] = useState<PSPTokenInfo | null>(null);
+  const [searchPriceInPSP, setSearchPriceInPSP] = useState('500');
   const { account } = useWeb3();
 
   React.useEffect(() => {
     if (isOpen && account) {
       loadSearchCredits();
-      loadETHPrice();
+      loadPSPTokenInfo();
+      loadSearchPrice();
     }
   }, [isOpen, account]);
 
-  const loadETHPrice = async () => {
+  const loadPSPTokenInfo = async () => {
+    if (!account) return;
     try {
-      const price = await cryptoPaymentService.getCurrentETHPrice();
-      setEthPrice(price);
-      const ethAmountForUSD = await cryptoPaymentService.getETHPriceForUSD(15);
-      setEthAmount(cryptoPaymentService.formatETHAmount(ethAmountForUSD));
+      const tokenInfo = await pspTokenService.getTokenInfo(account);
+      setPspTokenInfo(tokenInfo);
     } catch (error) {
-      console.error('Failed to load ETH price:', error);
+      console.error('Failed to load PSP token info:', error);
+    }
+  };
+
+  const loadSearchPrice = async () => {
+    try {
+      const price = await pspTokenService.getSearchPrice();
+      setSearchPriceInPSP(price);
+    } catch (error) {
+      console.error('Failed to load search price:', error);
     }
   };
 
@@ -91,53 +98,35 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
       }
     }
 
-    // Handle new payment based on selected method
-    if (paymentMethod === 'crypto') {
-      await handleCryptoPayment();
-    } else {
-      await handleStripePayment();
-    }
+    // Handle PSP token payment
+    await handlePSPPayment();
   };
 
-  const handleCryptoPayment = async () => {
-    setIsProcessingCrypto(true);
+  const handlePSPPayment = async () => {
+    setIsProcessingPayment(true);
     try {
-      const result = await cryptoPaymentService.payWithMetaMask(account!);
+      // Check PSP token balance first
+      if (!pspTokenInfo || parseFloat(pspTokenInfo.userBalance) < parseFloat(searchPriceInPSP)) {
+        alert(`Insufficient PSP tokens. You need ${searchPriceInPSP} PSP tokens but only have ${pspTokenInfo?.userBalance || '0'} PSP.`);
+        setIsProcessingPayment(false);
+        return;
+      }
+
+      const result = await pspTokenService.payForSearch(account!);
 
       if (result.success) {
-        // Add 3 credits to user account
-        setSearchCredits(prev => prev + 3);
-        alert(`Payment successful! Transaction: ${result.transactionHash?.substring(0, 10)}...`);
+        // Update credits and token info
+        setSearchCredits(prev => prev + (result.creditsAdded || 1));
+        await loadPSPTokenInfo(); // Refresh token balance
+        alert(`Payment successful! You now have ${result.totalCredits} search credits.`);
         onSearchWithPayment();
         onClose();
       } else {
         alert(`Payment failed: ${result.error}`);
       }
     } catch (error) {
-      console.error('Crypto payment failed:', error);
-      alert('Crypto payment failed. Please try again.');
-    } finally {
-      setIsProcessingCrypto(false);
-    }
-  };
-
-  const handleStripePayment = async () => {
-    setIsProcessingPayment(true);
-    try {
-      const paymentIntent = await paymentService.createSearchPaymentIntent({
-        amount: 1500, // $15.00 in cents for 3 searches
-        currency: 'usd',
-        description: `AI Patent Search Package: 3 searches for $15`,
-        searchQuery,
-        userAddress: account!
-      });
-
-      // Redirect to Stripe Checkout
-      window.open(`/payment-checkout?client_secret=${paymentIntent.clientSecret}`, '_blank');
-
-    } catch (error) {
-      console.error('Stripe payment failed:', error);
-      alert('Payment processing failed. Please try again.');
+      console.error('PSP payment failed:', error);
+      alert('PSP payment failed. Please try again.');
     } finally {
       setIsProcessingPayment(false);
     }
@@ -270,68 +259,43 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                       </p>
                     </div>
 
-                    {/* Payment Method Selection */}
-                    <div className="mb-6">
-                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        Choose Payment Method
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          onClick={() => setPaymentMethod('crypto')}
-                          className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                            paymentMethod === 'crypto'
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                              : 'border-gray-200 dark:border-gray-600 hover:border-purple-300'
-                          }`}
-                        >
+                    {/* PSP Token Balance Display */}
+                    {pspTokenInfo && (
+                      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <Wallet className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              MetaMask
+                            <Coins className="w-5 h-5 text-blue-600" />
+                            <span className="text-blue-800 dark:text-blue-200 font-medium">
+                              PSP Token Balance
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {ethAmount} ETH
+                          <span className="text-blue-900 dark:text-blue-100 font-bold">
+                            {parseFloat(pspTokenInfo.userBalance).toLocaleString()} PSP
+                          </span>
+                        </div>
+                        {parseFloat(pspTokenInfo.userBalance) < parseFloat(searchPriceInPSP) && (
+                          <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                            ⚠️ Insufficient balance. You need {searchPriceInPSP} PSP tokens for one search.
                           </div>
-                        </button>
-                        <button
-                          onClick={() => setPaymentMethod('stripe')}
-                          className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                            paymentMethod === 'stripe'
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                              : 'border-gray-200 dark:border-gray-600 hover:border-purple-300'
-                          }`}
-                        >
-                          <div className="flex items-center space-x-2">
-                            <CreditCard className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              Card
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            $15.00 USD
-                          </div>
-                        </button>
+                        )}
                       </div>
-                    </div>
+                    )}
 
                     {/* Pricing */}
                     <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-700">
                       <div className="text-center mb-4">
                         <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">
-                          {paymentMethod === 'crypto' ? `${ethAmount} ETH` : '$15'}
+                          {searchPriceInPSP} PSP
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                          for 3 AI searches
+                          for 1 AI search
                         </div>
                         <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                          Best value • Only {paymentMethod === 'crypto' ? `${(parseFloat(ethAmount) / 3).toFixed(6)} ETH` : '$5'} per search
+                          Premium AI • Only $5.00 USD per search
                         </div>
-                        {paymentMethod === 'crypto' && ethPrice > 0 && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            ≈ $15.00 USD (ETH @ ${ethPrice.toLocaleString()})
-                          </div>
-                        )}
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Patent Search Pennies (PSP) • 1 PSP = $0.01 USD
+                        </div>
                       </div>
 
                       {/* Features */}
@@ -356,15 +320,13 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
 
                       <button
                         onClick={handlePaymentSearch}
-                        disabled={isProcessingPayment || isProcessingCrypto}
+                        disabled={isProcessingPayment || !pspTokenInfo || parseFloat(pspTokenInfo.userBalance) < parseFloat(searchPriceInPSP)}
                         className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
                       >
-                        {(isProcessingPayment || isProcessingCrypto) ? (
+                        {isProcessingPayment ? (
                           <div className="flex items-center justify-center space-x-2">
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>
-                              {isProcessingCrypto ? 'Confirming Transaction...' : 'Processing...'}
-                            </span>
+                            <span>Processing Payment...</span>
                           </div>
                         ) : searchCredits > 0 ? (
                           <div className="flex items-center justify-center space-x-2">
@@ -373,33 +335,27 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                           </div>
                         ) : (
                           <div className="flex items-center justify-center space-x-2">
-                            {paymentMethod === 'crypto' ? (
-                              <>
-                                <Wallet className="w-4 h-4" />
-                                <span>Pay {ethAmount} ETH</span>
-                              </>
-                            ) : (
-                              <>
-                                <CreditCard className="w-4 h-4" />
-                                <span>Pay $15 with Card</span>
-                              </>
-                            )}
+                            <Coins className="w-4 h-4" />
+                            <span>Pay {searchPriceInPSP} PSP</span>
                           </div>
                         )}
                       </button>
 
-                      {/* Payment Method Benefits */}
+                      {/* PSP Token Benefits */}
                       <div className="mt-3 text-center">
-                        {paymentMethod === 'crypto' ? (
-                          <div className="text-xs text-green-600 dark:text-green-400">
-                            ✓ Instant payment • ✓ No processing fees • ✓ Decentralized
-                          </div>
-                        ) : (
-                          <div className="text-xs text-blue-600 dark:text-blue-400">
-                            ✓ Credit/Debit cards • ✓ Secure via Stripe • ✓ No crypto needed
-                          </div>
-                        )}
+                        <div className="text-xs text-green-600 dark:text-green-400">
+                          ✓ Blockchain-native • ✓ No processing fees • ✓ Instant payment
+                        </div>
                       </div>
+
+                      {/* Buy PSP Tokens Link */}
+                      {pspTokenInfo && parseFloat(pspTokenInfo.userBalance) < parseFloat(searchPriceInPSP) && (
+                        <div className="mt-3 text-center">
+                          <div className="text-xs text-blue-600 dark:text-blue-400">
+                            Need more PSP tokens? You can purchase them with ETH in your wallet.
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
