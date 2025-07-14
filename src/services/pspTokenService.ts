@@ -27,13 +27,40 @@ const PSP_TOKEN_ABI = [
   'event TokensPurchased(address indexed buyer, uint256 amount, uint256 ethPaid)'
 ];
 
-// SearchPayment Contract ABI (minimal interface)
+// SearchPayment Contract ABI (enhanced for multi-token support)
 const SEARCH_PAYMENT_ABI = [
+  // Legacy functions
   'function payForSearch() returns (bool)',
   'function getSearchPrice() view returns (uint256)',
   'function getPSPTokenAddress() view returns (address)',
-  'function getUserStats(address user) view returns (uint256 totalPaid, uint256 searchesPurchased)'
+
+  // New multi-token functions
+  'function payWithETH() payable returns (bool)',
+  'function payWithUSDC() returns (bool)',
+  'function payWithPSP() returns (bool)',
+  'function getSearchPrice(uint8 token) view returns (uint256)',
+  'function getAllSearchPrices() view returns (uint256 ethPrice, uint256 usdcPrice, uint256 pspPrice)',
+  'function getTokenAddresses() view returns (address pspAddress, address usdcAddress)',
+  'function getUserStats(address user) view returns (uint256 ethPaid, uint256 usdcPaid, uint256 pspPaid, uint256 searchesPurchased)',
+  'function getUserTokenStats(address user, uint8 token) view returns (uint256 totalPaid)'
 ];
+
+// USDC Contract ABI (minimal interface)
+const USDC_ABI = [
+  'function balanceOf(address owner) view returns (uint256)',
+  'function transfer(address to, uint256 amount) returns (bool)',
+  'function transferFrom(address from, address to, uint256 amount) returns (bool)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function decimals() view returns (uint8)'
+];
+
+// Payment token enum (matches contract)
+export enum PaymentToken {
+  ETH = 0,
+  USDC = 1,
+  PSP = 2
+}
 
 export interface PSPTokenInfo {
   name: string;
@@ -52,13 +79,38 @@ export interface PurchaseResult {
   error?: string;
 }
 
+export interface PaymentResult {
+  success: boolean;
+  transactionHash?: string;
+  paymentMethod?: PaymentToken;
+  amountPaid?: string;
+  searchCredits?: number;
+  error?: string;
+}
+
+export interface MultiTokenPricing {
+  ethPrice: string;
+  usdcPrice: string;
+  pspPrice: string;
+  equivalentUSD: string;
+}
+
+export interface UserPaymentStats {
+  ethPaid: string;
+  usdcPaid: string;
+  pspPaid: string;
+  searchesPurchased: number;
+}
+
 export class PSPTokenService {
   private static instance: PSPTokenService;
   private pspTokenAddress: string;
+  private usdcTokenAddress: string;
   private searchPaymentAddress: string;
 
   constructor() {
     this.pspTokenAddress = import.meta.env.VITE_PSP_TOKEN_ADDRESS || '';
+    this.usdcTokenAddress = import.meta.env.VITE_USDC_TOKEN_ADDRESS || '';
     this.searchPaymentAddress = import.meta.env.VITE_SEARCH_PAYMENT_ADDRESS || '';
   }
 
@@ -274,7 +326,7 @@ export class PSPTokenService {
   }
 
   /**
-   * Get search price in PSP tokens
+   * Get search price in PSP tokens (legacy)
    */
   async getSearchPrice(): Promise<string> {
     try {
@@ -284,12 +336,256 @@ export class PSPTokenService {
 
       const provider = new BrowserProvider(window.ethereum);
       const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, provider);
-      
+
       const price = await contract.getSearchPrice();
       return ethers.formatEther(price);
     } catch (error) {
       console.error('Failed to get search price:', error);
       return '500'; // Default fallback
+    }
+  }
+
+  /**
+   * Get all search prices for different payment methods
+   */
+  async getAllSearchPrices(): Promise<MultiTokenPricing> {
+    try {
+      if (!window.ethereum || !this.searchPaymentAddress) {
+        return {
+          ethPrice: '0.002',
+          usdcPrice: '5',
+          pspPrice: '500',
+          equivalentUSD: '5.00'
+        };
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, provider);
+
+      const [ethPrice, usdcPrice, pspPrice] = await contract.getAllSearchPrices();
+
+      return {
+        ethPrice: ethers.formatEther(ethPrice),
+        usdcPrice: ethers.formatUnits(usdcPrice, 6), // USDC has 6 decimals
+        pspPrice: ethers.formatEther(pspPrice),
+        equivalentUSD: '5.00'
+      };
+    } catch (error) {
+      console.error('Failed to get all search prices:', error);
+      return {
+        ethPrice: '0.002',
+        usdcPrice: '5',
+        pspPrice: '500',
+        equivalentUSD: '5.00'
+      };
+    }
+  }
+
+  /**
+   * Pay for search with ETH
+   */
+  async payWithETH(userAddress: string): Promise<PaymentResult> {
+    try {
+      if (!window.ethereum || !this.searchPaymentAddress) {
+        return { success: false, error: 'MetaMask not available or contract address not configured' };
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
+
+      // Get ETH price
+      const pricing = await this.getAllSearchPrices();
+      const ethAmount = ethers.parseEther(pricing.ethPrice);
+
+      // Check user balance
+      const userBalance = await provider.getBalance(userAddress);
+      if (userBalance < ethAmount) {
+        return { success: false, error: 'Insufficient ETH balance' };
+      }
+
+      // Pay with ETH
+      const transaction = await contract.payWithETH({
+        value: ethAmount,
+        gasLimit: 200000
+      });
+
+      const receipt = await transaction.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.transactionHash,
+        paymentMethod: PaymentToken.ETH,
+        amountPaid: pricing.ethPrice,
+        searchCredits: 1
+      };
+    } catch (error: any) {
+      console.error('ETH payment failed:', error);
+      return { success: false, error: error.message || 'ETH payment failed' };
+    }
+  }
+
+  /**
+   * Pay for search with USDC
+   */
+  async payWithUSDC(userAddress: string): Promise<PaymentResult> {
+    try {
+      if (!window.ethereum || !this.searchPaymentAddress || !this.usdcTokenAddress) {
+        return { success: false, error: 'MetaMask not available or contract addresses not configured' };
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      const usdcContract = new ethers.Contract(this.usdcTokenAddress, USDC_ABI, signer);
+      const searchContract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
+
+      // Get USDC price
+      const pricing = await this.getAllSearchPrices();
+      const usdcAmount = ethers.parseUnits(pricing.usdcPrice, 6); // USDC has 6 decimals
+
+      // Check user balance
+      const userBalance = await usdcContract.balanceOf(userAddress);
+      if (userBalance < usdcAmount) {
+        return { success: false, error: 'Insufficient USDC balance' };
+      }
+
+      // Check allowance
+      const allowance = await usdcContract.allowance(userAddress, this.searchPaymentAddress);
+
+      // Approve USDC if needed
+      if (allowance < usdcAmount) {
+        const approveTransaction = await usdcContract.approve(this.searchPaymentAddress, usdcAmount);
+        await approveTransaction.wait();
+      }
+
+      // Pay with USDC
+      const paymentTransaction = await searchContract.payWithUSDC({
+        gasLimit: 200000
+      });
+
+      const receipt = await paymentTransaction.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.transactionHash,
+        paymentMethod: PaymentToken.USDC,
+        amountPaid: pricing.usdcPrice,
+        searchCredits: 1
+      };
+    } catch (error: any) {
+      console.error('USDC payment failed:', error);
+      return { success: false, error: error.message || 'USDC payment failed' };
+    }
+  }
+
+  /**
+   * Pay for search with PSP tokens
+   */
+  async payWithPSP(userAddress: string): Promise<PaymentResult> {
+    try {
+      if (!window.ethereum || !this.searchPaymentAddress || !this.pspTokenAddress) {
+        return { success: false, error: 'MetaMask not available or contract addresses not configured' };
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      const pspContract = new ethers.Contract(this.pspTokenAddress, PSP_TOKEN_ABI, signer);
+      const searchContract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
+
+      // Get PSP price
+      const pricing = await this.getAllSearchPrices();
+      const pspAmount = ethers.parseEther(pricing.pspPrice);
+
+      // Check user balance
+      const userBalance = await pspContract.balanceOf(userAddress);
+      if (userBalance < pspAmount) {
+        return { success: false, error: 'Insufficient PSP token balance' };
+      }
+
+      // Check allowance
+      const allowance = await pspContract.allowance(userAddress, this.searchPaymentAddress);
+
+      // Approve PSP tokens if needed
+      if (allowance < pspAmount) {
+        const approveTransaction = await pspContract.approve(this.searchPaymentAddress, pspAmount);
+        await approveTransaction.wait();
+      }
+
+      // Pay with PSP
+      const paymentTransaction = await searchContract.payWithPSP({
+        gasLimit: 200000
+      });
+
+      const receipt = await paymentTransaction.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.transactionHash,
+        paymentMethod: PaymentToken.PSP,
+        amountPaid: pricing.pspPrice,
+        searchCredits: 1
+      };
+    } catch (error: any) {
+      console.error('PSP payment failed:', error);
+      return { success: false, error: error.message || 'PSP payment failed' };
+    }
+  }
+
+  /**
+   * Get user payment statistics for all tokens
+   */
+  async getUserPaymentStats(userAddress: string): Promise<UserPaymentStats> {
+    try {
+      if (!window.ethereum || !this.searchPaymentAddress) {
+        return {
+          ethPaid: '0',
+          usdcPaid: '0',
+          pspPaid: '0',
+          searchesPurchased: 0
+        };
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, provider);
+
+      const [ethPaid, usdcPaid, pspPaid, searchesPurchased] = await contract.getUserStats(userAddress);
+
+      return {
+        ethPaid: ethers.formatEther(ethPaid),
+        usdcPaid: ethers.formatUnits(usdcPaid, 6),
+        pspPaid: ethers.formatEther(pspPaid),
+        searchesPurchased: Number(searchesPurchased)
+      };
+    } catch (error) {
+      console.error('Failed to get user payment stats:', error);
+      return {
+        ethPaid: '0',
+        usdcPaid: '0',
+        pspPaid: '0',
+        searchesPurchased: 0
+      };
+    }
+  }
+
+  /**
+   * Get user balance for USDC token
+   */
+  async getUSDCBalance(userAddress: string): Promise<string> {
+    try {
+      if (!window.ethereum || !this.usdcTokenAddress) {
+        return '0';
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const contract = new ethers.Contract(this.usdcTokenAddress, USDC_ABI, provider);
+
+      const balance = await contract.balanceOf(userAddress);
+      return ethers.formatUnits(balance, 6); // USDC has 6 decimals
+    } catch (error) {
+      console.error('Failed to get USDC balance:', error);
+      return '0';
     }
   }
 }

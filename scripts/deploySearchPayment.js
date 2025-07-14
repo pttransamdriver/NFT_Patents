@@ -30,17 +30,43 @@ async function main() {
     throw new Error(`Invalid PSP token address: ${pspTokenAddress}`);
   }
 
+  // Get network info for USDC address
+  const network = await ethers.provider.getNetwork();
+  let usdcTokenAddress;
+
+  if (network.chainId === 31337n) { // localhost
+    // For localhost, we'll use a placeholder USDC address
+    usdcTokenAddress = "0x0000000000000000000000000000000000000001";
+    console.log("⚠️  Using placeholder USDC address for localhost testing");
+  } else if (network.chainId === 11155111n) { // Sepolia
+    usdcTokenAddress = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // USDC on Sepolia
+  } else if (network.chainId === 1n) { // Mainnet
+    usdcTokenAddress = "0xA0b86a33E6441b8C4505B7C0c6b0b8e6C6C6C6C6"; // USDC on Mainnet
+  } else {
+    throw new Error(`Unsupported network: ${network.chainId}`);
+  }
+
   // Get the contract factory
   const SearchPayment = await ethers.getContractFactory("SearchPayment");
 
-  // Set search price: 500 PSP tokens = 500 * 10^18 wei (since PSP has 18 decimals)
+  // Set search prices equivalent to $5.00 USD:
+  const searchPriceInETH = ethers.parseEther("0.002"); // ~$5 at $2500/ETH
+  const searchPriceInUSDC = ethers.parseUnits("5", 6); // $5 USDC (6 decimals)
   const searchPriceInPSP = ethers.parseUnits("500", 18); // 500 PSP tokens
 
-  console.log(`🎯 Search Price: ${ethers.formatUnits(searchPriceInPSP, 18)} PSP tokens`);
-  console.log(`💰 This equals $5.00 USD (500 PSP × $0.01 per PSP)`);
+  console.log("🎯 Multi-Token Search Pricing:");
+  console.log(`   ETH: ${ethers.formatEther(searchPriceInETH)} ETH (~$5.00)`);
+  console.log(`   USDC: ${ethers.formatUnits(searchPriceInUSDC, 6)} USDC`);
+  console.log(`   PSP: ${ethers.formatUnits(searchPriceInPSP, 18)} PSP tokens`);
 
-  // Deploy the contract
-  const searchPayment = await SearchPayment.deploy(pspTokenAddress, searchPriceInPSP);
+  // Deploy the enhanced contract with multi-token support
+  const searchPayment = await SearchPayment.deploy(
+    pspTokenAddress,
+    usdcTokenAddress,
+    searchPriceInETH,
+    searchPriceInUSDC,
+    searchPriceInPSP
+  );
   await searchPayment.waitForDeployment();
 
   const contractAddress = await searchPayment.getAddress();
@@ -55,17 +81,20 @@ async function main() {
   console.log(`💎 Deployer Balance: ${ethers.formatEther(deployerBalance)} ETH`);
   console.log(`🏭 Contract Address: ${contractAddress}`);
   console.log(`🪙 PSP Token Address: ${pspTokenAddress}`);
-  console.log(`💲 Search Price: ${ethers.formatUnits(searchPriceInPSP, 18)} PSP`);
+  console.log(`💵 USDC Token Address: ${usdcTokenAddress}`);
 
   // Verify contract details
   try {
-    const pspToken = await searchPayment.getPSPTokenAddress();
-    const searchPrice = await searchPayment.getSearchPrice();
+    const [pspAddress, usdcAddress] = await searchPayment.getTokenAddresses();
+    const [ethPrice, usdcPrice, pspPrice] = await searchPayment.getAllSearchPrices();
     const searchesPerPayment = await searchPayment.getSearchesPerPayment();
 
     console.log("\n🔍 Contract Verification:");
-    console.log(`✅ PSP Token: ${pspToken}`);
-    console.log(`✅ Search Price: ${ethers.formatUnits(searchPrice, 18)} PSP`);
+    console.log(`✅ PSP Token: ${pspAddress}`);
+    console.log(`✅ USDC Token: ${usdcAddress}`);
+    console.log(`✅ ETH Price: ${ethers.formatEther(ethPrice)} ETH`);
+    console.log(`✅ USDC Price: ${ethers.formatUnits(usdcPrice, 6)} USDC`);
+    console.log(`✅ PSP Price: ${ethers.formatUnits(pspPrice, 18)} PSP`);
     console.log(`✅ Searches Per Payment: ${searchesPerPayment}`);
     console.log(`✅ Contract Owner: ${await searchPayment.owner()}`);
   } catch (error) {
@@ -104,18 +133,27 @@ async function main() {
   console.log(`   VITE_SEARCH_PAYMENT_ADDRESS=${contractAddress}`);
   console.log("2. Authorize the SearchPayment contract to spend PSP tokens:");
   console.log(`   pspToken.setAuthorizedSpender("${contractAddress}", true)`);
-  console.log("3. Test the complete payment flow on testnet");
-  console.log("4. Verify both contracts on Etherscan");
+  console.log("3. Test all payment methods (ETH, USDC, PSP)");
+  console.log("4. Verify contracts on Etherscan");
+  console.log("\n💰 Payment Methods Available:");
+  console.log("   - payWithETH(): Direct Ethereum payments");
+  console.log("   - payWithUSDC(): Stablecoin payments");
+  console.log("   - payWithPSP(): Native platform tokens");
 
   // Save deployment info to file
   const deploymentInfo = {
     network: networkName,
     contractAddress: contractAddress,
     pspTokenAddress: pspTokenAddress,
+    usdcTokenAddress: usdcTokenAddress,
     deployerAddress: deployer.address,
     deploymentTime: new Date().toISOString(),
-    searchPriceInPSP: searchPriceInPSP.toString(),
-    searchPriceInUSD: "5.00",
+    pricing: {
+      ethPrice: searchPriceInETH.toString(),
+      usdcPrice: searchPriceInUSDC.toString(),
+      pspPrice: searchPriceInPSP.toString(),
+      equivalentUSD: "5.00"
+    },
     searchesPerPayment: 1,
     transactionHash: searchPayment.deploymentTransaction()?.hash
   };
@@ -145,13 +183,19 @@ async function main() {
       },
       SearchPayment: {
         address: contractAddress,
-        searchPrice: "500 PSP",
-        searchPriceUSD: "$5.00"
+        supportedTokens: ["ETH", "USDC", "PSP"],
+        pricing: {
+          eth: "0.002 ETH",
+          usdc: "5 USDC",
+          psp: "500 PSP",
+          equivalentUSD: "$5.00"
+        }
       }
     },
     environmentVariables: {
       VITE_PSP_TOKEN_ADDRESS: pspTokenAddress,
-      VITE_SEARCH_PAYMENT_ADDRESS: contractAddress
+      VITE_SEARCH_PAYMENT_ADDRESS: contractAddress,
+      VITE_USDC_TOKEN_ADDRESS: usdcTokenAddress
     }
   };
 
