@@ -1,0 +1,19 @@
+{
+  "filter_paths": [
+    "node_modules",
+    "test",
+    "scripts"
+  ],
+  "detectors_to_exclude": [
+    "pragma",
+    "solc-version",
+    "low-level-calls"
+  ],
+  "exclude_informational": false,
+  "exclude_low": false,
+  "exclude_medium": false,
+  "exclude_high": false,
+  "exclude_optimization": true,
+  "json": "slither-report.json",
+  "sarif": "slither-report.sarif"
+}
