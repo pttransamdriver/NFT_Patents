@@ -98,7 +98,7 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
       }
     }
 
-    // Handle PSP token payment
+    // Handle PSP token payment (default payment method)
     await handlePSPPayment();
   };
 
@@ -112,11 +112,11 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
         return;
       }
 
-      const result = await pspTokenService.payForSearch(account!);
+      const result = await pspTokenService.payWithPSP(account!);
 
       if (result.success) {
         // Update credits and token info
-        setSearchCredits(prev => prev + (result.creditsAdded || 1));
+        setSearchCredits(result.totalCredits || 1);
         await loadPSPTokenInfo(); // Refresh token balance
         alert(`Payment successful! You now have ${result.totalCredits} search credits.`);
         onSearchWithPayment();
@@ -127,6 +127,50 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
     } catch (error) {
       console.error('PSP payment failed:', error);
       alert('PSP payment failed. Please try again.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handleETHPayment = async () => {
+    setIsProcessingPayment(true);
+    try {
+      const result = await paymentService.payWithETH(account!);
+
+      if (result.success) {
+        setSearchCredits(result.totalCredits || 1);
+        await loadPSPTokenInfo(); // Refresh balances
+        alert(`ETH payment successful! You now have ${result.totalCredits} search credits.`);
+        onSearchWithPayment();
+        onClose();
+      } else {
+        alert(`ETH payment failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('ETH payment failed:', error);
+      alert('ETH payment failed. Please try again.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handleUSDCPayment = async () => {
+    setIsProcessingPayment(true);
+    try {
+      const result = await paymentService.payWithUSDC(account!);
+
+      if (result.success) {
+        setSearchCredits(result.totalCredits || 1);
+        await loadPSPTokenInfo(); // Refresh balances
+        alert(`USDC payment successful! You now have ${result.totalCredits} search credits.`);
+        onSearchWithPayment();
+        onClose();
+      } else {
+        alert(`USDC payment failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('USDC payment failed:', error);
+      alert('USDC payment failed. Please try again.');
     } finally {
       setIsProcessingPayment(false);
     }
@@ -318,33 +362,92 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                         </div>
                       </div>
 
-                      <button
-                        onClick={handlePaymentSearch}
-                        disabled={isProcessingPayment || !pspTokenInfo || parseFloat(pspTokenInfo.userBalance) < parseFloat(searchPriceInPSP)}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-                      >
-                        {isProcessingPayment ? (
-                          <div className="flex items-center justify-center space-x-2">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>Processing Payment...</span>
-                          </div>
-                        ) : searchCredits > 0 ? (
-                          <div className="flex items-center justify-center space-x-2">
-                            <Zap className="w-4 h-4" />
-                            <span>Use Search Credit</span>
-                          </div>
+                      {/* Payment Options */}
+                      <div className="space-y-3">
+                        {searchCredits > 0 ? (
+                          <button
+                            onClick={handlePaymentSearch}
+                            disabled={isProcessingPayment}
+                            className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                          >
+                            {isProcessingPayment ? (
+                              <div className="flex items-center justify-center space-x-2">
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>Using Credit...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center space-x-2">
+                                <Zap className="w-4 h-4" />
+                                <span>Use Search Credit</span>
+                              </div>
+                            )}
+                          </button>
                         ) : (
-                          <div className="flex items-center justify-center space-x-2">
-                            <Coins className="w-4 h-4" />
-                            <span>Pay {searchPriceInPSP} PSP</span>
-                          </div>
-                        )}
-                      </button>
+                          <>
+                            {/* PSP Payment */}
+                            <button
+                              onClick={handlePSPPayment}
+                              disabled={isProcessingPayment || !pspTokenInfo || parseFloat(pspTokenInfo.userBalance) < parseFloat(searchPriceInPSP)}
+                              className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                            >
+                              {isProcessingPayment ? (
+                                <div className="flex items-center justify-center space-x-2">
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  <span>Processing PSP Payment...</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center space-x-2">
+                                  <Coins className="w-4 h-4" />
+                                  <span>Pay {searchPriceInPSP} PSP</span>
+                                </div>
+                              )}
+                            </button>
 
-                      {/* PSP Token Benefits */}
+                            {/* ETH Payment */}
+                            <button
+                              onClick={handleETHPayment}
+                              disabled={isProcessingPayment}
+                              className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                            >
+                              {isProcessingPayment ? (
+                                <div className="flex items-center justify-center space-x-2">
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  <span>Processing ETH Payment...</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center space-x-2">
+                                  <DollarSign className="w-4 h-4" />
+                                  <span>Pay with ETH</span>
+                                </div>
+                              )}
+                            </button>
+
+                            {/* USDC Payment */}
+                            <button
+                              onClick={handleUSDCPayment}
+                              disabled={isProcessingPayment}
+                              className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                            >
+                              {isProcessingPayment ? (
+                                <div className="flex items-center justify-center space-x-2">
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  <span>Processing USDC Payment...</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center space-x-2">
+                                  <DollarSign className="w-4 h-4" />
+                                  <span>Pay with USDC</span>
+                                </div>
+                              )}
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Web3 Payment Benefits */}
                       <div className="mt-3 text-center">
                         <div className="text-xs text-green-600 dark:text-green-400">
-                          ✓ Blockchain-native • ✓ No processing fees • ✓ Instant payment
+                          ✓ Fully decentralized • ✓ No middlemen • ✓ Instant settlement
                         </div>
                       </div>
 

@@ -1,21 +1,31 @@
 {
   "network": "localhost",
-  "deploymentTime": "2025-07-11T18:27:37.000Z",
+  "deploymentTime": "2025-07-15T00:42:02.357Z",
   "contracts": {
     "PSPToken": {
-      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
       "name": "Patent Search Pennies",
       "symbol": "PSP",
       "decimals": 18
     },
     "SearchPayment": {
-      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-      "searchPrice": "500 PSP",
-      "searchPriceUSD": "$5.00"
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "supportedTokens": [
+        "ETH",
+        "USDC",
+        "PSP"
+      ],
+      "pricing": {
+        "eth": "0.002 ETH",
+        "usdc": "5 USDC",
+        "psp": "500 PSP",
+        "equivalentUSD": "$5.00"
+      }
     }
   },
   "environmentVariables": {
-    "VITE_PSP_TOKEN_ADDRESS": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-    "VITE_SEARCH_PAYMENT_ADDRESS": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+    "VITE_PSP_TOKEN_ADDRESS": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "VITE_SEARCH_PAYMENT_ADDRESS": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    "VITE_USDC_TOKEN_ADDRESS": "0x0000000000000000000000000000000000000001"
   }
 }
