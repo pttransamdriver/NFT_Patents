@@ -5,7 +5,8 @@ export default defineConfig({
   plugins: [react()],
   base: '/NFT_Patents/',
   build: {
-    outDir: 'docs'
+    outDir: 'docs',
+    copyPublicDir: true
   },
   server: {
     port: 5173,

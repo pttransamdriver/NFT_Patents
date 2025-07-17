@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PatentNFT - USPTO Patent NFT Marketplace</title>
     <meta name="description" content="The premier marketplace for USPTO patent NFTs. Discover, mint, and trade patent NFTs with AI-powered search." />
+    <script>
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect.replace('/NFT_Patents', '/NFT_Patents/#'));
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
