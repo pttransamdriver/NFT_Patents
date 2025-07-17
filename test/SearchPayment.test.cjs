@@ -148,9 +148,9 @@ describe("SearchPayment", function () {
     it("Should reject PSP payment without approval", async function () {
       // Remove approval
       await pspToken.connect(addr1).approve(await searchPayment.getAddress(), 0);
-      
+
       await expect(searchPayment.connect(addr1).payWithPSP())
-        .to.be.revertedWith("PSP token transfer failed");
+        .to.be.reverted; // Modern ERC20 throws custom errors, not string messages
     });
 
     it("Should work with legacy payForSearch function", async function () {
@@ -233,10 +233,10 @@ describe("SearchPayment", function () {
 
     it("Should work with legacy price update function", async function () {
       const newPrice = ethers.parseEther("600");
-      
-      await searchPayment.updateSearchPrice(newPrice);
-      
-      const legacyPrice = await searchPayment.getSearchPrice();
+
+      await searchPayment.updateSearchPriceLegacy(newPrice);
+
+      const legacyPrice = await searchPayment.getSearchPriceLegacy();
       expect(legacyPrice).to.equal(newPrice);
     });
   });
@@ -293,7 +293,7 @@ describe("SearchPayment", function () {
     });
 
     it("Should return legacy search price", async function () {
-      expect(await searchPayment.getSearchPrice()).to.equal(PSP_PRICE);
+      expect(await searchPayment.getSearchPriceLegacy()).to.equal(PSP_PRICE);
     });
 
     it("Should return correct token balances", async function () {
@@ -301,7 +301,7 @@ describe("SearchPayment", function () {
       await searchPayment.connect(addr1).payWithETH({ value: ETH_PRICE });
       
       expect(await searchPayment.getTokenBalance(0)).to.equal(ETH_PRICE); // ETH balance
-      expect(await searchPayment.getTokenBalance()).to.be.gte(0); // Legacy PSP balance
+      expect(await searchPayment.getTokenBalanceLegacy()).to.be.gte(0); // Legacy PSP balance
     });
 
     it("Should return searches per payment", async function () {

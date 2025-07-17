@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers, BrowserProvider, JsonRpcSigner } from 'ethers';
+import { isMetaMaskInstalled, promptMetaMaskInstall } from '../utils/metamask';
 
 interface Web3ContextType {
   provider: BrowserProvider | null;
@@ -29,7 +30,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
   const connectWallet = async () => {
-    if (window.ethereum) {
+    if (isMetaMaskInstalled()) {
       try {
         // Request account access
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -46,6 +47,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("Error connecting to wallet:", error);
       }
     } else {
+      promptMetaMaskInstall();
       alert("Please install MetaMask or another Ethereum wallet extension");
     }
   };

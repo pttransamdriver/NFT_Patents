@@ -196,7 +196,7 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
      * @dev Legacy function - returns PSP price for backward compatibility
      * @return Current price in PSP tokens for 1 search
      */
-    function getSearchPrice() external view returns (uint256) {
+    function getSearchPriceLegacy() external view returns (uint256) {
         return searchPriceInPSP;
     }
 
@@ -252,7 +252,7 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
      * @dev Legacy function - update PSP price for backward compatibility
      * @param _newPrice New price in PSP tokens
      */
-    function updateSearchPrice(uint256 _newPrice) external onlyOwner {
+    function updateSearchPriceLegacy(uint256 _newPrice) external onlyOwner {
         require(_newPrice > 0, "Price must be greater than 0");
 
         uint256 oldPrice = searchPriceInPSP;
@@ -380,7 +380,7 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
      * @dev Legacy function - get PSP token balance for backward compatibility
      * @return Contract PSP token balance
      */
-    function getTokenBalance() external view returns (uint256) {
+    function getTokenBalanceLegacy() external view returns (uint256) {
         return pspToken.balanceOf(address(this));
     }
 

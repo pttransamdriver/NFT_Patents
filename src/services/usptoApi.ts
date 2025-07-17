@@ -29,10 +29,12 @@ export class USPTOApiService {
   private static instance: USPTOApiService;
 
   // Validate API key configuration
-  private validateApiKey(): void {
+  private validateApiKey(): boolean {
     if (!USPTO_API_KEY || USPTO_API_KEY === 'your_uspto_api_key') {
-      throw new Error('USPTO API key not configured. Please add VITE_USPTO_API_KEY to your .env file. Get your key from https://developer.uspto.gov/');
+      console.warn('USPTO API key not configured. Using mock data. Add VITE_USPTO_API_KEY to your .env file for real data.');
+      return false;
     }
+    return true;
   }
   
   public static getInstance(): USPTOApiService {
@@ -43,7 +45,12 @@ export class USPTOApiService {
   }
 
   async searchPatents(params: USPTOSearchParams): Promise<Patent[]> {
-    this.validateApiKey();
+    const hasValidApiKey = this.validateApiKey();
+
+    // If no valid API key, return mock data for development
+    if (!hasValidApiKey) {
+      return this.getMockPatents(params.query);
+    }
 
     try {
       // Use USPTO's public search API

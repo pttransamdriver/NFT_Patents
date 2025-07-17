@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { usptoApi } from '../services/usptoApi';
 import { aiSearchService } from '../services/aiSearchService';
 import { mintingService } from '../services/mintingService';
-import { useWallet } from '../contexts/WalletContext';
+import { useWeb3 } from '../contexts/Web3Context';
 import AISearchModal from '../components/AISearchModal';
 import type { Patent } from '../types';
 
@@ -21,7 +21,7 @@ const PatentSearchPage: React.FC = () => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [pendingAIQuery, setPendingAIQuery] = useState<string>('');
   const [mintingPatent, setMintingPatent] = useState<string | null>(null);
-  const { isConnected, address } = useWallet();
+  const { isConnected, account: address } = useWeb3();
 
   const aiSuggestions = [
     "Find patents about renewable energy from 2020-2023",

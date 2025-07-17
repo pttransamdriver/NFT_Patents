@@ -31,9 +31,15 @@ export class AISearchService {
   }
 
   async convertNaturalLanguageToSearch(request: AISearchRequest): Promise<AISearchResponse> {
+    // Check if API key is available
+    if (!OPENAI_API_KEY || OPENAI_API_KEY === 'your_openai_api_key_here') {
+      console.warn('OpenAI API key not configured. Using fallback search conversion.');
+      return this.getFallbackSearchResponse(request.naturalLanguageQuery);
+    }
+
     try {
       const prompt = this.buildSearchPrompt(request.naturalLanguageQuery);
-      
+
       const response = await axios.post(
         `${OPENAI_BASE_URL}/chat/completions`,
         {
@@ -196,6 +202,42 @@ Format your response as JSON:
     }
   }
 
+  private getFallbackSearchResponse(query: string): AISearchResponse {
+    const lowerQuery = query.toLowerCase();
+    let searchTerms = query;
+    let explanation = 'Using basic keyword matching';
+    let confidence = 60;
+
+    // Simple rule-based conversion
+    if (lowerQuery.includes('renewable energy') || lowerQuery.includes('solar') || lowerQuery.includes('wind')) {
+      searchTerms = 'renewable energy OR solar OR wind OR photovoltaic';
+      explanation = 'Converted to renewable energy search terms';
+      confidence = 75;
+    } else if (lowerQuery.includes('ai') || lowerQuery.includes('artificial intelligence') || lowerQuery.includes('machine learning')) {
+      searchTerms = 'artificial intelligence OR machine learning OR neural network';
+      explanation = 'Converted to AI/ML search terms';
+      confidence = 75;
+    } else if (lowerQuery.includes('battery') || lowerQuery.includes('energy storage')) {
+      searchTerms = 'battery OR energy storage OR lithium';
+      explanation = 'Converted to battery technology search terms';
+      confidence = 75;
+    } else if (lowerQuery.includes('quantum')) {
+      searchTerms = 'quantum computing OR quantum';
+      explanation = 'Converted to quantum technology search terms';
+      confidence = 75;
+    } else if (lowerQuery.includes('medical') || lowerQuery.includes('healthcare')) {
+      searchTerms = 'medical OR healthcare OR diagnostic';
+      explanation = 'Converted to medical technology search terms';
+      confidence = 75;
+    }
+
+    return {
+      searchTerms,
+      explanation,
+      confidence
+    };
+  }
+
   private fallbackSuggestions(partialQuery: string): string[] {
     const suggestions = [
       'Find renewable energy patents from 2020-2024',
@@ -204,8 +246,8 @@ Format your response as JSON:
       'Find quantum computing patents',
       'Medical device patents with FDA approval'
     ];
-    
-    return suggestions.filter(s => 
+
+    return suggestions.filter(s =>
       s.toLowerCase().includes(partialQuery.toLowerCase())
     ).slice(0, 5);
   }
