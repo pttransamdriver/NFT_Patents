@@ -1,10 +1,10 @@
 {
   "network": "localhost",
-  "contractAddress": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-  "pspTokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "contractAddress": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  "pspTokenAddress": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
   "usdcTokenAddress": "0x0000000000000000000000000000000000000001",
   "deployerAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "deploymentTime": "2025-07-15T00:42:02.357Z",
+  "deploymentTime": "2025-08-10T02:07:08.388Z",
   "pricing": {
     "ethPrice": "2000000000000000",
     "usdcPrice": "5000000",
@@ -12,5 +12,5 @@
     "equivalentUSD": "5.00"
   },
   "searchesPerPayment": 1,
-  "transactionHash": "0x9d34956acea2e88950188be084fd70ef0d0a821c2ba1baa8eea8aa2e370e99e1"
+  "transactionHash": "0x0ef49780d16482f195f63136f38ec08395ff48e271d4d2b29551136d4b5f8f77"
 }

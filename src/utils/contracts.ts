@@ -1,12 +1,43 @@
 import { ethers, BrowserProvider, JsonRpcSigner, Contract } from 'ethers';
 import toast from 'react-hot-toast';
 
-// Import contract ABIs
-import PatentNFTAbi from '../../artifacts/contracts/PatentNFT.sol/PatentNFT.json';
-import contractAddresses from '../contracts/contract-address.json';
+// Import contract ABIs - using dynamic imports to avoid Vite issues
+let PatentNFTAbi: any = null;
+let contractAddresses: any = null;
+
+// Load contract artifacts dynamically
+const loadContractArtifacts = async () => {
+  if (!PatentNFTAbi) {
+    try {
+      PatentNFTAbi = await import('../../artifacts/contracts/PatentNFT.sol/PatentNFT.json');
+    } catch (error) {
+      console.error('Failed to load PatentNFT ABI:', error);
+      // Fallback ABI for basic functionality
+      PatentNFTAbi = { abi: [] };
+    }
+  }
+
+  if (!contractAddresses) {
+    try {
+      contractAddresses = await import('../contracts/contract-address.json');
+    } catch (error) {
+      console.error('Failed to load contract addresses:', error);
+      // Use environment variables as fallback
+      contractAddresses = {
+        default: {
+          PatentNFT: import.meta.env.VITE_PATENT_NFT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+        }
+      };
+    }
+  }
+};
 
 // Contract addresses from deployment
-const CONTRACT_ADDRESSES = contractAddresses;
+const getContractAddresses = () => {
+  return contractAddresses?.default || contractAddresses || {
+    PatentNFT: import.meta.env.VITE_PATENT_NFT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+  };
+};
 
 export interface PatentNFTContract extends Contract {
   mintPatentNFT(to: string, patentTitle: string, patentNumber: string, inventor: string, overrides?: any): Promise<ethers.ContractTransaction>;
@@ -18,12 +49,15 @@ export interface PatentNFTContract extends Contract {
   tokenURI(tokenId: bigint): Promise<string>;
 }
 
-export const getPatentNFTContract = (
+export const getPatentNFTContract = async (
   providerOrSigner: BrowserProvider | JsonRpcSigner
-): PatentNFTContract => {
+): Promise<PatentNFTContract> => {
+  await loadContractArtifacts();
+  const addresses = getContractAddresses();
+
   return new Contract(
-    CONTRACT_ADDRESSES.PatentNFT,
-    PatentNFTAbi.abi,
+    addresses.PatentNFT,
+    PatentNFTAbi.abi || PatentNFTAbi.default?.abi || [],
     providerOrSigner
   ) as PatentNFTContract;
 };
@@ -37,7 +71,7 @@ export const mintPatentNFT = async (
   }
 ): Promise<{ success: boolean; tokenId?: string; transactionHash?: string; error?: string }> => {
   try {
-    const contract = getPatentNFTContract(signer);
+    const contract = await getPatentNFTContract(signer);
     const userAddress = await signer.getAddress();
 
     // Check if patent already exists
@@ -120,7 +154,7 @@ export const mintPatentNFT = async (
 
 export const getMintingPrice = async (provider: BrowserProvider): Promise<string> => {
   try {
-    const contract = getPatentNFTContract(provider);
+    const contract = await getPatentNFTContract(provider);
     const price = await contract.getMintingPrice();
     return ethers.formatEther(price);
   } catch (error) {
@@ -131,7 +165,7 @@ export const getMintingPrice = async (provider: BrowserProvider): Promise<string
 
 export const checkPatentExists = async (provider: BrowserProvider, patentNumber: string): Promise<boolean> => {
   try {
-    const contract = getPatentNFTContract(provider);
+    const contract = await getPatentNFTContract(provider);
     return await contract.patentExists(patentNumber);
   } catch (error) {
     console.error('Error checking patent existence:', error);
@@ -141,7 +175,7 @@ export const checkPatentExists = async (provider: BrowserProvider, patentNumber:
 
 export const getUserNFTs = async (signer: JsonRpcSigner, userAddress: string): Promise<any[]> => {
   try {
-    const contract = getPatentNFTContract(signer);
+    const contract = await getPatentNFTContract(signer);
     const balance = await contract.balanceOf(userAddress);
     const nfts = [];
 
@@ -166,4 +200,4 @@ export const getUserNFTs = async (signer: JsonRpcSigner, userAddress: string): P
   }
 };
 
-export { CONTRACT_ADDRESSES };
+export { getContractAddresses as CONTRACT_ADDRESSES };

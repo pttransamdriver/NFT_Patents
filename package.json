@@ -29,6 +29,7 @@
     "deploy-psp-testnet": "hardhat run scripts/deployPSP.js --network sepolia",
     "deploy-search-payment-testnet": "hardhat run scripts/deploySearchPayment.js --network sepolia",
     "setup-psp-auth-testnet": "hardhat run scripts/setupPSPAuthorization.js --network sepolia",
+    "deploy-sepolia": "hardhat run scripts/deploySepolia.js --network sepolia",
     "node": "hardhat node",
     "deploy-pages": "npm run build && gh-pages -d docs"
   },
