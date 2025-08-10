@@ -1,10 +1,11 @@
 // We import the Hardhat Runtime Environment explicitly here. This is optional
 // but useful for running the script in a standalone fashion through `node <script>`.
-import { ethers } from "hardhat";
+import hre from "hardhat";
 import fs from "fs";
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
+const { ethers } = hre;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

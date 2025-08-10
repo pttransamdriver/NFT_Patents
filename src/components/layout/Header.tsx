@@ -8,12 +8,7 @@ import { useWeb3 } from '../../contexts/Web3Context';
 const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
-  const { isConnected, account, connectWallet } = useWeb3();
-  
-  const disconnectWallet = () => {
-    // For now, just reload the page to disconnect
-    window.location.reload();
-  };
+  const { isConnected, account, connectWallet, disconnectWallet, isConnecting } = useWeb3();
   const location = useLocation();
 
   const navigation = [
@@ -90,10 +85,20 @@ const Header: React.FC = () => {
             ) : (
               <button
                 onClick={connectWallet}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+                disabled={isConnecting}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200"
               >
-                <Wallet className="w-4 h-4" />
-                <span>Connect Wallet</span>
+                {isConnecting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-4 h-4" />
+                    <span>Connect Wallet</span>
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -161,10 +166,20 @@ const Header: React.FC = () => {
                 ) : (
                   <button
                     onClick={connectWallet}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
+                    disabled={isConnecting}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200"
                   >
-                    <Wallet className="w-4 h-4" />
-                    <span>Connect</span>
+                    {isConnecting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Connecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="w-4 h-4" />
+                        <span>Connect</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>

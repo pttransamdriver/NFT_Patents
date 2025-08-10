@@ -118,7 +118,7 @@ const HomePage: React.FC = () => {
               Why Choose PatentNFT?
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Revolutionary Decentalized Intellectual Property. 
+              Revolutionary Decentralized Marketplace for Intellectual Property. 
               Our features make patent trading accessible, secure, and profitable.
               Join us in redefining global patent ownership and innovation!
             </p>

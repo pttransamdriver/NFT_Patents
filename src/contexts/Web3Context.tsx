@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers, BrowserProvider, JsonRpcSigner } from 'ethers';
-import { isMetaMaskInstalled, promptMetaMaskInstall } from '../utils/metamask';
+import { isMetaMaskInstalled, isEthereumWalletAvailable, getWalletName, promptMetaMaskInstall } from '../utils/metamask';
+import toast from 'react-hot-toast';
 
 interface Web3ContextType {
   provider: BrowserProvider | null;
@@ -8,7 +9,10 @@ interface Web3ContextType {
   account: string | null;
   chainId: number | null;
   connectWallet: () => Promise<void>;
+  disconnectWallet: () => void;
   isConnected: boolean;
+  isConnecting: boolean;
+  switchToLocalNetwork: () => Promise<void>;
 }
 
 const Web3Context = createContext<Web3ContextType>({
@@ -17,7 +21,10 @@ const Web3Context = createContext<Web3ContextType>({
   account: null,
   chainId: null,
   connectWallet: async () => {},
+  disconnectWallet: () => {},
   isConnected: false,
+  isConnecting: false,
+  switchToLocalNetwork: async () => {},
 });
 
 export const useWeb3 = () => useContext(Web3Context);
@@ -28,27 +35,137 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   const [account, setAccount] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
 
   const connectWallet = async () => {
-    if (isMetaMaskInstalled()) {
-      try {
-        // Request account access
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const browserProvider = new BrowserProvider(window.ethereum);
-        const web3Signer = await browserProvider.getSigner();
-        const network = await browserProvider.getNetwork();
-        
-        setProvider(browserProvider);
-        setSigner(web3Signer);
-        setAccount(accounts[0]);
-        setChainId(Number(network.chainId));
-        setIsConnected(true);
-      } catch (error) {
-        console.error("Error connecting to wallet:", error);
-      }
-    } else {
+    // Prevent multiple simultaneous connection attempts
+    if (isConnecting) {
+      toast.error('Connection already in progress...');
+      return;
+    }
+
+    // Check if already connected
+    if (isConnected) {
+      toast.success('Wallet already connected!');
+      return;
+    }
+
+    // Check if any Ethereum wallet is available
+    if (!isEthereumWalletAvailable()) {
+      toast.error('No Ethereum wallet detected. Please install MetaMask or another Ethereum wallet.');
       promptMetaMaskInstall();
-      alert("Please install MetaMask or another Ethereum wallet extension");
+      return;
+    }
+
+    // Prefer MetaMask but allow other wallets
+    const walletName = getWalletName();
+    if (!isMetaMaskInstalled() && walletName !== 'Unknown Wallet') {
+      toast.loading(`Connecting to ${walletName}...`, { duration: 1000 });
+    }
+
+    setIsConnecting(true);
+    
+    try {
+      // Show loading state
+      const loadingToast = toast.loading('Connecting to wallet...');
+      
+      // Request account access
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      
+      if (!accounts || accounts.length === 0) {
+        toast.dismiss(loadingToast);
+        toast.error('No accounts found. Please check your wallet.');
+        return;
+      }
+
+      // Initialize provider and signer
+      const browserProvider = new BrowserProvider(window.ethereum);
+      const web3Signer = await browserProvider.getSigner();
+      const network = await browserProvider.getNetwork();
+      
+      // Update state
+      setProvider(browserProvider);
+      setSigner(web3Signer);
+      setAccount(accounts[0]);
+      setChainId(Number(network.chainId));
+      setIsConnected(true);
+      
+      // Success feedback
+      toast.dismiss(loadingToast);
+      toast.success('Wallet connected successfully!');
+      
+    } catch (error: any) {
+      console.error('Error connecting to wallet:', error);
+      
+      // Handle specific error types
+      if (error.code === 4001) {
+        toast.error('Connection rejected by user');
+      } else if (error.code === -32002) {
+        toast.error('Connection request already pending. Please check MetaMask.');
+      } else if (error.message?.includes('User denied')) {
+        toast.error('Connection denied. Please approve the request in your wallet.');
+      } else {
+        toast.error('Failed to connect wallet. Please try again.');
+      }
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const disconnectWallet = () => {
+    // Clear all wallet state
+    setProvider(null);
+    setSigner(null);
+    setAccount(null);
+    setChainId(null);
+    setIsConnected(false);
+    setIsConnecting(false);
+    
+    toast.success('Wallet disconnected successfully!');
+  };
+
+  const switchToLocalNetwork = async () => {
+    if (!window.ethereum) {
+      toast.error('No Ethereum wallet detected');
+      return;
+    }
+
+    try {
+      // Try to switch to local network (chainId 31337)
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x7A69' }], // 31337 in hex
+      });
+      toast.success('Switched to local network!');
+    } catch (error: any) {
+      console.error('Error switching network:', error);
+      
+      // If network doesn't exist, add it
+      if (error.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: '0x7A69', // 31337 in hex
+                chainName: 'Hardhat Local',
+                rpcUrls: ['http://127.0.0.1:8545'],
+                nativeCurrency: {
+                  name: 'Ether',
+                  symbol: 'ETH',
+                  decimals: 18,
+                },
+              },
+            ],
+          });
+          toast.success('Added and switched to local network!');
+        } catch (addError) {
+          console.error('Error adding network:', addError);
+          toast.error('Failed to add local network');
+        }
+      } else {
+        toast.error('Failed to switch network');
+      }
     }
   };
 
@@ -117,7 +234,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <Web3Context.Provider value={{ provider, signer, account, chainId, connectWallet, isConnected }}>
+    <Web3Context.Provider value={{ provider, signer, account, chainId, connectWallet, disconnectWallet, isConnected, isConnecting, switchToLocalNetwork }}>
       {children}
     </Web3Context.Provider>
   );

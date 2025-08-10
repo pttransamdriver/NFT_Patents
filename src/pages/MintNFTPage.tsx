@@ -123,30 +123,27 @@ const MintNFTPage: React.FC = () => {
       return;
     }
 
-    toast.success('NFT minting initiated! This may take a few minutes...');
-    
+    if (!verificationResult?.patent) {
+      toast.error('No patent data available');
+      return;
+    }
+
     try {
-      // In a real implementation, you would:
-      // 1. Upload metadata to IPFS
-      // 2. Get the IPFS hash/URI
-      // 3. Call the smart contract to mint the NFT
+      // Import the contract functions
+      const { mintPatentNFT } = await import('../utils/contracts');
       
-      // For now, we'll simulate the process
-      // const PatentNFTContract = getPatentNFTContract(signer);
-      // const tx = await PatentNFTContract.mintPatent(
-      //   account,
-      //   "ipfs://QmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-      //   verificationResult?.patent.title,
-      //   verificationResult?.patent.inventors[0],
-      //   verificationResult?.patent.patentNumber
-      // );
-      // await tx.wait();
-      
-      // Simulate minting process
-      setTimeout(() => {
+      const result = await mintPatentNFT(signer, {
+        patentNumber: verificationResult.patent.patentNumber,
+        title: verificationResult.patent.title,
+        inventor: verificationResult.patent.inventors[0] || 'Unknown'
+      });
+
+      if (result.success) {
         updateStep(3, true);
-        toast.success('Patent NFT minted successfully!');
-      }, 3000);
+        toast.success(`Patent NFT minted successfully! Token ID: ${result.tokenId}`);
+      } else {
+        toast.error(`Minting failed: ${result.error}`);
+      }
     } catch (error) {
       console.error("Error minting NFT:", error);
       toast.error('Failed to mint NFT. Please try again.');

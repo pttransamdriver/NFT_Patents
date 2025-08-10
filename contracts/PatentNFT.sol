@@ -16,6 +16,9 @@ contract PatentNFT is ERC721URIStorage, Ownable {
     // Private counter to track and assign unique token IDs
     uint256 private _tokenIds;
     
+    // Minting price in wei (0.1 ETH by default)
+    uint256 public mintingPrice = 0.1 ether;
+    
     /**
      * @dev Structure to store patent information for each NFT
      */
@@ -29,6 +32,9 @@ contract PatentNFT is ERC721URIStorage, Ownable {
     
     // Mapping that links each token ID to its patent data
     mapping(uint256 => Patent) public patents;
+    
+    // Mapping to track which patent numbers have been minted
+    mapping(string => bool) public patentExists;
     
     /**
      * @dev Events emitted by the contract for external monitoring
@@ -152,5 +158,63 @@ contract PatentNFT is ERC721URIStorage, Ownable {
             patent.isVerified
         );
     }
-
+    
+    /**
+     * @dev Frontend-compatible minting function with payment
+     * @param recipient The address to mint the NFT to
+     * @param patentNumber The patent number to mint
+     */
+    function mintPatentNFT(address recipient, string memory patentNumber) public payable returns (uint256) {
+        require(msg.value >= mintingPrice, "Insufficient payment for minting");
+        require(!patentExists[patentNumber], "Patent already minted");
+        require(recipient != address(0), "Invalid recipient address");
+        require(bytes(patentNumber).length > 0, "Patent number required");
+        
+        // Mark patent as existing
+        patentExists[patentNumber] = true;
+        
+        // Create a default metadata URI (in production, this would be IPFS)
+        string memory tokenURI = string(abi.encodePacked("https://api.patentnft.com/metadata/", patentNumber));
+        
+        // Mint the patent with default values
+        return mintPatent(
+            recipient,
+            tokenURI,
+            string(abi.encodePacked("Patent ", patentNumber)), // Default title
+            "Unknown", // Default inventor
+            patentNumber
+        );
+    }
+    
+    /**
+     * @dev Returns the current minting price
+     */
+    function getMintingPrice() public view returns (uint256) {
+        return mintingPrice;
+    }
+    
+    /**
+     * @dev Set minting price (only owner)
+     */
+    function setMintingPrice(uint256 _mintingPrice) public onlyOwner {
+        mintingPrice = _mintingPrice;
+    }
+    
+    /**
+     * @dev Withdraw contract balance (only owner)
+     */
+    function withdraw() public onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        
+        (bool success, ) = payable(owner()).call{value: balance}("");
+        require(success, "Withdrawal failed");
+    }
+    
+    /**
+     * @dev Get total number of minted tokens
+     */
+    function totalSupply() public view returns (uint256) {
+        return _tokenIds;
+    }
 }
