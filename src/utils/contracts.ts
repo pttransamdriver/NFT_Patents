@@ -74,18 +74,14 @@ export const mintPatentNFT = async (
     // Add some extra gas for safety
     const gasEstimate = await contract.mintPatentNFT.estimateGas(
       userAddress,
-      patentData.title,
       patentData.patentNumber,
-      patentData.inventor,
       { value: mintingPrice }
     );
 
-    // Call the mint function
+    // Call the mint function (contract only takes recipient and patentNumber)
     const tx = await contract.mintPatentNFT(
       userAddress,
-      patentData.title,
       patentData.patentNumber,
-      patentData.inventor,
       { 
         value: mintingPrice,
         gasLimit: gasEstimate + BigInt(50000) // Add 50k gas buffer

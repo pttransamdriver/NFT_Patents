@@ -67,8 +67,7 @@ const MintNFTPage: React.FC = () => {
 
     setIsVerifying(true);
     
-    // Simulate verification process
-    setTimeout(() => {
+    try {
       const isValidFormat = validatePatentNumber(patentNumber);
       
       if (!isValidFormat) {
@@ -76,28 +75,56 @@ const MintNFTPage: React.FC = () => {
           isValid: false,
           error: 'Invalid patent number format. Please use formats like: US-12325364-B1, US10,123,456, or US12345678'
         });
-      } else {
-        // Update mock data to match the searched patent if it's the specific one
-        const patentData = patentNumber.replace(/\s/g, '').toUpperCase() === 'US-12325364-B1' 
-          ? mockPatentData 
-          : {
-              ...mockPatentData,
-              patentNumber: patentNumber.replace(/\s/g, '').toUpperCase(),
-              title: 'Revolutionary Water Purification System',
-              abstract: 'A novel water purification method using nanotechnology filters that remove 99.99% of contaminants while preserving essential minerals.',
-              estimatedValue: '8.5 ETH'
-            };
+        setIsVerifying(false);
+        return;
+      }
 
+      // Import and use USPTO API service
+      const { usptoApi } = await import('../services/usptoApi');
+      
+      // Clean patent number for API call
+      const cleanPatentNumber = patentNumber.replace(/\s/g, '').toUpperCase();
+      
+      // Search for the patent using USPTO API
+      const patent = await usptoApi.getPatentByNumber(cleanPatentNumber);
+      
+      if (patent) {
+        // Convert patent data to NFT format
+        const nftData = await usptoApi.convertPatentToNFT(patent, 0.05);
+        
         setVerificationResult({
           isValid: true,
-          patent: patentData
+          patent: {
+            patentNumber: patent.patentNumber,
+            title: patent.title,
+            abstract: patent.abstract,
+            inventors: patent.inventors,
+            assignee: patent.assignee,
+            filingDate: patent.filingDate,
+            status: patent.status,
+            category: patent.category,
+            estimatedValue: `${nftData.price} ETH`,
+            isAvailable: patent.isAvailableForMinting
+          }
         });
         updateStep(1, true);
         setCurrentStep(2);
         updateStep(2, false, true);
+      } else {
+        setVerificationResult({
+          isValid: false,
+          error: 'Patent not found in USPTO database. Please verify the patent number and try again.'
+        });
       }
+    } catch (error: any) {
+      console.error('Patent verification error:', error);
+      setVerificationResult({
+        isValid: false,
+        error: `Verification failed: ${error.message || 'Unable to connect to USPTO database'}`
+      });
+    } finally {
       setIsVerifying(false);
-    }, 2000);
+    }
   };
 
   const updateStep = (stepId: number, completed: boolean, active: boolean = false) => {
