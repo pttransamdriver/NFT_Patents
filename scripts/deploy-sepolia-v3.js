@@ -1,34 +1,58 @@
-const hre = require("hardhat");
-const fs = require('fs');
-const path = require('path');
+import { ethers } from "ethers";
+import hre from "hardhat";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function main() {
-  console.log("🚀 Starting Sepolia Deployment...");
+  console.log("🚀 Starting Sepolia Deployment with Hardhat v3...");
   
-  // Get deployer account
-  const [deployer] = await hre.ethers.getSigners();
-  console.log("👤 Deploying with account:", deployer.address);
+  // Get network configuration
+  const network = hre.network;
+  console.log("🌐 Network:", network.name);
+  
+  if (network.name !== "sepolia") {
+    console.log("⚠️  This script is designed for Sepolia. Current network:", network.name);
+    console.log("💡 To deploy to Sepolia, run: npx hardhat run scripts/deploy-sepolia-v3.js --network sepolia");
+    return;
+  }
+  
+  // Create provider and wallet
+  const provider = new ethers.JsonRpcProvider(network.config.url);
+  const wallet = new ethers.Wallet(network.config.accounts[0], provider);
+  
+  console.log("👤 Deploying with account:", wallet.address);
   
   // Check balance
-  const balance = await deployer.provider.getBalance(deployer.address);
-  console.log("💰 Account balance:", hre.ethers.formatEther(balance), "ETH");
+  const balance = await provider.getBalance(wallet.address);
+  console.log("💰 Account balance:", ethers.formatEther(balance), "ETH");
   
-  if (balance < hre.ethers.parseEther("0.05")) {
+  if (balance < ethers.parseEther("0.05")) {
     console.log("⚠️  Warning: Low balance. You may need more ETH for deployment.");
+    console.log("💡 Get Sepolia ETH from: https://sepoliafaucet.com/");
+    return;
   }
   
   const deploymentInfo = {
     network: "sepolia",
-    deployer: deployer.address,
+    deployer: wallet.address,
     timestamp: new Date().toISOString(),
     contracts: {}
   };
 
   try {
+    // Get contract artifacts
+    const PSPTokenArtifact = await hre.artifacts.readArtifact("PSPToken");
+    const SearchPaymentArtifact = await hre.artifacts.readArtifact("SearchPayment");
+    const PatentNFTArtifact = await hre.artifacts.readArtifact("PatentNFT");
+    
     // 1. Deploy PSP Token
-    console.log("\n📦 Deploying PSP Token...");
-    const PSPToken = await hre.ethers.getContractFactory("PSPToken");
-    const pspToken = await PSPToken.deploy();
+    console.log("\\n📦 Deploying PSP Token...");
+    const PSPTokenFactory = new ethers.ContractFactory(PSPTokenArtifact.abi, PSPTokenArtifact.bytecode, wallet);
+    const pspToken = await PSPTokenFactory.deploy();
     await pspToken.waitForDeployment();
     
     const pspAddress = await pspToken.getAddress();
@@ -41,16 +65,11 @@ async function main() {
     };
 
     // 2. Deploy Search Payment Contract
-    console.log("\n📦 Deploying SearchPayment Contract...");
-    const SearchPayment = await hre.ethers.getContractFactory("SearchPayment");
-    
-    // Use a placeholder USDC address for Sepolia (you can update this later)
+    console.log("\\n📦 Deploying SearchPayment Contract...");
     const sepoliaUSDCAddress = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // Sepolia USDC
     
-    const searchPayment = await SearchPayment.deploy(
-      pspAddress,
-      sepoliaUSDCAddress
-    );
+    const SearchPaymentFactory = new ethers.ContractFactory(SearchPaymentArtifact.abi, SearchPaymentArtifact.bytecode, wallet);
+    const searchPayment = await SearchPaymentFactory.deploy(pspAddress, sepoliaUSDCAddress);
     await searchPayment.waitForDeployment();
     
     const searchPaymentAddress = await searchPayment.getAddress();
@@ -63,9 +82,9 @@ async function main() {
     };
 
     // 3. Deploy Patent NFT Contract
-    console.log("\n📦 Deploying PatentNFT Contract...");
-    const PatentNFT = await hre.ethers.getContractFactory("PatentNFT");
-    const patentNFT = await PatentNFT.deploy();
+    console.log("\\n📦 Deploying PatentNFT Contract...");
+    const PatentNFTFactory = new ethers.ContractFactory(PatentNFTArtifact.abi, PatentNFTArtifact.bytecode, wallet);
+    const patentNFT = await PatentNFTFactory.deploy();
     await patentNFT.waitForDeployment();
     
     const patentNFTAddress = await patentNFT.getAddress();
@@ -78,7 +97,7 @@ async function main() {
     };
 
     // 4. Set up PSP Token authorization
-    console.log("\n🔐 Setting up PSP Token authorization...");
+    console.log("\\n🔐 Setting up PSP Token authorization...");
     const authTx = await pspToken.setAuthorizedSpender(searchPaymentAddress, true);
     await authTx.wait();
     console.log("✅ SearchPayment authorized to spend PSP tokens");
@@ -114,17 +133,17 @@ VITE_DEBUG=false
     fs.writeFileSync(envFile, envContent);
 
     // 7. Display summary
-    console.log("\n🎉 Deployment Complete!");
-    console.log("=" * 50);
+    console.log("\\n🎉 Deployment Complete!");
+    console.log("=".repeat(50));
     console.log("📋 Deployment Summary:");
-    console.log("👤 Deployer:", deployer.address);
+    console.log("👤 Deployer:", wallet.address);
     console.log("🌐 Network: Sepolia Testnet");
     console.log("🪙 PSP Token:", pspAddress);
     console.log("💳 SearchPayment:", searchPaymentAddress);
     console.log("🖼️  PatentNFT:", patentNFTAddress);
     console.log("💵 USDC Token:", sepoliaUSDCAddress);
     
-    console.log("\n📝 Next Steps:");
+    console.log("\\n📝 Next Steps:");
     console.log("1. Copy .env.sepolia to .env (or update your existing .env)");
     console.log("2. Verify contracts on Etherscan:");
     console.log(`   npx hardhat verify --network sepolia ${pspAddress}`);
@@ -133,7 +152,7 @@ VITE_DEBUG=false
     console.log("3. Test the application with MetaMask on Sepolia");
     console.log("4. Update your frontend and backend configurations");
     
-    console.log("\n🔗 Useful Links:");
+    console.log("\\n🔗 Useful Links:");
     console.log(`📊 PSP Token: https://sepolia.etherscan.io/address/${pspAddress}`);
     console.log(`💳 SearchPayment: https://sepolia.etherscan.io/address/${searchPaymentAddress}`);
     console.log(`🖼️  PatentNFT: https://sepolia.etherscan.io/address/${patentNFTAddress}`);

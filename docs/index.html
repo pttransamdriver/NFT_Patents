@@ -2,12 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/NFT_Patents/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PatentNFT - USPTO Patent NFT Marketplace</title>
     <meta name="description" content="The premier marketplace for USPTO patent NFTs. Discover, mint, and trade patent NFTs with AI-powered search." />
-    <script type="module" crossorigin src="/NFT_Patents/assets/index-0622qsnE.js"></script>
-    <link rel="stylesheet" crossorigin href="/NFT_Patents/assets/index-3k_WLQBJ.css">
+    <script>
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect.replace('/NFT_Patents', '/NFT_Patents/#'));
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/NFT_Patents/assets/index-BT5ROH-Y.js"></script>
+    <link rel="stylesheet" crossorigin href="/NFT_Patents/assets/index-DIo7uu0u.css">
   </head>
   <body>
     <div id="root"></div>

@@ -76,19 +76,9 @@ Tests cover:
 
 #### Coverage Analysis
 ```bash
-npm run test:coverage
+# Note: Coverage analysis tools removed in Hardhat v3 upgrade
+# Use alternative tools or manual testing for coverage analysis
 ```
-- Ensures comprehensive test coverage
-- Identifies untested code paths
-- Validates security test completeness
-
-### Gas Analysis
-```bash
-npm run analyze:size
-```
-- Contract size optimization
-- Gas usage analysis
-- Deployment cost estimation
 
 ## 🚨 Security Procedures
 

@@ -1,11 +1,17 @@
 import hre from "hardhat";
-const { ethers } = hre;
+import { ethers } from "ethers";
 
 async function main() {
   console.log("🚀 Deploying PSP Token Contract...");
 
-  // Get the contract factory
-  const PSPToken = await ethers.getContractFactory("PSPToken");
+  // Create provider and wallet
+  const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+  const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  const wallet = new ethers.Wallet(privateKey, provider);
+
+  // Get the contract artifact and create factory
+  const PSPTokenArtifact = await hre.artifacts.readArtifact("PSPToken");
+  const PSPToken = new ethers.ContractFactory(PSPTokenArtifact.abi, PSPTokenArtifact.bytecode, wallet);
 
   // Calculate initial token price
   // Assuming 1 PSP = $0.01 USD and 1 ETH = $2000 USD
@@ -23,8 +29,8 @@ async function main() {
   console.log(`✅ PSP Token deployed to: ${contractAddress}`);
 
   // Get deployment details
-  const [deployer] = await ethers.getSigners();
-  const deployerBalance = await ethers.provider.getBalance(deployer.address);
+  const deployer = wallet;
+  const deployerBalance = await provider.getBalance(deployer.address);
   
   console.log("\n📋 Deployment Summary:");
   console.log(`👤 Deployer: ${deployer.address}`);

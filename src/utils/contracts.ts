@@ -17,24 +17,12 @@ const loadContractArtifacts = async () => {
     }
   }
 
-  if (!contractAddresses) {
-    try {
-      contractAddresses = await import('../contracts/contract-address.json');
-    } catch (error) {
-      console.error('Failed to load contract addresses:', error);
-      // Use environment variables as fallback
-      contractAddresses = {
-        default: {
-          PatentNFT: import.meta.env.VITE_PATENT_NFT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3'
-        }
-      };
-    }
-  }
+  // Contract addresses now come from environment variables
 };
 
-// Contract addresses from deployment
+// Contract addresses from environment variables
 const getContractAddresses = () => {
-  return contractAddresses?.default || contractAddresses || {
+  return {
     PatentNFT: import.meta.env.VITE_PATENT_NFT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3'
   };
 };

@@ -35,8 +35,14 @@ export class MintingService {
         };
       }
 
+      // Select the correct provider (same logic as Web3Context)
+      let ethereum = window.ethereum;
+      if (window.ethereum.providers) {
+        ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
+      }
+
       // Get provider and signer
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = new BrowserProvider(ethereum);
       const signer = await provider.getSigner();
       
       // Get contract instance
@@ -93,7 +99,13 @@ export class MintingService {
     try {
       if (!window.ethereum) return false;
       
-      const provider = new BrowserProvider(window.ethereum);
+      // Select the correct provider
+      let ethereum = window.ethereum;
+      if (window.ethereum.providers) {
+        ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
+      }
+      
+      const provider = new BrowserProvider(ethereum);
       const contract = getPatentNFTContract(provider);
       
       // Check if patent is already minted
@@ -110,7 +122,13 @@ export class MintingService {
     try {
       if (!window.ethereum) return 0.1; // Default price
       
-      const provider = new BrowserProvider(window.ethereum);
+      // Select the correct provider
+      let ethereum = window.ethereum;
+      if (window.ethereum.providers) {
+        ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
+      }
+      
+      const provider = new BrowserProvider(ethereum);
       const contract = getPatentNFTContract(provider);
       
       const priceInWei = await contract.getMintingPrice();

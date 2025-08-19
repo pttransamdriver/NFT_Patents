@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ethers } from 'ethers';
 import { 
   FileText, User, Building, Calendar, TrendingUp, Heart, 
   Share2, ShoppingCart, Tag, Clock, ExternalLink, Download,
@@ -48,7 +49,46 @@ const NFTDetailPage: React.FC = () => {
       await connectWallet();
       return;
     }
-    toast.success('Purchase initiated! Please confirm in your wallet.');
+    
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading('Initiating purchase...');
+      
+      // Check if MetaMask is available
+      if (!window.ethereum) {
+        toast.dismiss(loadingToast);
+        toast.error('MetaMask not found. Please install MetaMask.');
+        return;
+      }
+
+      // Select the correct provider (same logic as Web3Context)
+      let ethereum = window.ethereum;
+      if (window.ethereum.providers) {
+        ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
+      }
+
+      // Get provider and signer
+      const provider = new ethers.BrowserProvider(ethereum);
+      const signer = await provider.getSigner();
+      
+      // For now, simulate a transaction (since this is mock data)
+      // In a real app, you'd call the marketplace contract
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      toast.dismiss(loadingToast);
+      toast.success('Purchase completed! (Simulated transaction)');
+      
+    } catch (error: any) {
+      console.error('Purchase failed:', error);
+      
+      if (error.code === 4001) {
+        toast.error('Transaction rejected by user');
+      } else if (error.code === -32002) {
+        toast.error('Transaction request already pending. Please check MetaMask.');
+      } else {
+        toast.error(`Purchase failed: ${error.message}`);
+      }
+    }
   };
 
   const handleMakeOffer = async () => {

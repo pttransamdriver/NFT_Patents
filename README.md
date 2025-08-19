@@ -1,130 +1,57 @@
-# Patent NFT Marketplace
+# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
 
-A decentralized marketplace for tokenizing and trading patents as NFTs with AI-powered search functionality and multi-token payment support.
+This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
 
-## 🎯 Features
+To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
 
-- **Patent NFT Minting**: Convert real patents into tradeable NFTs (one NFT per patent)
-- **AI-Powered Search**: Gemini-based patent search with user API key support
-- **Multi-Token Payments**: Accept ETH, USDC, and PSP tokens for AI searches
-- **USPTO Integration**: Real patent verification through official USPTO API
-- **Decentralized Trading**: Buy and sell patent NFTs on the marketplace
-- **User Profiles**: Track owned patents and trading history
+## Project Overview
 
-## 🏗️ Tech Stack
+This example project includes:
 
-- **Frontend**: React, TypeScript, Vite, TailwindCSS, Framer Motion
-- **Blockchain**: Ethereum, Solidity ^0.8.28, Hardhat
-- **Web3 Integration**: ethers.js v6, MetaMask
-- **AI Integration**: Google Gemini API
-- **Smart Contracts**:
-  - `PatentNFT.sol` - ERC721 for patent tokenization
-  - `PSPToken.sol` - ERC20 payment token (1 PSP = $0.01)
-  - `SearchPayment.sol` - Multi-token payment processing
+- A simple Hardhat configuration file.
+- Foundry-compatible Solidity unit tests.
+- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
+- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
 
-## 🚀 Quick Start
+## Usage
 
-### Prerequisites
+### Running Tests
 
-- Node.js (v18+)
-- npm or yarn
-- MetaMask wallet
-- Git
+To run all the tests in the project, execute the following command:
 
-### Installation
-
-1. **Clone and setup**
-```bash
-git clone https://github.com/yourusername/patent-nft-marketplace.git
-cd NFT_Patents
-npm install
+```shell
+npx hardhat test
 ```
 
-2. **Environment setup**
-```bash
-cp .env.example .env
-# Add your API keys to .env:
-# VITE_GEMINI_API_KEY=your_gemini_key
-# VITE_USPTO_API_KEY=your_uspto_key (when available)
+You can also selectively run the Solidity or `node:test` tests:
+
+```shell
+npx hardhat test solidity
+npx hardhat test nodejs
 ```
 
-3. **Start development**
-```bash
-# Terminal 1: Start local blockchain
-npm run node
+### Make a deployment to Sepolia
 
-# Terminal 2: Deploy contracts
-npm run deploy
+This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
 
-# Terminal 3: Start frontend
-npm run dev
+To run the deployment to a local chain:
+
+```shell
+npx hardhat ignition deploy ignition/modules/Counter.ts
 ```
 
-## 🧪 Testing
+To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
 
-```bash
-# Compile contracts
-npm run compile
+You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
 
-# Run smart contract tests
-npm run test
+To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
 
-# Lint code
-npm run lint
+```shell
+npx hardhat keystore set SEPOLIA_PRIVATE_KEY
 ```
 
-## 🚀 Deployment
+After setting the variable, you can run the deployment with the Sepolia network:
 
-### Testnet (Sepolia)
-```bash
-# Deploy PSP token
-npm run deploy-psp-testnet
-
-# Deploy search payment contract
-npm run deploy-search-payment-testnet
-
-# Setup PSP authorization
-npm run setup-psp-auth-testnet
+```shell
+npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
 ```
-
-### Production
-```bash
-# Build for production
-npm run build
-
-# Deploy to GitHub Pages
-npm run deploy-pages
-```
-
-## 💰 Payment System
-
-The platform supports three payment methods for AI searches:
-
-- **ETH**: Direct Ethereum payments
-- **USDC**: Stablecoin payments
-- **PSP Tokens**: Native platform tokens (500 PSP = $5 per search)
-
-Users can purchase PSP tokens with ETH or use their existing token balances.
-
-## 🤖 AI Integration
-
-- **Default**: Gemini API for patent searches
-- **User Choice**: Support for user-provided API keys (Claude, ChatGPT, Gemini)
-- **Cost**: ~500 PSP tokens ($5) per comprehensive search
-
-## 📚 Documentation
-
-- [Setup Guide](./SETUP_GUIDE.md) - Complete setup instructions
-- [API Integration](./API_INTEGRATION_GUIDE.md) - USPTO and AI API setup
-- [Smart Contract Guide](./SMART_CONTRACT_GUIDE.md) - Contract deployment and testing
-
-## 🔒 Security
-
-- Comprehensive smart contract testing
-- Multi-signature wallet support
-- Pausable contracts for emergency stops
-- Reentrancy protection on payment functions
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details
