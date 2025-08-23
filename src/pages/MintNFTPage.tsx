@@ -79,43 +79,51 @@ const MintNFTPage: React.FC = () => {
         return;
       }
 
-      // Import and use USPTO API service
-      const { usptoApi } = await import('../services/usptoApi');
-      
-      // Clean patent number for API call
+      // Call backend API for patent verification
       const cleanPatentNumber = patentNumber.replace(/\s/g, '').toUpperCase();
       
-      // Search for the patent using USPTO API
-      const patent = await usptoApi.getPatentByNumber(cleanPatentNumber);
-      
-      if (patent) {
-        // Convert patent data to NFT format
-        const nftData = await usptoApi.convertPatentToNFT(patent, 0.05);
+      try {
+        const response = await fetch(`http://localhost:3001/api/patents/verify/${cleanPatentNumber}`);
         
-        setVerificationResult({
-          isValid: true,
-          patent: {
-            patentNumber: patent.patentNumber,
-            title: patent.title,
-            abstract: patent.abstract,
-            inventors: patent.inventors,
-            assignee: patent.assignee,
-            filingDate: patent.filingDate,
-            status: patent.status,
-            category: patent.category,
-            estimatedValue: `${nftData.price} ETH`,
-            isAvailable: patent.isAvailableForMinting
-          }
-        });
-        updateStep(1, true);
-        setCurrentStep(2);
-        updateStep(2, false, true);
-      } else {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.patent) {
+          setVerificationResult({
+            isValid: true,
+            patent: {
+              patentNumber: data.patent.patentNumber,
+              title: data.patent.title,
+              abstract: data.patent.abstract,
+              inventors: data.patent.inventors,
+              assignee: data.patent.assignee,
+              filingDate: data.patent.filingDate,
+              status: data.patent.status,
+              category: data.patent.category,
+              estimatedValue: '0.05 ETH',
+              isAvailable: data.patent.isAvailableForMinting
+            }
+          });
+          updateStep(1, true);
+          setCurrentStep(2);
+          updateStep(2, false, true);
+        } else {
+          setVerificationResult({
+            isValid: false,
+            error: data.error || 'Patent not found in database.'
+          });
+        }
+      } catch (fetchError: any) {
+        console.error('Backend connection error:', fetchError);
         setVerificationResult({
           isValid: false,
-          error: 'Patent not found in USPTO database. Please verify the patent number and try again.'
+          error: `Backend server not running. Please start the backend server on port 3001. Error: ${fetchError.message}`
         });
       }
+      
     } catch (error: any) {
       console.error('Patent verification error:', error);
       setVerificationResult({

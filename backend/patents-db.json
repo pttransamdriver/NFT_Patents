@@ -1,0 +1,74 @@
+{
+  "patents": [
+    {
+      "patentNumber": "US-10123456-B2",
+      "title": "Advanced Solar Cell Technology with Quantum Dots",
+      "abstract": "A novel photovoltaic cell design that increases efficiency by 25% through innovative semiconductor layering and quantum dot integration. The invention addresses current limitations in solar energy conversion.",
+      "inventors": ["Dr. Sarah Johnson", "Michael Chen", "Prof. Lisa Wang"],
+      "assignee": "SolarTech Industries Inc.",
+      "filingDate": "2020-03-15",
+      "publicationDate": "2022-11-08",
+      "status": "active",
+      "category": "Clean Energy",
+      "isAvailableForMinting": true,
+      "pdfPath": "/patents/US-10123456-B2.pdf",
+      "imageUrl": "/images/solar-cell-patent.jpg"
+    },
+    {
+      "patentNumber": "US-10234567-B2",
+      "title": "AI-Powered Medical Diagnostic System",
+      "abstract": "Machine learning algorithm for early detection of cardiovascular diseases using non-invasive imaging techniques. Provides 95% accuracy in diagnosis within 30 seconds.",
+      "inventors": ["Dr. Emily Rodriguez", "James Park", "Dr. Alex Kim"],
+      "assignee": "MedTech Solutions LLC",
+      "filingDate": "2019-08-22",
+      "publicationDate": "2021-12-14",
+      "status": "active",
+      "category": "Healthcare",
+      "isAvailableForMinting": true,
+      "pdfPath": "/patents/US-10234567-B2.pdf",
+      "imageUrl": "/images/medical-ai-patent.jpg"
+    },
+    {
+      "patentNumber": "US-10345678-B1",
+      "title": "Autonomous Vehicle Navigation System",
+      "abstract": "Advanced LIDAR and computer vision system for autonomous vehicle navigation in complex urban environments. Reduces accident risk by 90% compared to traditional systems.",
+      "inventors": ["Dr. Robert Chen", "Maria Gonzalez"],
+      "assignee": "AutoDrive Technologies",
+      "filingDate": "2021-01-10",
+      "publicationDate": "2023-05-20",
+      "status": "active",
+      "category": "Transportation",
+      "isAvailableForMinting": true,
+      "pdfPath": "/patents/US-10345678-B1.pdf",
+      "imageUrl": "/images/autonomous-vehicle-patent.jpg"
+    },
+    {
+      "patentNumber": "US-10456789-B2",
+      "title": "Quantum Computing Error Correction Method",
+      "abstract": "Revolutionary quantum error correction algorithm that maintains quantum coherence 10x longer than existing methods. Enables practical quantum computing applications.",
+      "inventors": ["Dr. Alan Turing Jr.", "Prof. Marie Curie III"],
+      "assignee": "Quantum Dynamics Corp",
+      "filingDate": "2022-06-05",
+      "publicationDate": "2024-01-15",
+      "status": "active",
+      "category": "Computing",
+      "isAvailableForMinting": true,
+      "pdfPath": "/patents/US-10456789-B2.pdf",
+      "imageUrl": "/images/quantum-computing-patent.jpg"
+    },
+    {
+      "patentNumber": "US-10567890-B1",
+      "title": "Biodegradable Plastic Alternative from Seaweed",
+      "abstract": "Environmentally friendly plastic substitute made from processed seaweed that biodegrades within 90 days. Maintains strength and flexibility of traditional plastics.",
+      "inventors": ["Dr. Ocean Blue", "Prof. Green Earth"],
+      "assignee": "EcoMaterials Inc.",
+      "filingDate": "2021-09-12",
+      "publicationDate": "2023-03-08",
+      "status": "active",
+      "category": "Materials",
+      "isAvailableForMinting": true,
+      "pdfPath": "/patents/US-10567890-B1.pdf",
+      "imageUrl": "/images/biodegradable-plastic-patent.jpg"
+    }
+  ]
+}
