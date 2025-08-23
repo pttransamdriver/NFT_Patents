@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 const { ethers } = require('ethers');
 require('dotenv').config();
 
@@ -19,9 +20,13 @@ const {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+// Middleware - Allow both localhost and 127.0.0.1 for development
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: [
+    process.env.CORS_ORIGIN || 'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5173'
+  ],
   credentials: true
 }));
 app.use(express.json());
@@ -244,6 +249,184 @@ app.get('/api/users/:address/profile', async (req, res) => {
   }
 });
 
+// Google Patents API via SerpApi (much more reliable than USPTO)
+// This provides access to global patents, not just US patents
+// SerpApi documentation: https://serpapi.com/google-patents-api
+const SERPAPI_BASE_URL = 'https://serpapi.com/search.json';
+
+// Enhanced mock data generator for Google Patents format
+function generateEnhancedMockPatents(criteria, start, rows) {
+  const categories = ['solar', 'artificial intelligence', 'medical device', 'battery', 'robotics', 'biotech'];
+  const countries = ['US', 'EP', 'CN', 'JP', 'KR'];
+  const assignees = [
+    'Google LLC', 'Apple Inc.', 'Microsoft Corporation', 'Samsung Electronics',
+    'Tesla Inc.', 'IBM', 'Intel Corporation', 'Qualcomm', 'Sony Corporation',
+    'General Electric', 'Johnson & Johnson', 'Pfizer Inc.', 'MIT', 'Stanford University'
+  ];
+
+  const mockPatents = [];
+  const searchTerm = criteria.toLowerCase();
+  
+  for (let i = 0; i < Math.min(rows, 20); i++) {
+    const patentNum = `${countries[i % countries.length]}${Math.floor(Math.random() * 9000000) + 1000000}`;
+    const assignee = assignees[i % assignees.length];
+    const year = 2015 + Math.floor(Math.random() * 9);
+    
+    // Generate relevant title based on search criteria
+    let title = '';
+    if (searchTerm.includes('solar')) {
+      title = `Advanced Solar Cell Technology with ${['Enhanced Efficiency', 'Improved Durability', 'Novel Materials'][i % 3]}`;
+    } else if (searchTerm.includes('ai') || searchTerm.includes('artificial intelligence')) {
+      title = `AI-Powered ${['Medical Diagnosis', 'Image Recognition', 'Natural Language Processing'][i % 3]} System`;
+    } else if (searchTerm.includes('battery')) {
+      title = `High-Capacity ${['Lithium-Ion', 'Solid-State', 'Graphene'][i % 3]} Battery Design`;
+    } else {
+      title = `Advanced ${searchTerm} Technology for ${['Industrial Applications', 'Consumer Devices', 'Medical Use'][i % 3]}`;
+    }
+
+    mockPatents.push({
+      position: start + i + 1,
+      title: title,
+      link: `https://patents.google.com/patent/${patentNum}`,
+      patent_id: patentNum,
+      priority_date: `${year}-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+      publication_date: `${year + 2}-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+      assignee: assignee,
+      inventor: `Dr. ${['John Smith', 'Sarah Johnson', 'Michael Chen', 'Emily Rodriguez', 'David Kim'][i % 5]}`,
+      abstract: `This invention relates to ${searchTerm} technology and provides improved methods for ${['efficiency enhancement', 'cost reduction', 'performance optimization'][i % 3]}. The invention addresses current limitations in ${searchTerm} systems and offers novel solutions for industrial and commercial applications.`,
+      classification: {
+        cpc: `H01L31/${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
+        ipc: `H01L 31/${String(Math.floor(Math.random() * 90) + 10)}`
+      },
+      legal_status: ['Active', 'Granted', 'Published'][i % 3],
+      citations: Math.floor(Math.random() * 200) + 10
+    });
+  }
+  
+  return mockPatents;
+}
+
+// Search patents via Google Patents (SerpApi)
+app.get('/api/uspto/search', async (req, res) => {
+  try {
+    const { criteria, start = 0, rows = 20, sort = 'date desc' } = req.query;
+    
+    if (!criteria) {
+      return res.status(400).json({ error: 'Search criteria required' });
+    }
+
+    console.log(`Searching Google Patents for: ${criteria}`);
+
+    // Use SerpApi to search Google Patents
+    // Note: SerpApi provides free tier (100 searches/month)
+    // For production, you'd need a SerpApi API key
+    const serpApiKey = process.env.SERPAPI_KEY || process.env.VITE_SERPAPI_KEY;
+    
+    // If no valid SerpApi key, fall back to mock data with enhanced info
+    if (!serpApiKey || serpApiKey === 'demo') {
+      console.log('No SerpApi key configured, using enhanced mock data');
+      const mockPatents = generateEnhancedMockPatents(criteria, start, rows);
+      return res.json({
+        organic_results: mockPatents,
+        search_information: {
+          query_displayed: criteria,
+          total_results: mockPatents.length * 10, // Simulate more results available
+          time_taken_displayed: 0.5
+        }
+      });
+    }
+
+    const searchParams = {
+      engine: 'google_patents',
+      q: criteria,
+      start: start,
+      num: Math.min(rows, 100),
+      api_key: serpApiKey
+    };
+
+    console.log(`SerpApi Google Patents search params:`, searchParams);
+
+    const response = await axios.get(SERPAPI_BASE_URL, {
+      params: searchParams,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'PatentNFT-Backend/1.0'
+      },
+      timeout: 15000
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Google Patents Search API Error:', error.message);
+    
+    // Return detailed error for debugging
+    if (error.response) {
+      res.status(error.response.status).json({
+        error: `Google Patents API Error: ${error.response.status}`,
+        message: error.response.data?.error || error.message,
+        details: error.response.data
+      });
+    } else if (error.code === 'ECONNABORTED') {
+      res.status(408).json({ error: 'Google Patents API timeout' });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to search patents', 
+        message: error.message 
+      });
+    }
+  }
+});
+
+// Get specific patent by number
+app.get('/api/uspto/patent/:patentNumber', async (req, res) => {
+  try {
+    const { patentNumber } = req.params;
+    
+    console.log(`Fetching Google Patents patent: ${patentNumber}`);
+
+    // Search for the specific patent number using Google Patents
+    const serpApiKey = process.env.SERPAPI_KEY || process.env.VITE_SERPAPI_KEY;
+    
+    const searchParams = {
+      engine: 'google_patents',
+      q: patentNumber,
+      num: 1,
+      api_key: serpApiKey || 'demo'
+    };
+
+    const response = await axios.get(SERPAPI_BASE_URL, {
+      params: searchParams,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'PatentNFT-Backend/1.0'
+      },
+      timeout: 15000
+    });
+
+    if (response.data.organic_results && response.data.organic_results.length > 0) {
+      res.json(response.data.organic_results[0]);
+    } else if (response.data.results && response.data.results.length > 0) {
+      res.json(response.data.results[0]);
+    } else {
+      res.status(404).json({ error: 'Patent not found' });
+    }
+  } catch (error) {
+    console.error('Google Patents API Error:', error.message);
+    
+    if (error.response) {
+      res.status(error.response.status).json({
+        error: `Google Patents API Error: ${error.response.status}`,
+        message: error.response.data?.error || error.message
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to fetch patent', 
+        message: error.message 
+      });
+    }
+  }
+});
+
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
@@ -253,16 +436,43 @@ app.get('/api/health', async (req, res) => {
     await client.query('SELECT 1');
     client.release();
 
+    // Test Google Patents API connection via SerpApi
+    let patentsApiStatus = 'not tested';
+    const serpApiKey = process.env.SERPAPI_KEY || process.env.VITE_SERPAPI_KEY;
+    
+    try {
+      const testResponse = await axios.get(SERPAPI_BASE_URL, {
+        params: { 
+          engine: 'google_patents',
+          q: 'solar',
+          num: 1,
+          api_key: serpApiKey || 'demo'
+        },
+        headers: { 'Accept': 'application/json' },
+        timeout: 5000
+      });
+      
+      if (testResponse.data.organic_results || testResponse.data.results) {
+        patentsApiStatus = 'connected (Google Patents via SerpApi)';
+      } else {
+        patentsApiStatus = 'connected but no results';
+      }
+    } catch (error) {
+      patentsApiStatus = `error: ${error.response?.status || error.message}`;
+    }
+
     res.json({
       status: 'OK',
       timestamp: new Date().toISOString(),
-      database: 'connected'
+      database: 'connected',
+      patentsApi: patentsApiStatus
     });
   } catch (error) {
     res.status(500).json({
       status: 'ERROR',
       timestamp: new Date().toISOString(),
       database: 'disconnected',
+      patentsApi: 'not tested',
       error: error.message
     });
   }

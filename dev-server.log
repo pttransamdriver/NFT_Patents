@@ -1,0 +1,11 @@
+
+> patent-nft-marketplace@0.0.0 dev
+> vite
+
+
+  VITE v5.4.19  ready in 298 ms
+
+  ➜  Local:   http://127.0.0.1:5173/NFT_Patents/
+2:31:03 PM [vite] hmr update /src/components/AISearchModal.tsx, /src/index.css
+2:31:27 PM [vite] hmr update /src/App.tsx, /src/index.css
+2:31:31 PM [vite] hmr update /src/App.tsx, /src/index.css

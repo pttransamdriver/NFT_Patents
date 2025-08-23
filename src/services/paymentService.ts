@@ -161,8 +161,18 @@ export class PaymentService {
    */
   async payWithETH(userAddress: string): Promise<PaymentResult> {
     try {
-      if (!window.ethereum || !this.searchPaymentAddress) {
-        return { success: false, error: 'MetaMask not available or contract address not configured' };
+      if (!window.ethereum) {
+        return { success: false, error: 'MetaMask not detected. Please install MetaMask.' };
+      }
+
+      if (!this.searchPaymentAddress) {
+        return { success: false, error: 'Contract address not configured. Please check your environment settings.' };
+      }
+
+      // Ensure MetaMask is connected
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (!accounts || accounts.length === 0) {
+        return { success: false, error: 'Please connect your MetaMask wallet first.' };
       }
 
       const provider = new BrowserProvider(window.ethereum);
@@ -173,16 +183,23 @@ export class PaymentService {
       const pricing = await this.getSearchPricing();
       const ethAmount = ethers.parseEther(pricing.ethPrice);
 
-      // Check user balance
+      // Check user balance (including gas)
       const userBalance = await provider.getBalance(userAddress);
-      if (userBalance < ethAmount) {
-        return { success: false, error: 'Insufficient ETH balance' };
+      const gasEstimate = await contract.payWithETH.estimateGas({ value: ethAmount });
+      const gasPrice = (await provider.getFeeData()).gasPrice || ethers.parseUnits('20', 'gwei');
+      const gasCost = gasEstimate * gasPrice;
+      const totalCost = ethAmount + gasCost;
+
+      if (userBalance < totalCost) {
+        return { 
+          success: false, 
+          error: `Insufficient ETH balance. Need ${ethers.formatEther(totalCost)} ETH (including gas), but have ${ethers.formatEther(userBalance)} ETH.` 
+        };
       }
 
-      // Pay with ETH
+      // Pay with ETH - let MetaMask estimate gas
       const transaction = await contract.payWithETH({
-        value: ethAmount,
-        gasLimit: 200000
+        value: ethAmount
       });
 
       const receipt = await transaction.wait();
@@ -196,7 +213,21 @@ export class PaymentService {
       };
     } catch (error: any) {
       console.error('ETH payment failed:', error);
-      return { success: false, error: error.message || 'ETH payment failed' };
+      
+      // Handle specific MetaMask errors
+      if (error.code === 4001) {
+        return { success: false, error: 'Transaction rejected by user.' };
+      } else if (error.code === -32002) {
+        return { success: false, error: 'Transaction request already pending. Please check MetaMask.' };
+      } else if (error.code === -32603) {
+        return { success: false, error: 'Insufficient funds for gas.' };
+      } else if (error.message?.includes('user rejected')) {
+        return { success: false, error: 'Transaction cancelled by user.' };
+      } else if (error.message?.includes('insufficient funds')) {
+        return { success: false, error: 'Insufficient ETH balance for transaction and gas fees.' };
+      } else {
+        return { success: false, error: error.message || 'ETH payment failed. Please try again.' };
+      }
     }
   }
 
@@ -280,5 +311,47 @@ export class PaymentService {
     return /^0x[a-fA-F0-9]{64}$/.test(hash);
   }
 }
+
+// Helper function to check MetaMask connection
+export const checkMetaMaskConnection = async (): Promise<{ connected: boolean; account?: string; error?: string }> => {
+  try {
+    if (!window.ethereum) {
+      return { connected: false, error: 'MetaMask not detected. Please install MetaMask.' };
+    }
+
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    if (!accounts || accounts.length === 0) {
+      return { connected: false, error: 'MetaMask not connected. Please connect your wallet.' };
+    }
+
+    return { connected: true, account: accounts[0] };
+  } catch (error: any) {
+    return { connected: false, error: error.message || 'Failed to check MetaMask connection.' };
+  }
+};
+
+// Helper function to request MetaMask connection
+export const requestMetaMaskConnection = async (): Promise<{ connected: boolean; account?: string; error?: string }> => {
+  try {
+    if (!window.ethereum) {
+      return { connected: false, error: 'MetaMask not detected. Please install MetaMask.' };
+    }
+
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!accounts || accounts.length === 0) {
+      return { connected: false, error: 'Connection rejected by user.' };
+    }
+
+    return { connected: true, account: accounts[0] };
+  } catch (error: any) {
+    if (error.code === 4001) {
+      return { connected: false, error: 'Connection rejected by user.' };
+    } else if (error.code === -32002) {
+      return { connected: false, error: 'Connection request already pending. Please check MetaMask.' };
+    } else {
+      return { connected: false, error: error.message || 'Failed to connect to MetaMask.' };
+    }
+  }
+};
 
 export const paymentService = PaymentService.getInstance();

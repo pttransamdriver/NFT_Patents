@@ -381,111 +381,26 @@ export class PSPTokenService {
     }
   }
 
-  /**
-   * Pay for search with ETH
-   */
-  async payWithETH(userAddress: string): Promise<PaymentResult> {
-    try {
-      if (!window.ethereum || !this.searchPaymentAddress) {
-        return { success: false, error: 'MetaMask not available or contract address not configured' };
-      }
-
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
-
-      // Get ETH price
-      const pricing = await this.getAllSearchPrices();
-      const ethAmount = ethers.parseEther(pricing.ethPrice);
-
-      // Check user balance
-      const userBalance = await provider.getBalance(userAddress);
-      if (userBalance < ethAmount) {
-        return { success: false, error: 'Insufficient ETH balance' };
-      }
-
-      // Pay with ETH
-      const transaction = await contract.payWithETH({
-        value: ethAmount,
-        gasLimit: 200000
-      });
-
-      const receipt = await transaction.wait();
-
-      return {
-        success: true,
-        transactionHash: receipt.transactionHash,
-        paymentMethod: PaymentToken.ETH,
-        amountPaid: pricing.ethPrice,
-        searchCredits: 1
-      };
-    } catch (error: any) {
-      console.error('ETH payment failed:', error);
-      return { success: false, error: error.message || 'ETH payment failed' };
-    }
-  }
-
-  /**
-   * Pay for search with USDC
-   */
-  async payWithUSDC(userAddress: string): Promise<PaymentResult> {
-    try {
-      if (!window.ethereum || !this.searchPaymentAddress || !this.usdcTokenAddress) {
-        return { success: false, error: 'MetaMask not available or contract addresses not configured' };
-      }
-
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-
-      const usdcContract = new ethers.Contract(this.usdcTokenAddress, USDC_ABI, signer);
-      const searchContract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
-
-      // Get USDC price
-      const pricing = await this.getAllSearchPrices();
-      const usdcAmount = ethers.parseUnits(pricing.usdcPrice, 6); // USDC has 6 decimals
-
-      // Check user balance
-      const userBalance = await usdcContract.balanceOf(userAddress);
-      if (userBalance < usdcAmount) {
-        return { success: false, error: 'Insufficient USDC balance' };
-      }
-
-      // Check allowance
-      const allowance = await usdcContract.allowance(userAddress, this.searchPaymentAddress);
-
-      // Approve USDC if needed
-      if (allowance < usdcAmount) {
-        const approveTransaction = await usdcContract.approve(this.searchPaymentAddress, usdcAmount);
-        await approveTransaction.wait();
-      }
-
-      // Pay with USDC
-      const paymentTransaction = await searchContract.payWithUSDC({
-        gasLimit: 200000
-      });
-
-      const receipt = await paymentTransaction.wait();
-
-      return {
-        success: true,
-        transactionHash: receipt.transactionHash,
-        paymentMethod: PaymentToken.USDC,
-        amountPaid: pricing.usdcPrice,
-        searchCredits: 1
-      };
-    } catch (error: any) {
-      console.error('USDC payment failed:', error);
-      return { success: false, error: error.message || 'USDC payment failed' };
-    }
-  }
+  // Payment methods moved to dedicated PaymentService to avoid duplication
+  // Use paymentService.payWithETH() and paymentService.payWithUSDC() instead
 
   /**
    * Pay for search with PSP tokens
    */
   async payWithPSP(userAddress: string): Promise<PaymentResult> {
     try {
-      if (!window.ethereum || !this.searchPaymentAddress || !this.pspTokenAddress) {
-        return { success: false, error: 'MetaMask not available or contract addresses not configured' };
+      if (!window.ethereum) {
+        return { success: false, error: 'MetaMask not detected. Please install MetaMask.' };
+      }
+
+      if (!this.searchPaymentAddress || !this.pspTokenAddress) {
+        return { success: false, error: 'Contract addresses not configured. Please check your environment settings.' };
+      }
+
+      // Ensure MetaMask is connected
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (!accounts || accounts.length === 0) {
+        return { success: false, error: 'Please connect your MetaMask wallet first.' };
       }
 
       const provider = new BrowserProvider(window.ethereum);
@@ -501,7 +416,10 @@ export class PSPTokenService {
       // Check user balance
       const userBalance = await pspContract.balanceOf(userAddress);
       if (userBalance < pspAmount) {
-        return { success: false, error: 'Insufficient PSP token balance' };
+        return { 
+          success: false, 
+          error: `Insufficient PSP token balance. Need ${pricing.pspPrice} PSP but have ${ethers.formatEther(userBalance)} PSP.` 
+        };
       }
 
       // Check allowance
@@ -509,16 +427,18 @@ export class PSPTokenService {
 
       // Approve PSP tokens if needed
       if (allowance < pspAmount) {
+        console.log('Requesting PSP token approval...');
         const approveTransaction = await pspContract.approve(this.searchPaymentAddress, pspAmount);
         await approveTransaction.wait();
+        console.log('PSP tokens approved successfully');
       }
 
       // Pay with PSP
-      const paymentTransaction = await searchContract.payWithPSP({
-        gasLimit: 200000
-      });
+      console.log('Processing PSP payment...');
+      const paymentTransaction = await searchContract.payWithPSP();
 
       const receipt = await paymentTransaction.wait();
+      console.log('PSP payment completed:', receipt.transactionHash);
 
       return {
         success: true,
@@ -529,7 +449,21 @@ export class PSPTokenService {
       };
     } catch (error: any) {
       console.error('PSP payment failed:', error);
-      return { success: false, error: error.message || 'PSP payment failed' };
+      
+      // Handle specific MetaMask errors
+      if (error.code === 4001) {
+        return { success: false, error: 'Transaction rejected by user.' };
+      } else if (error.code === -32002) {
+        return { success: false, error: 'Transaction request already pending. Please check MetaMask.' };
+      } else if (error.message?.includes('user rejected')) {
+        return { success: false, error: 'Transaction cancelled by user.' };
+      } else if (error.message?.includes('insufficient allowance')) {
+        return { success: false, error: 'Insufficient PSP token allowance. Please approve tokens first.' };
+      } else if (error.message?.includes('insufficient balance')) {
+        return { success: false, error: 'Insufficient PSP token balance.' };
+      } else {
+        return { success: false, error: error.message || 'PSP payment failed. Please try again.' };
+      }
     }
   }
 

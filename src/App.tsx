@@ -7,6 +7,8 @@ import { Web3Provider } from './contexts/Web3Context';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import NetworkDebugger from './components/NetworkDebugger';
+import MetaMaskDebugger from './components/MetaMaskDebugger';
+import PaymentTest from './components/PaymentTest';
 import HomePage from './pages/HomePage';
 import MarketplacePage from './pages/MarketplacePage';
 import PatentSearchPage from './pages/PatentSearchPage';
@@ -24,6 +26,8 @@ function App() {
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
               <Header />
               <NetworkDebugger />
+              <MetaMaskDebugger />
+              <PaymentTest />
               <main className="pt-16">
                 <Routes>
                   <Route path="/" element={<HomePage />} />

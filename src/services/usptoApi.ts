@@ -53,27 +53,25 @@ export class USPTOApiService {
     }
 
     try {
-      // Use USPTO's public search API
-      const response = await axios.get(`${USPTO_SEARCH_URL}/search/publications`, {
+      // Use backend proxy to avoid CORS issues
+      const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const response = await axios.get(`${backendUrl}/api/uspto/search`, {
         params: {
           criteria: params.query,
           start: params.start || 0,
           rows: params.rows || 20,
           sort: params.sort || 'date desc'
         },
-        headers: {
-          'X-API-Key': USPTO_API_KEY,
-          'Accept': 'application/json',
-          'User-Agent': 'PatentNFT-App/1.0'
-        },
         timeout: 15000
       });
 
-      return this.transformUSPTOData(response.data.results || []);
+      // Handle Google Patents API response format
+      const results = response.data.organic_results || response.data.results || [];
+      return this.transformUSPTOData(results);
     } catch (error: any) {
       console.error('USPTO API Error:', error);
 
-      // Provide specific error messages based on response
+      // Handle backend proxy errors
       if (error.response?.status === 401) {
         throw new Error('USPTO API authentication failed. Please check your API key.');
       } else if (error.response?.status === 403) {
@@ -81,47 +79,58 @@ export class USPTOApiService {
       } else if (error.response?.status === 429) {
         throw new Error('USPTO API rate limit exceeded. Please try again later.');
       } else if (error.response?.status === 500) {
-        throw new Error('USPTO API server error. Please try again later.');
+        throw new Error('Backend server error. Please ensure your backend is running.');
       } else if (error.code === 'ECONNABORTED') {
-        throw new Error('USPTO API request timed out. Please try again.');
-      } else if (error.message.includes('Network Error')) {
-        throw new Error('Network error. Please check your internet connection.');
+        throw new Error('Request timed out. Please try again.');
+      } else if (error.code === 'ECONNREFUSED') {
+        console.warn('Backend server not available. Falling back to mock data.');
+        return this.getMockPatents(params.query);
       } else {
-        throw new Error(`USPTO API error: ${error.message || 'Unknown error occurred'}`);
+        throw new Error(`Search error: ${error.response?.data?.message || error.message || 'Unknown error occurred'}`);
       }
     }
   }
 
   async getPatentByNumber(patentNumber: string): Promise<Patent | null> {
-    this.validateApiKey();
+    const hasValidApiKey = this.validateApiKey();
+
+    // If no valid API key, return mock data
+    if (!hasValidApiKey) {
+      return this.getMockPatentByNumber(patentNumber) || this.createMockPatent(patentNumber);
+    }
 
     try {
-      // Note: USPTO API has CORS restrictions for browser calls
-      // For now, we'll use the mock data fallback and log the attempt
-      console.log(`Attempting to fetch patent: ${patentNumber}`);
-      console.log('USPTO API call would be made here, but CORS prevents direct browser access');
-      
-      // In production, this would need to go through a backend proxy
-      throw new Error('CORS_RESTRICTION');
+      // Use backend proxy to get specific patent
+      const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const response = await axios.get(`${backendUrl}/api/uspto/patent/${patentNumber}`, {
+        timeout: 15000
+      });
 
-      const results = response.data?.results || [];
-      if (results.length === 0) return null;
-
-      const transformed = this.transformUSPTOData(results);
-      return transformed[0] || null;
-    } catch (error: any) {
-      console.log('USPTO API Error:', error.message);
-
-      // Handle CORS restriction specifically
-      if (error.message === 'CORS_RESTRICTION') {
-        console.log('Using mock data due to CORS restrictions. In production, use a backend proxy.');
+      // Handle Google Patents single result response
+      if (response.data.organic_results && response.data.organic_results.length > 0) {
+        const transformed = this.transformUSPTOData([response.data.organic_results[0]]);
+        return transformed[0] || null;
+      } else if (response.data.patent_id || response.data.title) {
+        // Direct patent object response
+        const transformed = this.transformUSPTOData([response.data]);
+        return transformed[0] || null;
       }
+      
+      return null;
+    } catch (error: any) {
+      console.error('USPTO Patent Fetch Error:', error);
 
-      // Fallback to mock data with the searched patent number
-      try {
-        return this.getMockPatentByNumber(patentNumber) || this.createMockPatent(patentNumber);
-      } catch {
+      // Handle specific error cases
+      if (error.response?.status === 404) {
+        console.log(`Patent ${patentNumber} not found in USPTO database`);
         return null;
+      } else if (error.code === 'ECONNREFUSED') {
+        console.warn('Backend server not available. Using mock data.');
+        return this.getMockPatentByNumber(patentNumber) || this.createMockPatent(patentNumber);
+      } else {
+        // Fallback to mock data
+        console.warn(`Error fetching patent ${patentNumber}, using mock data:`, error.message);
+        return this.getMockPatentByNumber(patentNumber) || this.createMockPatent(patentNumber);
       }
     }
   }
@@ -145,20 +154,44 @@ export class USPTOApiService {
     };
   }
 
-  private transformUSPTOData(usptoData: USPTOPatentData[]): Patent[] {
-    return usptoData.map(patent => ({
-      patentNumber: patent.patentNumber || 'N/A',
-      title: patent.patentTitle || 'Untitled Patent',
-      abstract: patent.patentAbstract || 'No abstract available',
-      inventors: Array.isArray(patent.inventorName) ? patent.inventorName : [patent.inventorName || 'Unknown'],
-      assignee: patent.assigneeName || 'Unassigned',
-      filingDate: patent.filingDate || '',
-      publicationDate: patent.publicationDate || '',
-      status: this.determinePatentStatus(patent.filingDate),
-      category: this.categorizePatent(patent.patentTitle, patent.patentAbstract),
-      claims: [],
-      isAvailableForMinting: true
-    }));
+  private transformUSPTOData(usptoData: any[]): Patent[] {
+    // Handle both old USPTO format and new Google Patents format
+    return usptoData.map(patent => {
+      // Google Patents format (via SerpApi)
+      if (patent.patent_id || patent.title) {
+        return {
+          patentNumber: patent.patent_id || patent.patentNumber || 'N/A',
+          title: patent.title || patent.patentTitle || 'Untitled Patent',
+          abstract: patent.abstract || patent.patentAbstract || 'No abstract available',
+          inventors: [patent.inventor || patent.inventorName || 'Unknown'],
+          assignee: patent.assignee || patent.assigneeName || 'Unassigned',
+          filingDate: patent.priority_date || patent.filingDate || '',
+          publicationDate: patent.publication_date || patent.publicationDate || '',
+          status: this.determinePatentStatus(patent.priority_date || patent.filingDate),
+          category: this.categorizePatent(
+            patent.title || patent.patentTitle, 
+            patent.abstract || patent.patentAbstract
+          ),
+          claims: [],
+          isAvailableForMinting: true
+        };
+      }
+      
+      // Legacy USPTO format
+      return {
+        patentNumber: patent.patentNumber || 'N/A',
+        title: patent.patentTitle || 'Untitled Patent',
+        abstract: patent.patentAbstract || 'No abstract available',
+        inventors: Array.isArray(patent.inventorName) ? patent.inventorName : [patent.inventorName || 'Unknown'],
+        assignee: patent.assigneeName || 'Unassigned',
+        filingDate: patent.filingDate || '',
+        publicationDate: patent.publicationDate || '',
+        status: this.determinePatentStatus(patent.filingDate),
+        category: this.categorizePatent(patent.patentTitle, patent.patentAbstract),
+        claims: [],
+        isAvailableForMinting: true
+      };
+    });
   }
 
   private getMockPatents(query: string): Patent[] {

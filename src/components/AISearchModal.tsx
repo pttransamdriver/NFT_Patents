@@ -103,6 +103,11 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
   };
 
   const handlePSPPayment = async () => {
+    if (!account) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
     setIsProcessingPayment(true);
     try {
       // Check PSP token balance first
@@ -112,13 +117,14 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
         return;
       }
 
-      const result = await pspTokenService.payWithPSP(account!);
+      console.log('Starting PSP payment process...');
+      const result = await pspTokenService.payWithPSP(account);
 
       if (result.success) {
         // Update credits and token info
-        setSearchCredits(result.totalCredits || 1);
+        setSearchCredits(result.searchCredits || 1);
         await loadPSPTokenInfo(); // Refresh token balance
-        alert(`Payment successful! You now have ${result.totalCredits} search credits.`);
+        alert(`Payment successful! You now have ${result.searchCredits} search credits.`);
         onSearchWithPayment();
         onClose();
       } else {
@@ -133,9 +139,15 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
   };
 
   const handleETHPayment = async () => {
+    if (!account) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
     setIsProcessingPayment(true);
     try {
-      const result = await paymentService.payWithETH(account!);
+      console.log('Starting ETH payment process...');
+      const result = await paymentService.payWithETH(account);
 
       if (result.success) {
         setSearchCredits(result.totalCredits || 1);
@@ -171,6 +183,34 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
     } catch (error) {
       console.error('USDC payment failed:', error);
       alert('USDC payment failed. Please try again.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handleBuyPSPTokens = async () => {
+    if (!account) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    try {
+      console.log('Starting PSP token purchase...');
+      // Calculate ETH needed for required PSP tokens
+      const ethNeeded = parseFloat(searchPriceInPSP) * 0.000005; // PSP price is 0.000005 ETH per token
+      
+      const result = await pspTokenService.purchaseTokens(ethNeeded.toString(), account);
+
+      if (result.success) {
+        await loadPSPTokenInfo(); // Refresh token balance
+        alert(`Successfully purchased ${result.tokensPurchased} PSP tokens!`);
+      } else {
+        alert(`PSP token purchase failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('PSP token purchase failed:', error);
+      alert('PSP token purchase failed. Please try again.');
     } finally {
       setIsProcessingPayment(false);
     }
@@ -451,12 +491,26 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Buy PSP Tokens Link */}
+                      {/* Buy PSP Tokens Button */}
                       {pspTokenInfo && parseFloat(pspTokenInfo.userBalance) < parseFloat(searchPriceInPSP) && (
-                        <div className="mt-3 text-center">
-                          <div className="text-xs text-blue-600 dark:text-blue-400">
-                            Need more PSP tokens? You can purchase them with ETH in your wallet.
-                          </div>
+                        <div className="mt-3">
+                          <button
+                            onClick={handleBuyPSPTokens}
+                            disabled={isProcessingPayment}
+                            className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg text-sm font-medium transition-all duration-200"
+                          >
+                            {isProcessingPayment ? (
+                              <div className="flex items-center justify-center space-x-2">
+                                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>Buying PSP...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center space-x-2">
+                                <Coins className="w-3 h-3" />
+                                <span>Buy {searchPriceInPSP} PSP Tokens (0.0025 ETH)</span>
+                              </div>
+                            )}
+                          </button>
                         </div>
                       )}
                     </div>

@@ -14,6 +14,9 @@ async function main() {
   const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
   const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
   const wallet = new ethers.Wallet(privateKey, provider);
+  
+  // Get current nonce
+  let nonce = await provider.getTransactionCount(wallet.address);
     
   console.log("📋 Deployment Summary:");
   console.log("👤 Deployer:", wallet.address);
@@ -21,11 +24,12 @@ async function main() {
   
   const deployedContracts = {};
   
-  // 1. Deploy PSP Token first
+  // 1. Deploy PSP Token first (1 PSP = $0.01, so ~0.000004 ETH at $2500/ETH)
   console.log("\n📦 Deploying PSP Token...");
   const PSPTokenArtifact = await hre.artifacts.readArtifact("PSPToken");
   const PSPTokenFactory = new ethers.ContractFactory(PSPTokenArtifact.abi, PSPTokenArtifact.bytecode, wallet);
-  const pspToken = await PSPTokenFactory.deploy();
+  const initialTokenPrice = ethers.parseEther("0.000004"); // 1 PSP = ~$0.01
+  const pspToken = await PSPTokenFactory.deploy(initialTokenPrice, { nonce: nonce++ });
   await pspToken.waitForDeployment();
   const pspTokenAddress = await pspToken.getAddress();
   deployedContracts.PSPToken = pspTokenAddress;
@@ -35,7 +39,21 @@ async function main() {
   console.log("\n📦 Deploying SearchPayment contract...");
   const SearchPaymentArtifact = await hre.artifacts.readArtifact("SearchPayment");
   const SearchPaymentFactory = new ethers.ContractFactory(SearchPaymentArtifact.abi, SearchPaymentArtifact.bytecode, wallet);
-  const searchPayment = await SearchPaymentFactory.deploy(pspTokenAddress);
+  
+  // Constructor parameters for SearchPayment
+  const usdcTokenAddress = "0x0000000000000000000000000000000000000001"; // Mock USDC for testing
+  const initialPriceInETH = ethers.parseEther("0.002"); // $5 at $2500/ETH
+  const initialPriceInUSDC = ethers.parseUnits("5", 6); // $5 USDC (6 decimals)
+  const initialPriceInPSP = ethers.parseEther("500"); // 500 PSP tokens
+  
+  const searchPayment = await SearchPaymentFactory.deploy(
+    pspTokenAddress,
+    usdcTokenAddress, 
+    initialPriceInETH,
+    initialPriceInUSDC,
+    initialPriceInPSP,
+    { nonce: nonce++ }
+  );
   await searchPayment.waitForDeployment();
   const searchPaymentAddress = await searchPayment.getAddress();
   deployedContracts.SearchPayment = searchPaymentAddress;
@@ -45,7 +63,7 @@ async function main() {
   console.log("\n📦 Deploying PatentNFT contract...");
   const PatentNFTArtifact = await hre.artifacts.readArtifact("PatentNFT");
   const PatentNFTFactory = new ethers.ContractFactory(PatentNFTArtifact.abi, PatentNFTArtifact.bytecode, wallet);
-  const patentNFT = await PatentNFTFactory.deploy();
+  const patentNFT = await PatentNFTFactory.deploy({ nonce: nonce++ });
   await patentNFT.waitForDeployment();
   const patentNFTAddress = await patentNFT.getAddress();
   deployedContracts.PatentNFT = patentNFTAddress;
