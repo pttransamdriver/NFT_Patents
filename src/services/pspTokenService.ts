@@ -79,14 +79,6 @@ export interface PurchaseResult {
   error?: string;
 }
 
-export interface PaymentResult {
-  success: boolean;
-  transactionHash?: string;
-  paymentMethod?: PaymentToken;
-  amountPaid?: string;
-  searchCredits?: number;
-  error?: string;
-}
 
 export interface MultiTokenPricing {
   ethPrice: string;
@@ -427,18 +419,14 @@ export class PSPTokenService {
 
       // Approve PSP tokens if needed
       if (allowance < pspAmount) {
-        console.log('Requesting PSP token approval...');
         const approveTransaction = await pspContract.approve(this.searchPaymentAddress, pspAmount);
         await approveTransaction.wait();
-        console.log('PSP tokens approved successfully');
       }
 
       // Pay with PSP
-      console.log('Processing PSP payment...');
       const paymentTransaction = await searchContract.payWithPSP();
 
       const receipt = await paymentTransaction.wait();
-      console.log('PSP payment completed:', receipt.transactionHash);
 
       return {
         success: true,

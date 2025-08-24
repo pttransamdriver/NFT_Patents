@@ -28,24 +28,44 @@ const getContractAddresses = () => {
 };
 
 export interface PatentNFTContract extends Contract {
-  mintPatentNFT(to: string, patentTitle: string, patentNumber: string, inventor: string, overrides?: any): Promise<ethers.ContractTransaction>;
+  mintPatentNFT(to: string, patentNumber: string, overrides?: any): Promise<ethers.ContractTransaction>;
   getMintingPrice(): Promise<bigint>;
   patentExists(patentNumber: string): Promise<boolean>;
   totalSupply(): Promise<bigint>;
   balanceOf(owner: string): Promise<bigint>;
   tokenOfOwnerByIndex(owner: string, index: bigint): Promise<bigint>;
   tokenURI(tokenId: bigint): Promise<string>;
+  getPatent(tokenId: bigint): Promise<{
+    title: string;
+    inventor: string;
+    filingDate: bigint;
+    patentNumber: string;
+    isVerified: boolean;
+  }>;
 }
 
-export const getPatentNFTContract = async (
+export const getPatentNFTContract = (
   providerOrSigner: BrowserProvider | JsonRpcSigner
-): Promise<PatentNFTContract> => {
-  await loadContractArtifacts();
+): PatentNFTContract => {
   const addresses = getContractAddresses();
+
+  // Use a minimal ABI for the functions we need
+  const minimalAbi = [
+    "function mintPatentNFT(address to, string memory patentNumber) external payable returns (uint256)",
+    "function getMintingPrice() external view returns (uint256)",
+    "function patentExists(string memory patentNumber) external view returns (bool)",
+    "function totalSupply() external view returns (uint256)",
+    "function balanceOf(address owner) external view returns (uint256)",
+    "function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256)",
+    "function tokenURI(uint256 tokenId) external view returns (string memory)",
+    "function getPatent(uint256 tokenId) external view returns (string memory title, string memory inventor, uint256 filingDate, string memory patentNumber, bool isVerified)",
+    "event PatentMinted(uint256 tokenId, address owner, string patentNumber)",
+    "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
+  ];
 
   return new Contract(
     addresses.PatentNFT,
-    PatentNFTAbi.abi || PatentNFTAbi.default?.abi || [],
+    minimalAbi,
     providerOrSigner
   ) as PatentNFTContract;
 };
@@ -59,7 +79,7 @@ export const mintPatentNFT = async (
   }
 ): Promise<{ success: boolean; tokenId?: string; transactionHash?: string; error?: string }> => {
   try {
-    const contract = await getPatentNFTContract(signer);
+    const contract = getPatentNFTContract(signer);
     const userAddress = await signer.getAddress();
 
     // Check if patent already exists
@@ -138,7 +158,7 @@ export const mintPatentNFT = async (
 
 export const getMintingPrice = async (provider: BrowserProvider): Promise<string> => {
   try {
-    const contract = await getPatentNFTContract(provider);
+    const contract = getPatentNFTContract(provider);
     const price = await contract.getMintingPrice();
     return ethers.formatEther(price);
   } catch (error) {
@@ -149,7 +169,7 @@ export const getMintingPrice = async (provider: BrowserProvider): Promise<string
 
 export const checkPatentExists = async (provider: BrowserProvider, patentNumber: string): Promise<boolean> => {
   try {
-    const contract = await getPatentNFTContract(provider);
+    const contract = getPatentNFTContract(provider);
     return await contract.patentExists(patentNumber);
   } catch (error) {
     console.error('Error checking patent existence:', error);
@@ -159,7 +179,7 @@ export const checkPatentExists = async (provider: BrowserProvider, patentNumber:
 
 export const getUserNFTs = async (signer: JsonRpcSigner, userAddress: string): Promise<any[]> => {
   try {
-    const contract = await getPatentNFTContract(signer);
+    const contract = getPatentNFTContract(signer);
     const balance = await contract.balanceOf(userAddress);
     const nfts = [];
 

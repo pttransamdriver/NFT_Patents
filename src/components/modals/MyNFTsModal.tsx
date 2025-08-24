@@ -1,0 +1,404 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Award, Download, DollarSign, Eye, Calendar, FileText, Sparkles, ExternalLink, HelpCircle, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useWeb3 } from '../../contexts/Web3Context';
+import { getPatentNFTContract } from '../../utils/contracts';
+import { mintingService } from '../../services/mintingService';
+import MetaMaskNFTGuide from './MetaMaskNFTGuide';
+
+interface UserNFT {
+  tokenId: string;
+  tokenURI: string;
+  patentNumber: string;
+  title: string;
+  inventor: string;
+  filingDate: string;
+  isVerified: boolean;
+}
+
+interface MyNFTsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSellNFT?: (nft: UserNFT, price: string) => void;
+  refreshTrigger?: number; // Add refresh trigger prop
+}
+
+const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, refreshTrigger }) => {
+  const [nfts, setNfts] = useState<UserNFT[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAddingToMetaMask, setIsAddingToMetaMask] = useState(false);
+  const [selectedNFT, setSelectedNFT] = useState<UserNFT | null>(null);
+  const [sellPrice, setSellPrice] = useState('');
+  const [showSellForm, setShowSellForm] = useState(false);
+  const [showMetaMaskGuide, setShowMetaMaskGuide] = useState(false);
+  const [selectedNFTForGuide, setSelectedNFTForGuide] = useState<UserNFT | null>(null);
+  const { isConnected, account, provider } = useWeb3();
+
+  const loadUserNFTs = async () => {
+    if (!isConnected || !account || !provider) return;
+
+    setIsLoading(true);
+    try {
+      const contract = getPatentNFTContract(provider);
+      const balance = await contract.balanceOf(account);
+      console.log(`User has ${balance} NFTs`);
+
+      const userNFTs: UserNFT[] = [];
+
+      for (let i = 0; i < Number(balance); i++) {
+        try {
+          const tokenId = await contract.tokenOfOwnerByIndex(account, BigInt(i));
+          
+          // Get patent details from contract
+          let patentData;
+          try {
+            patentData = await contract.getPatent(tokenId);
+          } catch (error) {
+            console.log(`Could not get patent details for token ${tokenId}, using defaults`);
+            patentData = {
+              title: `Patent NFT #${tokenId}`,
+              inventor: 'Unknown',
+              filingDate: BigInt(Date.now() / 1000),
+              patentNumber: `PATENT-${tokenId}`,
+              isVerified: false
+            };
+          }
+
+          // Get token URI
+          let tokenURI = '';
+          try {
+            tokenURI = await contract.tokenURI(tokenId);
+          } catch (error) {
+            console.log(`Could not get tokenURI for token ${tokenId}`);
+          }
+
+          userNFTs.push({
+            tokenId: tokenId.toString(),
+            tokenURI,
+            patentNumber: patentData.patentNumber || `PATENT-${tokenId}`,
+            title: patentData.title || `Patent NFT #${tokenId}`,
+            inventor: patentData.inventor || 'Unknown',
+            filingDate: new Date(Number(patentData.filingDate) * 1000).toLocaleDateString(),
+            isVerified: patentData.isVerified || false
+          });
+        } catch (error) {
+          console.error(`Error loading NFT at index ${i}:`, error);
+        }
+      }
+
+      setNfts(userNFTs);
+    } catch (error) {
+      console.error('Error loading NFTs:', error);
+      toast.error('Failed to load NFTs');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addNFTToMetaMask = async (nft: UserNFT) => {
+    setSelectedNFTForGuide(nft);
+    setShowMetaMaskGuide(true);
+  };
+
+  const addAllNFTsToMetaMask = async () => {
+    if (!account) return;
+
+    setIsAddingToMetaMask(true);
+    try {
+      await mintingService.addAllUserNFTsToMetaMask(account);
+      toast.success('All NFTs added to MetaMask!');
+    } catch (error) {
+      toast.error('Failed to add NFTs to MetaMask');
+    } finally {
+      setIsAddingToMetaMask(false);
+    }
+  };
+
+  const handleSellNFT = (nft: UserNFT) => {
+    setSelectedNFT(nft);
+    setShowSellForm(true);
+  };
+
+  const confirmSell = () => {
+    if (selectedNFT && sellPrice && onSellNFT) {
+      onSellNFT(selectedNFT, sellPrice);
+      setShowSellForm(false);
+      setSelectedNFT(null);
+      setSellPrice('');
+      toast.success('NFT listed for sale!');
+    }
+  };
+
+  const copyContractInfo = (tokenId: string) => {
+    const contractAddress = import.meta.env.VITE_PATENT_NFT_ADDRESS;
+    const info = `Contract: ${contractAddress}\nToken ID: ${tokenId}`;
+    navigator.clipboard.writeText(info);
+    toast.success('Contract info copied to clipboard!');
+  };
+
+  useEffect(() => {
+    if (isOpen && isConnected && account) {
+      loadUserNFTs();
+    }
+  }, [isOpen, isConnected, account, refreshTrigger]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  My Patent NFTs
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  Manage your tokenized patents
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {/* Actions Bar */}
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center space-x-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {nfts.length} NFT{nfts.length !== 1 ? 's' : ''} found
+                  </div>
+                  <button
+                    onClick={loadUserNFTs}
+                    disabled={isLoading}
+                    className="flex items-center space-x-1 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+                {nfts.length > 0 && (
+                  <button
+                    onClick={addAllNFTsToMetaMask}
+                    disabled={isAddingToMetaMask}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm rounded-lg font-medium transition-colors flex items-center space-x-2"
+                  >
+                    {isAddingToMetaMask ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Adding to MetaMask...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Add All to MetaMask</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Loading State */}
+              {isLoading && (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your NFTs...</p>
+                </div>
+              )}
+
+              {/* NFTs Grid */}
+              {!isLoading && nfts.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {nfts.map((nft, index) => (
+                    <motion.div
+                      key={nft.tokenId}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300"
+                    >
+                      {/* NFT Preview */}
+                      <div className="h-32 bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center">
+                        <div className="text-center text-white">
+                          <Award className="w-10 h-10 mx-auto mb-1 opacity-80" />
+                          <p className="text-xs font-medium">Patent NFT #{nft.tokenId}</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        {/* Header */}
+                        <div className="mb-3">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 truncate">
+                            {nft.title}
+                          </h3>
+                          <div className="flex items-center space-x-1 mb-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              #{nft.tokenId}
+                            </span>
+                            {nft.isVerified && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Verified
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="space-y-1 mb-4">
+                          <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                            <FileText className="w-3 h-3 mr-1" />
+                            <span className="truncate">{nft.patentNumber}</span>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                            <Eye className="w-3 h-3 mr-1" />
+                            <span className="truncate">{nft.inventor}</span>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            <span>{nft.filingDate}</span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleSellNFT(nft)}
+                            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded font-medium transition-colors flex items-center justify-center space-x-1"
+                          >
+                            <DollarSign className="w-3 h-3" />
+                            <span>Sell</span>
+                          </button>
+                          <div className="grid grid-cols-2 gap-1">
+                            <button
+                              onClick={() => addNFTToMetaMask(nft)}
+                              className="px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded font-medium transition-colors"
+                              title="Show MetaMask import guide"
+                            >
+                              <HelpCircle className="w-3 h-3 mx-auto" />
+                            </button>
+                            <button
+                              onClick={() => copyContractInfo(nft.tokenId)}
+                              className="px-2 py-1.5 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded font-medium transition-colors"
+                              title="Copy contract info"
+                            >
+                              <ExternalLink className="w-3 h-3 mx-auto" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!isLoading && nfts.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Award className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    No Patent NFTs Found
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    You haven't minted any Patent NFTs yet
+                  </p>
+                  <button
+                    onClick={onClose}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Go Search & Mint Patents
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Sell Form Modal */}
+            <AnimatePresence>
+              {showSellForm && selectedNFT && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
+                  >
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                      List NFT for Sale
+                    </h3>
+                    
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        NFT: {selectedNFT.title} (#{selectedNFT.tokenId})
+                      </p>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Price (ETH)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={sellPrice}
+                        onChange={(e) => setSellPrice(e.target.value)}
+                        placeholder="0.1"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => {
+                          setShowSellForm(false);
+                          setSelectedNFT(null);
+                          setSellPrice('');
+                        }}
+                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={confirmSell}
+                        disabled={!sellPrice || parseFloat(sellPrice) <= 0}
+                        className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                      >
+                        List for Sale
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        </div>
+      )}
+      
+      {/* MetaMask NFT Guide */}
+      {selectedNFTForGuide && (
+        <MetaMaskNFTGuide
+          isOpen={showMetaMaskGuide}
+          onClose={() => {
+            setShowMetaMaskGuide(false);
+            setSelectedNFTForGuide(null);
+          }}
+          contractAddress={import.meta.env.VITE_PATENT_NFT_ADDRESS || ''}
+          tokenId={selectedNFTForGuide.tokenId}
+          patentNumber={selectedNFTForGuide.patentNumber}
+        />
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default MyNFTsModal;

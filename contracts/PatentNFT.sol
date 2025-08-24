@@ -4,6 +4,7 @@ pragma solidity ^0.8.20; // Specify minimum Solidity compiler version
 
 // Import OpenZeppelin contracts for NFT functionality
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol"; // NFT with metadata URI storage
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol"; // NFT enumeration functionality
 import "@openzeppelin/contracts/access/Ownable.sol"; // Access control for admin functions
 // Counters library removed in newer OpenZeppelin versions - using uint256 instead
 
@@ -12,12 +13,15 @@ import "@openzeppelin/contracts/access/Ownable.sol"; // Access control for admin
  * @dev NFT contract for tokenizing patents with verification system
  * Inherits from ERC721URIStorage (NFT with metadata) and Ownable (access control)
  */
-contract PatentNFT is ERC721URIStorage, Ownable {
+contract PatentNFT is ERC721URIStorage, ERC721Enumerable, Ownable {
     // Private counter to track and assign unique token IDs
     uint256 private _tokenIds;
     
     // Minting price in wei (0.1 ETH by default)
     uint256 public mintingPrice = 0.1 ether;
+    
+    // Base URI for metadata (configurable)
+    string public baseTokenURI = "http://localhost:3001/metadata/";
     
     /**
      * @dev Structure to store patent information for each NFT
@@ -173,8 +177,8 @@ contract PatentNFT is ERC721URIStorage, Ownable {
         // Mark patent as existing
         patentExists[patentNumber] = true;
         
-        // Create a default metadata URI (in production, this would be IPFS)
-        string memory tokenURI = string(abi.encodePacked("https://api.patentnft.com/metadata/", patentNumber));
+        // Create metadata URI using configurable base URI
+        string memory tokenURI = string(abi.encodePacked(baseTokenURI, patentNumber));
         
         // Mint the patent with default values
         return mintPatent(
@@ -201,6 +205,13 @@ contract PatentNFT is ERC721URIStorage, Ownable {
     }
     
     /**
+     * @dev Set base URI for metadata (only owner)
+     */
+    function setBaseTokenURI(string memory _baseTokenURI) public onlyOwner {
+        baseTokenURI = _baseTokenURI;
+    }
+    
+    /**
      * @dev Withdraw contract balance (only owner)
      */
     function withdraw() public onlyOwner {
@@ -212,9 +223,54 @@ contract PatentNFT is ERC721URIStorage, Ownable {
     }
     
     /**
-     * @dev Get total number of minted tokens
+     * @dev Get total number of minted tokens - override ERC721Enumerable
      */
-    function totalSupply() public view returns (uint256) {
-        return _tokenIds;
+    function totalSupply() public view override(ERC721Enumerable) returns (uint256) {
+        return ERC721Enumerable.totalSupply();
+    }
+    
+    /**
+     * @dev Override required by Solidity for multiple inheritance
+     */
+    function _update(address to, uint256 tokenId, address auth)
+        internal
+        override(ERC721, ERC721Enumerable)
+        returns (address)
+    {
+        return super._update(to, tokenId, auth);
+    }
+
+    /**
+     * @dev Override required by Solidity for multiple inheritance
+     */
+    function _increaseBalance(address account, uint128 value)
+        internal
+        override(ERC721, ERC721Enumerable)
+    {
+        super._increaseBalance(account, value);
+    }
+
+    /**
+     * @dev Override required by Solidity for multiple inheritance
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721URIStorage, ERC721Enumerable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
+    /**
+     * @dev Override required by Solidity for multiple inheritance
+     */
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
     }
 }

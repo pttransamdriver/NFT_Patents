@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Copy } from 'lucide-react';
+import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Copy, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
+import MyNFTsModal from '../components/modals/MyNFTsModal';
 import { mockNFTs } from '../data/mockData';
 import { useWeb3 } from '../contexts/Web3Context';
 import { getUserNFTs } from '../utils/contracts';
+import { marketplaceService, type MarketplaceListing, type PaginatedListings } from '../services/marketplaceService';
 import type { SearchFilters } from '../types';
 
 const MarketplacePage: React.FC = () => {
@@ -19,12 +21,19 @@ const MarketplacePage: React.FC = () => {
   });
   const [realNFTs, setRealNFTs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>([]);
+  const [marketplaceLoading, setMarketplaceLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalListings, setTotalListings] = useState(0);
   const [showListingModal, setShowListingModal] = useState(false);
   const [selectedNFT, setSelectedNFT] = useState<any>(null);
   const [listingPrice, setListingPrice] = useState('');
   const [showExternalListingModal, setShowExternalListingModal] = useState(false);
   const [externalNFTAddress, setExternalNFTAddress] = useState('');
   const [externalTokenId, setExternalTokenId] = useState('');
+  const [showMyNFTsModal, setShowMyNFTsModal] = useState(false);
+  const [nftRefreshTrigger, setNftRefreshTrigger] = useState(0);
   const { signer, account, isConnected, connectWallet } = useWeb3();
 
   const categories = ['All', 'Clean Energy', 'Healthcare', 'Transportation', 'Computing', 'Materials', 'Energy Storage'];
@@ -38,7 +47,6 @@ const MarketplacePage: React.FC = () => {
       setLoading(true);
       try {
         const userNFTs = await getUserNFTs(signer, account);
-        console.log('User NFTs:', userNFTs);
         
         // Convert contract NFTs to marketplace format
         const formattedNFTs = userNFTs.map((nft, index) => ({
@@ -72,6 +80,26 @@ const MarketplacePage: React.FC = () => {
     fetchUserNFTs();
   }, [signer, account]);
 
+  // Fetch marketplace listings
+  useEffect(() => {
+    const fetchMarketplaceListings = async () => {
+      setMarketplaceLoading(true);
+      try {
+        const result = await marketplaceService.getMarketplaceListings(currentPage, 20);
+        setMarketplaceListings(result.listings);
+        setTotalPages(result.totalPages);
+        setTotalListings(result.totalListings);
+      } catch (error) {
+        console.error('Error fetching marketplace listings:', error);
+        setMarketplaceListings([]);
+      } finally {
+        setMarketplaceLoading(false);
+      }
+    };
+
+    fetchMarketplaceListings();
+  }, [currentPage]);
+
   // Handle NFT listing
   const handleListNFT = (nft: any) => {
     setSelectedNFT(nft);
@@ -84,7 +112,6 @@ const MarketplacePage: React.FC = () => {
       return;
     }
     
-    console.log(`Listing NFT #${selectedNFT.id} for ${listingPrice} ETH`);
     alert(`NFT #${selectedNFT.id} listed for ${listingPrice} ETH! (Simulated)`);
     
     setShowListingModal(false);
@@ -92,42 +119,78 @@ const MarketplacePage: React.FC = () => {
     setListingPrice('');
   };
 
+  const handleSellNFTFromModal = (nft: any, price: string) => {
+    // Here you would integrate with your marketplace contract
+    // For now, just show a success message
+    alert(`NFT #${nft.tokenId} listed for ${price} ETH!`);
+  };
+
+  // Convert MarketplaceListing to NFT format for NFTCard component
+  const convertListingToNFT = (listing: MarketplaceListing) => {
+    return {
+      id: listing.listingId,
+      patentNumber: listing.patentNumber || `Unknown-${listing.tokenId}`,
+      title: listing.title || `Patent NFT #${listing.tokenId}`,
+      description: `Patent NFT available for purchase at ${listing.priceInEth} ETH`,
+      inventor: listing.inventor || 'Unknown',
+      assignee: 'Unknown',
+      filingDate: new Date().toISOString(),
+      category: 'Technology', // Default category
+      status: 'active' as const,
+      price: parseFloat(listing.priceInEth),
+      priceChange: 0,
+      owner: listing.seller,
+      creator: listing.seller,
+      mintDate: new Date().toISOString(),
+      isListed: true,
+      views: 0,
+      likes: 0,
+      imageUrl: listing.imageUrl,
+      ipfsHash: '',
+      transactionHistory: []
+    };
+  };
+
   const filteredNFTs = useMemo(() => {
-    // Only show real NFTs (remove mock NFTs)
-    const allNFTs = [...realNFTs];
-    
-    let filtered = allNFTs.filter(nft => {
+    // Use marketplace listings instead of user's personal NFTs
+    let filtered = marketplaceListings.filter(listing => {
       const matchesSearch = searchQuery === '' || 
-        nft.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        nft.inventor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        nft.patentNumber.toLowerCase().includes(searchQuery.toLowerCase());
+        (listing.title && listing.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (listing.inventor && listing.inventor.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (listing.patentNumber && listing.patentNumber.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      const matchesCategory = !filters.category || filters.category === 'All' || nft.category === filters.category;
-      const matchesStatus = !filters.status || filters.status === 'All' || nft.status === filters.status;
+      // Since we don't have category/status on marketplace listings yet, skip those filters for now
+      // const matchesCategory = !filters.category || filters.category === 'All' || listing.category === filters.category;
+      // const matchesStatus = !filters.status || filters.status === 'All' || listing.status === filters.status;
       
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch;
     });
 
     // Sort results
     if (filters.sortBy === 'price') {
-      filtered.sort((a, b) => filters.sortOrder === 'asc' ? a.price - b.price : b.price - a.price);
-    } else if (filters.sortBy === 'date') {
       filtered.sort((a, b) => {
-        const dateA = new Date(a.mintDate).getTime();
-        const dateB = new Date(b.mintDate).getTime();
-        return filters.sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+        const priceA = parseFloat(a.priceInEth);
+        const priceB = parseFloat(b.priceInEth);
+        return filters.sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
+      });
+    } else if (filters.sortBy === 'date') {
+      // Since we don't have mintDate on MarketplaceListing, sort by listing ID as proxy for recency
+      filtered.sort((a, b) => {
+        const idA = parseInt(a.listingId);
+        const idB = parseInt(b.listingId);
+        return filters.sortOrder === 'asc' ? idA - idB : idB - idA;
       });
     } else {
-      // Sort by popularity (views + likes)
+      // Sort by token ID as proxy for popularity (newer tokens = higher IDs)
       filtered.sort((a, b) => {
-        const popularityA = a.views + a.likes * 10;
-        const popularityB = b.views + b.likes * 10;
-        return filters.sortOrder === 'asc' ? popularityA - popularityB : popularityB - popularityA;
+        const tokenA = parseInt(a.tokenId);
+        const tokenB = parseInt(b.tokenId);
+        return filters.sortOrder === 'asc' ? tokenA - tokenB : tokenB - tokenA;
       });
     }
 
     return filtered;
-  }, [searchQuery, filters, realNFTs]);
+  }, [searchQuery, filters, marketplaceListings]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -199,6 +262,20 @@ const MarketplacePage: React.FC = () => {
                 <List className="w-5 h-5" />
               </button>
             </div>
+
+            {/* My NFTs Button */}
+            {isConnected && (
+              <button
+                onClick={() => {
+                  setNftRefreshTrigger(prev => prev + 1); // Trigger refresh
+                  setShowMyNFTsModal(true);
+                }}
+                className="flex items-center px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg"
+              >
+                <Wallet className="w-5 h-5 mr-2" />
+                My NFTs
+              </button>
+            )}
           </div>
 
           {/* Expanded Filters */}
@@ -401,21 +478,26 @@ const MarketplacePage: React.FC = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          {filteredNFTs.length > 0 ? (
+          {marketplaceLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">Loading marketplace listings...</p>
+            </div>
+          ) : filteredNFTs.length > 0 ? (
             <div className={
               viewMode === 'grid' 
                 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
                 : 'space-y-4'
             }>
-              {filteredNFTs.map((nft, index) => (
+              {filteredNFTs.map((listing, index) => (
                 <motion.div
-                  key={nft.id}
+                  key={listing.listingId}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                 >
                   <NFTCard 
-                    nft={nft} 
+                    nft={convertListingToNFT(listing)} 
                     className={viewMode === 'list' ? 'flex' : ''}
                   />
                 </motion.div>
@@ -434,12 +516,61 @@ const MarketplacePage: React.FC = () => {
           )}
         </motion.div>
 
-        {/* Load More Button */}
-        {filteredNFTs.length > 0 && filteredNFTs.length >= 12 && (
-          <div className="text-center mt-12">
-            <button className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200">
-              Load More Patents
-            </button>
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-12">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing page {currentPage} of {totalPages} ({totalListings} total patents)
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </button>
+              
+              {/* Page Numbers */}
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  const pageNum = i + 1;
+                  const shouldShow = pageNum === 1 || pageNum === totalPages || 
+                    (pageNum >= currentPage - 2 && pageNum <= currentPage + 2);
+                  
+                  if (!shouldShow && pageNum !== 2 && pageNum !== totalPages - 1) {
+                    return pageNum === 3 || pageNum === totalPages - 2 ? (
+                      <span key={pageNum} className="px-2 text-gray-400">...</span>
+                    ) : null;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                        currentPage === pageNum
+                          ? 'text-blue-600 bg-blue-50 border border-blue-300 dark:bg-blue-900 dark:text-blue-300'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -597,7 +728,6 @@ const MarketplacePage: React.FC = () => {
                       alert('Please enter both contract address and token ID');
                       return;
                     }
-                    console.log('Adding external NFT:', { address: externalNFTAddress, tokenId: externalTokenId });
                     alert('NFT listing submitted! It will appear once the transfer is verified.');
                     setShowExternalListingModal(false);
                     setExternalNFTAddress('');
@@ -611,6 +741,14 @@ const MarketplacePage: React.FC = () => {
             </motion.div>
           </div>
         )}
+
+        {/* My NFTs Modal */}
+        <MyNFTsModal
+          isOpen={showMyNFTsModal}
+          onClose={() => setShowMyNFTsModal(false)}
+          onSellNFT={handleSellNFTFromModal}
+          refreshTrigger={nftRefreshTrigger}
+        />
       </div>
     </div>
   );

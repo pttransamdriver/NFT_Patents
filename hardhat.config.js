@@ -1,4 +1,5 @@
 import "@nomicfoundation/hardhat-ethers";
+import "@nomicfoundation/hardhat-mocha";
 
 /** @type import('hardhat/config').HardhatUserConfig */
 export default {
@@ -23,6 +24,12 @@ export default {
     hardhat: {
       type: "edr-simulated",
       chainId: 31337
+    },
+    sepolia: {
+      type: "http", 
+      url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
+      accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
+      chainId: 11155111
     }
   },
   paths: {

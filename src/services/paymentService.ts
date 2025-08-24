@@ -11,6 +11,9 @@ export interface PaymentResult {
   transactionHash?: string;
   creditsAdded?: number;
   totalCredits?: number;
+  paymentMethod?: PaymentToken;
+  amountPaid?: string;
+  searchCredits?: number;
   error?: string;
 }
 

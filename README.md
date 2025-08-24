@@ -40,11 +40,18 @@ The Patent NFT Marketplace consists of four main components and two external dep
 ### Key Features
 
 - 🌍 **Global Patent Search**: Access to worldwide patents (US, EP, CN, JP, KR)
-- 💎 **NFT Minting**: Convert real patents into tradeable NFTs
+- 💎 **NFT Minting**: Convert real patents into tradeable NFTs with PDF-to-image conversion
+- 📄 **IPFS Storage**: Patent documents and images stored on decentralized IPFS network
+- 🏪 **Live Marketplace**: Real-time listing of all users' patent NFTs for sale
+- 📄 **Pagination**: Browse thousands of listings with 20 patents per page
 - 💰 **Multi-Token Payments**: Support for ETH, USDC, and PSP tokens
 - 🔒 **Smart Contract Security**: ReentrancyGuard, Pausable, access controls
 - 🔄 **CORS-Free Integration**: Backend proxy eliminates browser limitations
 - 📱 **Responsive UI**: Modern React interface with Tailwind CSS
+- 🎯 **My NFTs Modal**: Integrated NFT management on marketplace page
+- 📱 **MetaMask Import Guide**: Step-by-step NFT import for local networks
+- 🔧 **Advanced Debugging**: Built-in tools for minting diagnostics
+- 🔍 **Patent Uniqueness**: Blockchain-enforced uniqueness prevents duplicate minting
 
 ## 🚀 Quick Start
 
@@ -244,7 +251,9 @@ app.use(cors({
 src/
 ├── components/           # Reusable UI components
 │   ├── layout/          # Header, Footer
-│   └── marketplace/     # NFT-specific components
+│   ├── marketplace/     # NFT-specific components
+│   ├── modals/          # MyNFTsModal, MetaMaskNFTGuide
+│   └── debug/           # MintDebugger, NetworkDebugger
 ├── contexts/            # React Context providers
 │   ├── Web3Context.tsx  # Blockchain connection
 │   ├── WalletContext.tsx # Wallet state management
@@ -344,6 +353,82 @@ class Web3Utils {
   // Standardized connection checking
   async isConnected(): Promise<{ connected: boolean; account?: string }>
 }
+```
+
+## 🏪 Marketplace & IPFS Integration
+
+### Live Marketplace Functionality
+
+The marketplace now displays real NFT listings from all users instead of mock data:
+
+**Key Features:**
+- **Real-time Listings**: Fetches active NFT listings from the NFTMarketplace smart contract
+- **Pagination**: Displays 20 patents per page with full navigation controls  
+- **Patent Metadata**: Shows actual patent titles, inventors, and images
+- **Search & Filter**: Search by patent number, title, or inventor name
+- **Price Sorting**: Sort by price, date, or popularity
+
+**MarketplaceService** (`src/services/marketplaceService.ts`):
+```typescript
+class MarketplaceService {
+  // Fetch paginated marketplace listings
+  async getMarketplaceListings(page: number, limit: number): Promise<PaginatedListings>
+  
+  // List an NFT for sale
+  async listNFT(tokenId: string, priceInEth: string): Promise<ListingResult>
+  
+  // Purchase an NFT from marketplace
+  async buyNFT(listingId: string, priceInEth: string): Promise<PurchaseResult>
+}
+```
+
+### PDF Processing & IPFS Storage
+
+**PatentPdfService** (`src/services/patentPdfService.ts`):
+```typescript
+class PatentPdfService {
+  // Fetch patent PDF from USPTO/Google Patents
+  async fetchPatentPdf(patentNumber: string): Promise<Blob | null>
+  
+  // Convert PDF to image for NFT display
+  async convertPdfToImage(pdfBlob: Blob): Promise<Blob>
+  
+  // Store files on IPFS with Pinata fallback
+  async storeOnIPFS(file: Blob, filename?: string): Promise<string>
+  
+  // Complete patent processing pipeline
+  async processPatentForNFT(patentNumber: string): Promise<{
+    pdfHash: string;
+    imageHash: string; 
+    imageUrl: string;
+  }>
+}
+```
+
+**Processing Pipeline:**
+1. **Patent PDF Retrieval**: Automatically fetches PDFs from patent offices
+2. **Image Conversion**: First page of PDF converted to PNG using pdf.js
+3. **IPFS Storage**: Both PDF and image stored on decentralized IPFS network
+4. **Metadata Creation**: NFT metadata includes IPFS links for images and documents
+5. **Contract Integration**: TokenURI points to backend metadata service
+
+**Supported Patent Sources:**
+- USPTO (US Patents)
+- Google Patents (Global coverage)
+- Placeholder generation for unavailable documents
+
+### Metadata Service
+
+**Backend Metadata API** (`backend/metadata.js`):
+- Stores IPFS hashes and metadata for each patent NFT
+- Serves JSON metadata compatible with OpenSea and other NFT platforms
+- Configurable metadata URIs for different deployment environments
+
+**Endpoints:**
+```javascript
+GET  /metadata/:patentNumber     // Serve NFT metadata JSON
+POST /metadata/:patentNumber/ipfs // Store IPFS hashes
+GET  /debug/metadata             // View all stored metadata
 ```
 
 ## 🔧 Configuration
@@ -601,6 +686,50 @@ curl "http://localhost:3001/api/uspto/search?criteria=test"
 - Batch operations where possible
 - Use events for off-chain indexing
 - Optimize gas usage with assembly when needed
+
+---
+
+## 🚀 Sepolia Deployment
+
+The project is fully configured for Sepolia testnet deployment with production-ready features:
+
+### Pre-deployment Checklist
+
+1. **Get Sepolia ETH**: Fund your wallet from [Sepolia Faucet](https://sepoliafaucet.com/)
+2. **Configure Environment**: Copy `.env.sepolia` to `.env` and update:
+   ```bash
+   SEPOLIA_PRIVATE_KEY=your_private_key_here
+   VITE_API_BASE_URL=https://your-production-backend.com
+   VITE_PINATA_API_KEY=your_pinata_api_key
+   VITE_PINATA_SECRET_KEY=your_pinata_secret_key
+   ```
+
+### Deployment Commands
+
+```bash
+# Deploy all contracts to Sepolia
+npm run deploy:sepolia
+
+# Verify contracts on Etherscan (commands provided after deployment)
+npx hardhat verify --network sepolia <contract_address> <constructor_args>
+```
+
+### Production Features Ready
+
+- ✅ **PDF to Image Processing**: Converts patent PDFs to NFT images
+- ✅ **IPFS Integration**: Stores patent documents and images on IPFS
+- ✅ **Live Marketplace**: Real-time listings with pagination
+- ✅ **Patent Uniqueness**: Blockchain-enforced duplicate prevention
+- ✅ **Fee Collection**: 2.5% platform fees + minting fees
+- ✅ **Multi-token Support**: ETH, USDC, and PSP token payments
+- ✅ **Configurable Metadata**: Production-ready tokenURI endpoints
+
+### Post-deployment Tasks
+
+1. **Update Contract Addresses**: Add deployed addresses to frontend `.env`
+2. **Configure Backend**: Update metadata URI in smart contract
+3. **Test Integration**: Verify minting, listing, and purchasing flows
+4. **Monitor Performance**: Set up logging and analytics
 
 ---
 
