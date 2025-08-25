@@ -6,7 +6,10 @@ import { PATENT_NFT_ABI } from './contractABIs';
 // Contract addresses from environment variables
 const getContractAddresses = () => {
   return {
-    PatentNFT: import.meta.env.VITE_PATENT_NFT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+    PatentNFT: import.meta.env.VITE_PATENT_NFT_ADDRESS,
+    PSPToken: import.meta.env.VITE_PSP_TOKEN_ADDRESS,
+    SearchPayment: import.meta.env.VITE_SEARCH_PAYMENT_ADDRESS,
+    Marketplace: import.meta.env.VITE_MARKETPLACE_ADDRESS
   };
 };
 

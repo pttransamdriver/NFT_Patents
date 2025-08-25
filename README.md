@@ -1,6 +1,6 @@
 # 🏛️ Patent NFT Marketplace
 
-A decentralized marketplace for tokenizing and trading patents as NFTs, featuring real-time patent data integration, multi-token payment systems, and smart contract-based ownership verification. How this is designed to work; there are patents that are searchable globaly on the Google Patents API. This web3 application searches those patents and mints from them. The patents are minted into an NFT by taking the PDF of the patent and putting it on IPFS as the image of the NFT. The Patent ID is used to help make the NFT and the NFT will share the name of the patent title. These are minted here and placed in your wallet. Then users can take those patents they own and sell them on the apps marketplace. 
+A decentralized marketplace for tokenizing and trading patents as NFTs, featuring real-time patent data integration, multi-token payment systems, and smart contract-based ownership verification. Standars and AI assisted searh capabilities replace standard and Patent Lawer searches. How this App is designed to work; there are patents that are searchable globaly on the Google Patents API. This web3 application searches those patents and mints from them. The patents are minted into an NFT by taking the PDF of the patent and putting it on IPFS as the image of the NFT. The Patent ID is used to help make the NFT and the NFT will share the name of the patent title. These are minted here and placed in your wallet. Then users can take those patents they own and sell them on the apps marketplace. 
 
 ## 📋 Table of Contents
 

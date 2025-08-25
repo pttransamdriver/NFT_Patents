@@ -43,7 +43,13 @@ export class PatentApiService extends BaseSingleton {
         timeout: 30000
       });
 
-      const results = response.data?.results || response.data || [];
+      const results = response.data?.organic_results || response.data?.results || response.data || [];
+      
+      if (!Array.isArray(results) || results.length === 0) {
+        console.warn('No patent results found for query:', params.query);
+        return [];
+      }
+      
       return this.transformPatentData(results);
     } catch (error: any) {
       if (error.response?.status === 401) {
@@ -97,9 +103,9 @@ export class PatentApiService extends BaseSingleton {
       description: patent.abstract,
       creator: patent.inventor,
       owner: patent.assignee,
-      image: patent.imageUrl,
+      imageUrl: patent.imageUrl,
       category: patent.category,
-      price: price.toString(),
+      price: price,
       priceInEth: price.toString()
     };
   }
@@ -135,7 +141,8 @@ export class PatentApiService extends BaseSingleton {
           classification: {
             cpc: patent.cpc_classification || [],
             ipc: patent.ipc_classification || []
-          }
+          },
+          isAvailableForMinting: true // Real patents are available for minting
         };
       }
 
@@ -164,7 +171,8 @@ export class PatentApiService extends BaseSingleton {
         classification: {
           cpc: [],
           ipc: []
-        }
+        },
+        isAvailableForMinting: true // Fallback patents are also available for minting
       };
     }).filter(patent => patent.patentNumber !== 'N/A' && patent.patentNumber !== 'Unknown');
   }

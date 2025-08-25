@@ -36,12 +36,26 @@ export interface Patent {
   title: string;
   abstract: string;
   inventors: string[];
+  inventor: string; // Primary inventor
   assignee: string;
   filingDate: string;
   publicationDate: string;
-  status: 'active' | 'expired' | 'pending';
+  patentType: string;
+  applicationNumber: string;
+  status: string;
   category: string;
   claims: string[];
+  description: string;
+  legalStatus: string;
+  priorityDate: string;
+  expirationDate: string;
+  country: string;
+  classification: {
+    cpc: string[];
+    ipc: string[];
+  };
+  citationCount: number;
+  imageUrl?: string;
   isAvailableForMinting: boolean;
 }
 
