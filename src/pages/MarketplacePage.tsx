@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Copy, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Copy, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
 import MyNFTsModal from '../components/modals/MyNFTsModal';
 import { mockNFTs } from '../data/mockData';
 import { useWeb3 } from '../contexts/Web3Context';
-import { getUserNFTs } from '../utils/contracts';
+import { getUserNFTs, getPatentNFTContract } from '../utils/contracts';
+import { ethers } from 'ethers';
 import { marketplaceService, type MarketplaceListing, type PaginatedListings } from '../services/marketplaceService';
 import type { SearchFilters } from '../types';
 
@@ -36,39 +37,217 @@ const MarketplacePage: React.FC = () => {
   const [nftRefreshTrigger, setNftRefreshTrigger] = useState(0);
   const { signer, account, isConnected, connectWallet } = useWeb3();
 
+  // Temporary cleanup function for development
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).cleanupDuplicates = async (patentNumber: string) => {
+        console.log(`Starting cleanup for patent: ${patentNumber}`);
+        const result = await marketplaceService.cancelDuplicateListings(patentNumber);
+        console.log(`Cleanup result:`, result);
+        
+        if (result.success && result.canceledCount > 0) {
+          alert(`Successfully canceled ${result.canceledCount} duplicate listings for ${patentNumber}`);
+          // Refresh marketplace
+          window.location.reload();
+        } else if (result.canceledCount === 0) {
+          alert(`No duplicates found for ${patentNumber}`);
+        } else {
+          alert(`Failed to cleanup duplicates: ${result.error}`);
+        }
+      };
+      
+      (window as any).findDuplicates = async () => {
+        console.log('Finding duplicate patents...');
+        const duplicates = await marketplaceService.getDuplicatePatents();
+        console.log('Duplicate patents found:', duplicates);
+        return duplicates;
+      };
+    }
+  }, []);
+
   const categories = ['All', 'Clean Energy', 'Healthcare', 'Transportation', 'Computing', 'Materials', 'Energy Storage'];
   const statusOptions = ['All', 'active', 'expired', 'pending'];
 
-  // Fetch user's minted NFTs
+  // Fetch user's minted NFTs from multiple sources
   useEffect(() => {
     const fetchUserNFTs = async () => {
       if (!signer || !account) return;
       
       setLoading(true);
       try {
-        const userNFTs = await getUserNFTs(signer, account);
+        const formattedNFTs = [];
         
-        // Convert contract NFTs to marketplace format
-        const formattedNFTs = userNFTs.map((nft, index) => ({
-          id: nft.tokenId,
-          title: `Patent NFT #${nft.tokenId}`,
-          description: 'Minted from your deployed contract',
-          patentNumber: `Contract-${nft.tokenId}`,
-          inventor: 'You',
-          assignee: 'Self',
-          category: 'Technology',
-          status: 'active' as const,
-          price: 0.1, // Default price for listing
-          priceChange: 0,
-          isListed: false, // Not listed yet
-          owner: account,
-          mintDate: new Date().toISOString(),
-          filingDate: new Date().toISOString(),
-          views: 0,
-          likes: 0,
-          transactionHistory: []
-        }));
+        // First, try to get NFTs from our PatentNFT contract
+        try {
+          const contract = getPatentNFTContract(signer);
+          const balance = await contract.balanceOf(account);
+          console.log(`Found ${balance} NFTs in PatentNFT contract`);
+          
+          // Get actual patent data for each NFT
+          for (let i = 0; i < Number(balance); i++) {
+            try {
+              const tokenId = await contract.tokenOfOwnerByIndex(account, BigInt(i));
+              
+              // Get patent details from contract
+              let patentData;
+              try {
+                patentData = await contract.getPatent(tokenId);
+              } catch (error) {
+                console.warn(`Could not get patent details for token ${tokenId}`);
+                patentData = {
+                  title: `Patent NFT #${tokenId}`,
+                  inventor: 'Unknown',
+                  filingDate: BigInt(Date.now() / 1000),
+                  patentNumber: `PATENT-${tokenId}`,
+                  isVerified: false
+                };
+              }
+              
+              formattedNFTs.push({
+                id: tokenId.toString(),
+                contractAddress: import.meta.env.VITE_PATENT_NFT_ADDRESS,
+                title: patentData.title || `Patent NFT #${tokenId}`,
+                description: patentData.title ? `${patentData.title} - Ready to list for sale!` : 'Minted from your deployed contract',
+                patentNumber: patentData.patentNumber || `Contract-${tokenId}`,
+                inventor: patentData.inventor || 'You',
+                assignee: 'Self',
+                category: 'Technology',
+                status: 'active' as const,
+                price: 0.1, // Default price for listing
+                priceChange: 0,
+                isListed: false, // Not listed yet
+                owner: account,
+                mintDate: new Date(Number(patentData.filingDate) * 1000).toISOString(),
+                filingDate: new Date(Number(patentData.filingDate) * 1000).toISOString(),
+                views: 0,
+                likes: 0,
+                transactionHistory: []
+              });
+            } catch (error) {
+              console.error(`Error loading NFT at index ${i}:`, error);
+            }
+          }
+        } catch (contractError) {
+          console.warn('Could not access PatentNFT contract:', contractError);
+        }
         
+        // Try to detect NFTs using Transfer events (more reliable method)
+        try {
+          console.log('Attempting to detect NFTs via Transfer events...');
+          const provider = await signer.provider;
+          
+          // Standard ERC721 Transfer event signature
+          const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+          
+          // Look for Transfer events TO this account
+          const toAddress = account.toLowerCase().padStart(64, '0');
+          const logs = await provider.getLogs({
+            fromBlock: 0,
+            toBlock: 'latest',
+            topics: [
+              transferTopic, // Transfer event
+              null, // from (any address)
+              '0x' + toAddress // to this account
+            ]
+          });
+          
+          console.log(`Found ${logs.length} Transfer events to account`);
+          
+          // Group by contract address and get unique tokens
+          const contractTokens = new Map();
+          
+          for (const log of logs) {
+            try {
+              const contractAddress = log.address.toLowerCase();
+              const tokenId = BigInt(log.topics[3]).toString();
+              
+              // Skip if this is our PatentNFT contract (already processed above)
+              if (contractAddress.toLowerCase() === import.meta.env.VITE_PATENT_NFT_ADDRESS?.toLowerCase()) {
+                continue;
+              }
+              
+              if (!contractTokens.has(contractAddress)) {
+                contractTokens.set(contractAddress, new Set());
+              }
+              contractTokens.get(contractAddress).add(tokenId);
+            } catch (error) {
+              console.warn('Error parsing log:', error);
+            }
+          }
+          
+          // For each contract, verify current ownership and get metadata
+          for (const [contractAddress, tokenIds] of contractTokens.entries()) {
+            try {
+              // Create a generic ERC721 contract instance
+              const genericNFTContract = new ethers.Contract(contractAddress, [
+                'function ownerOf(uint256 tokenId) view returns (address)',
+                'function tokenURI(uint256 tokenId) view returns (string)',
+                'function name() view returns (string)',
+                'function symbol() view returns (string)'
+              ], signer);
+              
+              let contractName = 'Unknown NFT';
+              try {
+                contractName = await genericNFTContract.name();
+              } catch {}
+              
+              for (const tokenId of tokenIds) {
+                try {
+                  // Verify current ownership
+                  const owner = await genericNFTContract.ownerOf(tokenId);
+                  if (owner.toLowerCase() !== account.toLowerCase()) {
+                    continue; // User no longer owns this NFT
+                  }
+                  
+                  // Get token URI for metadata
+                  let tokenURI = '';
+                  let metadata = null;
+                  try {
+                    tokenURI = await genericNFTContract.tokenURI(tokenId);
+                    if (tokenURI.startsWith('http')) {
+                      const response = await fetch(tokenURI);
+                      if (response.ok) {
+                        metadata = await response.json();
+                      }
+                    }
+                  } catch {}
+                  
+                  formattedNFTs.push({
+                    id: `${contractAddress}-${tokenId}`,
+                    contractAddress,
+                    title: metadata?.name || `${contractName} #${tokenId}`,
+                    description: metadata?.description || `NFT from external contract`,
+                    patentNumber: `External-${tokenId}`,
+                    inventor: 'External',
+                    assignee: 'External',
+                    category: 'External NFT',
+                    status: 'active' as const,
+                    price: 0.1,
+                    priceChange: 0,
+                    isListed: false,
+                    owner: account,
+                    mintDate: new Date().toISOString(),
+                    filingDate: new Date().toISOString(),
+                    views: 0,
+                    likes: 0,
+                    transactionHistory: [],
+                    imageUrl: metadata?.image,
+                    tokenURI,
+                    isExternal: true
+                  });
+                } catch (error) {
+                  console.warn(`Error checking token ${tokenId} in contract ${contractAddress}:`, error);
+                }
+              }
+            } catch (error) {
+              console.warn(`Error accessing contract ${contractAddress}:`, error);
+            }
+          }
+        } catch (eventError) {
+          console.warn('Could not detect NFTs via events:', eventError);
+        }
+        
+        console.log(`Total NFTs found: ${formattedNFTs.length}`);
         setRealNFTs(formattedNFTs);
       } catch (error) {
         console.error('Error fetching user NFTs:', error);
@@ -85,7 +264,9 @@ const MarketplacePage: React.FC = () => {
     const fetchMarketplaceListings = async () => {
       setMarketplaceLoading(true);
       try {
+        console.log('Fetching marketplace listings for page:', currentPage);
         const result = await marketplaceService.getMarketplaceListings(currentPage, 20);
+        console.log('Marketplace listings result:', result);
         setMarketplaceListings(result.listings);
         setTotalPages(result.totalPages);
         setTotalListings(result.totalListings);
@@ -106,23 +287,90 @@ const MarketplacePage: React.FC = () => {
     setShowListingModal(true);
   };
 
-  const handleConfirmListing = () => {
+  const handleConfirmListing = async () => {
     if (!listingPrice || parseFloat(listingPrice) <= 0) {
       alert('Please enter a valid price');
       return;
     }
     
-    alert(`NFT #${selectedNFT.id} listed for ${listingPrice} ETH! (Simulated)`);
+    if (!selectedNFT) return;
+    
+    try {
+      console.log('Listing NFT with ID:', selectedNFT.id, 'for price:', listingPrice);
+      
+      // Use the marketplace service to actually list the NFT
+      const result = await marketplaceService.listNFT(selectedNFT.id, listingPrice);
+      
+      if (result.success) {
+        alert(`NFT "${selectedNFT.title}" successfully listed for ${listingPrice} ETH!\nTransaction hash: ${result.txHash}`);
+        
+        // Remove the NFT from user's owned NFTs since it's now listed
+        const updatedUserNFTs = realNFTs.filter(nft => nft.id !== selectedNFT.id);
+        setRealNFTs(updatedUserNFTs);
+        
+        // Add a small delay before refreshing to allow blockchain to process
+        setTimeout(async () => {
+          try {
+            console.log('Refreshing marketplace listings after successful listing...');
+            const updatedListings = await marketplaceService.getMarketplaceListings(1, 20); // Start from page 1 to see new listings
+            setMarketplaceListings(updatedListings.listings);
+            setTotalPages(updatedListings.totalPages);
+            setTotalListings(updatedListings.totalListings);
+            setCurrentPage(1); // Reset to page 1 to show the new listing
+            console.log(`Found ${updatedListings.totalListings} total listings after refresh`);
+          } catch (refreshError) {
+            console.error('Error refreshing marketplace after listing:', refreshError);
+          }
+        }, 2000); // 2 second delay
+      } else {
+        alert(`Failed to list NFT: ${result.error}`);
+        console.error('Listing failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error listing NFT:', error);
+      alert('Error listing NFT. Please check console for details.');
+    }
     
     setShowListingModal(false);
     setSelectedNFT(null);
     setListingPrice('');
   };
 
-  const handleSellNFTFromModal = (nft: any, price: string) => {
-    // Here you would integrate with your marketplace contract
-    // For now, just show a success message
-    alert(`NFT #${nft.tokenId} listed for ${price} ETH!`);
+  const handleSellNFTFromModal = async (nft: any, price: string) => {
+    try {
+      console.log('Listing NFT from modal with token ID:', nft.tokenId, 'for price:', price);
+      
+      // Use the marketplace service to actually list the NFT
+      const result = await marketplaceService.listNFT(nft.tokenId, price);
+      
+      if (result.success) {
+        alert(`NFT #${nft.tokenId} successfully listed for ${price} ETH!\nTransaction hash: ${result.txHash}`);
+        
+        // Refresh user NFTs to reflect changes
+        setNftRefreshTrigger(prev => prev + 1);
+        
+        // Add a small delay before refreshing marketplace to allow blockchain to process
+        setTimeout(async () => {
+          try {
+            console.log('Refreshing marketplace listings after successful listing from modal...');
+            const updatedListings = await marketplaceService.getMarketplaceListings(1, 20); // Start from page 1 to see new listings
+            setMarketplaceListings(updatedListings.listings);
+            setTotalPages(updatedListings.totalPages);
+            setTotalListings(updatedListings.totalListings);
+            setCurrentPage(1); // Reset to page 1 to show the new listing
+            console.log(`Found ${updatedListings.totalListings} total listings after refresh`);
+          } catch (refreshError) {
+            console.error('Error refreshing marketplace after listing from modal:', refreshError);
+          }
+        }, 2000); // 2 second delay
+      } else {
+        alert(`Failed to list NFT: ${result.error}`);
+        console.error('Listing failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error listing NFT from modal:', error);
+      alert('Error listing NFT. Please check console for details.');
+    }
   };
 
   // Convert MarketplaceListing to NFT format for NFTCard component
@@ -373,13 +621,18 @@ const MarketplacePage: React.FC = () => {
               {realNFTs.slice(0, 3).map((nft) => (
                 <div key={nft.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:border-green-300 dark:hover:border-green-600 transition-colors">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Patent NFT #{nft.id}</h3>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs">
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm truncate pr-2" title={nft.title}>
+                      {nft.title}
+                    </h3>
+                    <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs whitespace-nowrap">
                       Owned
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Minted from your contract
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Patent #{nft.patentNumber}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
+                    Inventor: {nft.inventor}
                   </p>
                   <div className="flex gap-2">
                     <button 
@@ -449,16 +702,65 @@ const MarketplacePage: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Results Count */}
+        {/* Marketplace Listings Section Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="mb-6"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                🏪 Marketplace Listings
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Browse and purchase patent NFTs from other users
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                setMarketplaceLoading(true);
+                try {
+                  console.log('Manual refresh of marketplace listings...');
+                  const result = await marketplaceService.getMarketplaceListings(1, 20);
+                  setMarketplaceListings(result.listings);
+                  setTotalPages(result.totalPages);
+                  setTotalListings(result.totalListings);
+                  setCurrentPage(1);
+                  console.log(`Manual refresh found ${result.totalListings} total listings`);
+                } catch (error) {
+                  console.error('Manual refresh error:', error);
+                } finally {
+                  setMarketplaceLoading(false);
+                }
+              }}
+              disabled={marketplaceLoading}
+              className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${marketplaceLoading ? 'animate-spin' : ''}`} />
+              {marketplaceLoading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Results Count and Debug Info */}
         <div className="flex items-center justify-between mb-6">
-          <p className="text-gray-600 dark:text-gray-400">
-            {filteredNFTs.length} patent{filteredNFTs.length !== 1 ? 's' : ''} found
-            {realNFTs.length > 0 && (
-              <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs">
-                {realNFTs.length} yours
-              </span>
+          <div>
+            <p className="text-gray-600 dark:text-gray-400">
+              {filteredNFTs.length} patent{filteredNFTs.length !== 1 ? 's' : ''} found • Page {currentPage} of {totalPages} • Total: {totalListings}
+              {realNFTs.length > 0 && (
+                <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs">
+                  {realNFTs.length} yours
+                </span>
+              )}
+            </p>
+            {import.meta.env.VITE_DEBUG === 'true' && (
+              <p className="text-xs text-gray-500 mt-1">
+                Debug: MarketplaceListings: {marketplaceListings.length}, Loading: {marketplaceLoading.toString()}
+              </p>
             )}
-          </p>
+          </div>
           
           <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
             <div className="flex items-center">
@@ -583,12 +885,13 @@ const MarketplacePage: React.FC = () => {
               className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
             >
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                🏷️ List NFT for Sale
+                🏷️ List NFT on Marketplace
               </h3>
               
               <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <h4 className="font-medium text-gray-900 dark:text-white">Patent NFT #{selectedNFT.id}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Ready to list on marketplace</p>
+                <h4 className="font-medium text-gray-900 dark:text-white">{selectedNFT.title}</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Token ID: #{selectedNFT.id} • Patent: {selectedNFT.patentNumber}</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Will be listed on the smart contract marketplace</p>
               </div>
 
               <div className="mb-4">
@@ -636,9 +939,10 @@ const MarketplacePage: React.FC = () => {
                 </button>
                 <button
                   onClick={handleConfirmListing}
-                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
+                  disabled={isListing || !listingPrice || parseFloat(listingPrice) <= 0}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200"
                 >
-                  List NFT
+                  {isListing ? 'Listing...' : 'List on Marketplace'}
                 </button>
               </div>
             </motion.div>

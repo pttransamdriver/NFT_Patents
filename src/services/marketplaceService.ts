@@ -4,7 +4,7 @@ import { getPatentNFTContract } from '../utils/contracts';
 // NFTMarketplace ABI (key functions)
 const MARKETPLACE_ABI = [
   "function listings(uint256 listingId) view returns (uint256 listingId, address nftContract, uint256 tokenId, address seller, uint256 price, bool active)",
-  "function _listingIds() view returns (uint256)",
+  "function getAllActiveListings() view returns (tuple(uint256 listingId, address nftContract, uint256 tokenId, address seller, uint256 price, bool active)[])",
   "function tokenToListing(address nftContract, uint256 tokenId) view returns (uint256)",
   "function listNFT(address nftContract, uint256 tokenId, uint256 price) external",
   "function buyNFT(uint256 listingId) payable external",
@@ -66,16 +66,24 @@ export class MarketplaceService {
    */
   async getMarketplaceListings(page: number = 1, limit: number = 20): Promise<PaginatedListings> {
     try {
+      console.log('MarketplaceService: Getting listings for page', page, 'limit', limit);
+      
       // Get provider
       const provider = new BrowserProvider(window.ethereum);
       const marketplaceContract = this.getMarketplaceContract(provider);
       const patentNFTContract = getPatentNFTContract(provider);
 
-      // Get total number of listings
-      const totalListingIds = await marketplaceContract._listingIds();
-      const totalCount = Number(totalListingIds);
+      console.log('MarketplaceService: Contracts initialized');
+      console.log('Marketplace address:', await marketplaceContract.getAddress());
+      console.log('PatentNFT address:', await patentNFTContract.getAddress());
 
-      if (totalCount === 0) {
+      // Get all active listings using the contract's built-in function
+      console.log('MarketplaceService: Calling getAllActiveListings()...');
+      const allActiveListings = await marketplaceContract.getAllActiveListings();
+      console.log('MarketplaceService: Found', allActiveListings.length, 'active listings');
+
+      if (allActiveListings.length === 0) {
+        console.log('MarketplaceService: No active listings found, returning empty result');
         return {
           listings: [],
           totalListings: 0,
@@ -87,19 +95,25 @@ export class MarketplaceService {
       }
 
       // Calculate pagination
+      const totalCount = allActiveListings.length;
       const totalPages = Math.ceil(totalCount / limit);
       const startIndex = (page - 1) * limit;
       const endIndex = Math.min(startIndex + limit, totalCount);
 
       const listings: MarketplaceListing[] = [];
 
-      // Fetch listings in the current page range
-      for (let i = startIndex + 1; i <= endIndex; i++) {
+      // Process the paginated listings
+      for (let i = startIndex; i < endIndex; i++) {
         try {
-          const listing = await marketplaceContract.listings(i);
-          
-          // Skip inactive listings
-          if (!listing.active) continue;
+          const listing = allActiveListings[i];
+          console.log(`Processing active listing ${i}:`, {
+            listingId: listing.listingId?.toString(),
+            nftContract: listing.nftContract,
+            tokenId: listing.tokenId?.toString(),
+            seller: listing.seller,
+            price: listing.price?.toString(),
+            active: listing.active
+          });
 
           // Get patent-specific data
           let patentData = null;
@@ -141,9 +155,11 @@ export class MarketplaceService {
 
           listings.push(marketplaceListing);
         } catch (error) {
-          console.error(`Error fetching listing ${i}:`, error);
+          console.error(`Error processing listing ${i}:`, error);
         }
       }
+
+      console.log(`MarketplaceService: Successfully processed ${listings.length} listings for page ${page}`);
 
       return {
         listings,
@@ -274,6 +290,90 @@ export class MarketplaceService {
         success: false,
         error: error.message || 'Failed to cancel listing'
       };
+    }
+  }
+
+  /**
+   * Cancel all duplicate listings for a specific patent, keeping only the most recent one
+   */
+  async cancelDuplicateListings(patentNumber: string): Promise<{ success: boolean; canceledCount: number; error?: string }> {
+    try {
+      console.log(`Looking for duplicate listings of patent: ${patentNumber}`);
+      const allListings = await this.getMarketplaceListings(1, 1000); // Get all listings
+      
+      // Find all active listings for this specific patent number
+      const duplicateListings = allListings.listings.filter(listing => 
+        listing.patentNumber && listing.patentNumber === patentNumber
+      );
+      
+      console.log(`Found ${duplicateListings.length} listings for patent ${patentNumber}`);
+      
+      if (duplicateListings.length <= 1) {
+        return { success: true, canceledCount: 0 };
+      }
+      
+      // Sort by listing ID (newer listings have higher IDs) and keep the most recent
+      duplicateListings.sort((a, b) => parseInt(b.listingId) - parseInt(a.listingId));
+      const listingsToCancel = duplicateListings.slice(1); // Remove the first (most recent) one
+      
+      console.log(`Canceling ${listingsToCancel.length} duplicate listings for patent ${patentNumber}:`);
+      listingsToCancel.forEach(listing => {
+        console.log(`  - Listing ID ${listing.listingId} at ${listing.priceInEth} ETH`);
+      });
+      
+      let canceledCount = 0;
+      for (const listing of listingsToCancel) {
+        try {
+          console.log(`Canceling listing ${listing.listingId}...`);
+          const result = await this.cancelListing(listing.listingId);
+          if (result.success) {
+            canceledCount++;
+            console.log(`✅ Canceled listing ${listing.listingId}`);
+          } else {
+            console.log(`❌ Failed to cancel listing ${listing.listingId}: ${result.error}`);
+          }
+        } catch (error) {
+          console.error(`Error canceling listing ${listing.listingId}:`, error);
+        }
+      }
+      
+      console.log(`Successfully canceled ${canceledCount}/${listingsToCancel.length} duplicate listings`);
+      return { success: true, canceledCount };
+      
+    } catch (error: any) {
+      console.error('Error canceling duplicate listings:', error);
+      return {
+        success: false,
+        canceledCount: 0,
+        error: error.message || 'Failed to cancel duplicates'
+      };
+    }
+  }
+
+  /**
+   * Get all duplicate patent numbers in the marketplace
+   */
+  async getDuplicatePatents(): Promise<string[]> {
+    try {
+      const allListings = await this.getMarketplaceListings(1, 1000);
+      const patentCounts = new Map<string, number>();
+      
+      // Count occurrences of each patent number
+      allListings.listings.forEach(listing => {
+        if (listing.patentNumber) {
+          const count = patentCounts.get(listing.patentNumber) || 0;
+          patentCounts.set(listing.patentNumber, count + 1);
+        }
+      });
+      
+      // Return patents that appear more than once
+      return Array.from(patentCounts.entries())
+        .filter(([, count]) => count > 1)
+        .map(([patent]) => patent);
+        
+    } catch (error) {
+      console.error('Error getting duplicate patents:', error);
+      return [];
     }
   }
 }

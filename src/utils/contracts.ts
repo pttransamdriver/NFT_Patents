@@ -27,26 +27,9 @@ const getContractAddresses = () => {
   };
 };
 
-export interface PatentNFTContract extends Contract {
-  mintPatentNFT(to: string, patentNumber: string, overrides?: any): Promise<ethers.ContractTransaction>;
-  getMintingPrice(): Promise<bigint>;
-  patentExists(patentNumber: string): Promise<boolean>;
-  totalSupply(): Promise<bigint>;
-  balanceOf(owner: string): Promise<bigint>;
-  tokenOfOwnerByIndex(owner: string, index: bigint): Promise<bigint>;
-  tokenURI(tokenId: bigint): Promise<string>;
-  getPatent(tokenId: bigint): Promise<{
-    title: string;
-    inventor: string;
-    filingDate: bigint;
-    patentNumber: string;
-    isVerified: boolean;
-  }>;
-}
-
 export const getPatentNFTContract = (
   providerOrSigner: BrowserProvider | JsonRpcSigner
-): PatentNFTContract => {
+): Contract => {
   const addresses = getContractAddresses();
 
   // Use a minimal ABI for the functions we need
@@ -59,15 +42,21 @@ export const getPatentNFTContract = (
     "function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256)",
     "function tokenURI(uint256 tokenId) external view returns (string memory)",
     "function getPatent(uint256 tokenId) external view returns (string memory title, string memory inventor, uint256 filingDate, string memory patentNumber, bool isVerified)",
+    "function approve(address to, uint256 tokenId) external",
+    "function getApproved(uint256 tokenId) external view returns (address)",
+    "function setApprovalForAll(address operator, bool approved) external",
+    "function isApprovedForAll(address owner, address operator) external view returns (bool)",
+    "function ownerOf(uint256 tokenId) external view returns (address)",
     "event PatentMinted(uint256 tokenId, address owner, string patentNumber)",
-    "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
+    "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+    "event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)"
   ];
 
   return new Contract(
     addresses.PatentNFT,
     minimalAbi,
     providerOrSigner
-  ) as PatentNFTContract;
+  );
 };
 
 export const mintPatentNFT = async (
@@ -177,7 +166,7 @@ export const checkPatentExists = async (provider: BrowserProvider, patentNumber:
   }
 };
 
-export const getUserNFTs = async (signer: JsonRpcSigner, userAddress: string): Promise<any[]> => {
+export const getUserNFTs = async (signer: any, userAddress: string): Promise<any[]> => {
   try {
     const contract = getPatentNFTContract(signer);
     const balance = await contract.balanceOf(userAddress);

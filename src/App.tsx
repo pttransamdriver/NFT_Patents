@@ -9,7 +9,6 @@ import Footer from './components/layout/Footer';
 import NetworkDebugger from './components/NetworkDebugger';
 import MetaMaskDebugger from './components/MetaMaskDebugger';
 import PaymentTest from './components/PaymentTest';
-import MintDebugger from './components/debug/MintDebugger';
 import HomePage from './pages/HomePage';
 import MarketplacePage from './pages/MarketplacePage';
 import PatentSearchPage from './pages/PatentSearchPage';
@@ -29,7 +28,6 @@ function App() {
               <NetworkDebugger />
               <MetaMaskDebugger />
               <PaymentTest />
-              <MintDebugger />
               <main className="pt-16">
                 <Routes>
                   <Route path="/" element={<HomePage />} />
