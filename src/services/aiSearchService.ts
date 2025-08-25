@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { BaseSingleton } from '../utils/baseSingleton';
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
@@ -20,15 +21,7 @@ export interface AISearchResponse {
   };
 }
 
-export class AISearchService {
-  private static instance: AISearchService;
-  
-  public static getInstance(): AISearchService {
-    if (!AISearchService.instance) {
-      AISearchService.instance = new AISearchService();
-    }
-    return AISearchService.instance;
-  }
+export class AISearchService extends BaseSingleton {
 
   async convertNaturalLanguageToSearch(request: AISearchRequest): Promise<AISearchResponse> {
     // Check if any AI API key is available (OpenAI or Gemini)
@@ -37,7 +30,6 @@ export class AISearchService {
                           (geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here');
 
     if (!hasValidApiKey) {
-      console.warn('No AI API key configured. Using enhanced fallback search conversion.');
       return this.getEnhancedFallbackSearchResponse(request.naturalLanguageQuery);
     }
 
@@ -188,39 +180,6 @@ Format your response as JSON:
     return text.substring(0, 100); // Fallback
   }
 
-  private fallbackSearch(query: string): AISearchResponse {
-    // Enhanced rule-based fallback
-    const lowerQuery = query.toLowerCase();
-    let searchTerms = query;
-    let category = 'Other';
-    
-    if (lowerQuery.includes('renewable energy') || lowerQuery.includes('solar') || lowerQuery.includes('wind')) {
-      searchTerms = 'renewable energy OR solar OR wind OR photovoltaic OR sustainable';
-      category = 'Energy';
-    } else if (lowerQuery.includes('ai') || lowerQuery.includes('artificial intelligence') || lowerQuery.includes('machine learning')) {
-      searchTerms = 'artificial intelligence OR machine learning OR neural network OR deep learning OR AI';
-      category = 'Technology';
-    } else if (lowerQuery.includes('medical') || lowerQuery.includes('health') || lowerQuery.includes('drug')) {
-      searchTerms = 'medical OR healthcare OR pharmaceutical OR drug OR therapy OR treatment';
-      category = 'Healthcare';
-    } else if (lowerQuery.includes('battery') || lowerQuery.includes('energy storage')) {
-      searchTerms = 'battery OR energy storage OR lithium OR electrochemical OR power storage';
-      category = 'Energy';
-    } else if (lowerQuery.includes('quantum')) {
-      searchTerms = 'quantum computing OR quantum OR qubit OR quantum algorithm';
-      category = 'Technology';
-    } else if (lowerQuery.includes('blockchain') || lowerQuery.includes('crypto')) {
-      searchTerms = 'blockchain OR cryptocurrency OR distributed ledger OR smart contract';
-      category = 'Technology';
-    }
-
-    return {
-      searchTerms,
-      explanation: 'Rule-based search term generation',
-      confidence: 70,
-      suggestedFilters: { category }
-    };
-  }
 
   async generateSearchSuggestions(partialQuery: string): Promise<string[]> {
     if (partialQuery.length < 3) return [];
@@ -325,10 +284,6 @@ Format your response as JSON:
     };
   }
 
-  private getFallbackSearchResponse(query: string): AISearchResponse {
-    // Legacy method for backward compatibility
-    return this.getEnhancedFallbackSearchResponse(query);
-  }
 
   private fallbackSuggestions(partialQuery: string): string[] {
     const suggestions = [
@@ -345,4 +300,4 @@ Format your response as JSON:
   }
 }
 
-export const aiSearchService = AISearchService.getInstance();
+export const aiSearchService = AISearchService.getInstance() as AISearchService;

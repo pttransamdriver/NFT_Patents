@@ -310,7 +310,8 @@ function generateEnhancedMockPatents(criteria, start, rows) {
 }
 
 // Search patents via Google Patents (SerpApi)
-app.get('/api/uspto/search', async (req, res) => {
+// Google Patents search endpoint
+app.get('/api/patents/search', async (req, res) => {
   try {
     const { criteria, start = 0, rows = 20, sort = 'date desc' } = req.query;
     
@@ -326,7 +327,6 @@ app.get('/api/uspto/search', async (req, res) => {
     
     // If no valid SerpApi key, fall back to mock data with enhanced info
     if (!serpApiKey || serpApiKey === 'demo') {
-      console.log('No SerpApi key configured, using enhanced mock data');
       const mockPatents = generateEnhancedMockPatents(criteria, start, rows);
       return res.json({
         organic_results: mockPatents,
@@ -379,7 +379,8 @@ app.get('/api/uspto/search', async (req, res) => {
 });
 
 // Get specific patent by number
-app.get('/api/uspto/patent/:patentNumber', async (req, res) => {
+// Get specific patent by number
+app.get('/api/patents/patent/:patentNumber', async (req, res) => {
   try {
     const { patentNumber } = req.params;
     
@@ -389,7 +390,6 @@ app.get('/api/uspto/patent/:patentNumber', async (req, res) => {
     
     // If no valid SerpApi key, generate enhanced mock patent data
     if (!serpApiKey || serpApiKey === 'demo') {
-      console.log('No SerpApi key configured, using enhanced mock patent data');
       const mockPatent = generateMockPatentByNumber(patentNumber);
       return res.json(mockPatent);
     }
@@ -475,7 +475,7 @@ function generateMockPatentByNumber(patentNumber) {
 }
 
 // Health check
-app.get('/api/health', async (req, res) => {
+app.get('/api/health', async (_req, res) => {
   try {
     // Test database connection
     const { pool } = require('./database');
@@ -569,16 +569,9 @@ app.post('/metadata/:patentNumber/ipfs', async (req, res) => {
   }
 });
 
-// Debug endpoint to view all metadata
-app.get('/debug/metadata', (req, res) => {
-  res.json({
-    count: metadataStore.getAllMetadata().length,
-    metadata: metadataStore.getAllMetadata()
-  });
-});
 
 // Error handling middleware
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   console.error('Unhandled error:', error);
   res.status(500).json({ error: 'Internal server error' });
 });

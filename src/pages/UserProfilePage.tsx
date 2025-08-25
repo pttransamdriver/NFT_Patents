@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { User, Calendar, TrendingUp, Grid, List, Filter, Copy, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import NFTCard from '../components/marketplace/NFTCard';
-import { mockNFTs, mockUsers } from '../data/mockData';
 import { useWeb3 } from '../contexts/Web3Context';
 import toast from 'react-hot-toast';
 
@@ -14,7 +13,8 @@ const UserProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'owned' | 'listed' | 'activity'>('owned');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const user = mockUsers.find(u => u.address === address);
+  // Mock user data removed - implement real user lookup
+  const user = null;
   const isOwnProfile = currentUserAddress === address;
 
   if (!user) {
@@ -28,8 +28,9 @@ const UserProfilePage: React.FC = () => {
     );
   }
 
-  const ownedNFTs = mockNFTs.filter(nft => user.ownedNFTs.includes(nft.id));
-  const listedNFTs = mockNFTs.filter(nft => user.listedNFTs.includes(nft.id));
+  // Mock data removed - implement real NFT fetching
+  const ownedNFTs: any[] = [];
+  const listedNFTs: any[] = [];
 
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;

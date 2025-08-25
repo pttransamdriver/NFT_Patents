@@ -1,6 +1,8 @@
-import { ethers, BrowserProvider, ContractTransactionResponse } from 'ethers';
+import { ethers, ContractTransactionResponse } from 'ethers';
 import { getPatentNFTContract } from '../utils/contracts';
 import { patentPdfService } from './patentPdfService';
+import { web3Utils } from '../utils/web3Utils';
+import { BaseSingleton } from '../utils/baseSingleton';
 import type { Patent } from '../types';
 
 export interface MintingParams {
@@ -16,23 +18,16 @@ export interface MintingResult {
   error?: string;
 }
 
-export class MintingService {
-  private static instance: MintingService;
-  
-  public static getInstance(): MintingService {
-    if (!MintingService.instance) {
-      MintingService.instance = new MintingService();
-    }
-    return MintingService.instance;
-  }
+export class MintingService extends BaseSingleton {
 
   async mintPatentNFT(params: MintingParams): Promise<MintingResult> {
     try {
-      // Check if MetaMask is available
-      if (!window.ethereum) {
+      // Check if MetaMask is connected
+      const { connected, error: connectionError } = await web3Utils.isConnected();
+      if (!connected) {
         return {
           success: false,
-          error: 'MetaMask not found. Please install MetaMask to mint NFTs.'
+          error: connectionError || 'Please connect MetaMask to mint NFTs.'
         };
       }
 
@@ -55,20 +50,18 @@ export class MintingService {
         });
 
       } catch (pdfError) {
-        console.warn('PDF processing failed, using placeholder:', pdfError);
         // Continue with minting even if PDF processing fails
         imageUrl = `https://via.placeholder.com/400x600.png?text=Patent+${params.patentNumber}`;
       }
 
-      // Select the correct provider (same logic as Web3Context)
-      let ethereum = window.ethereum;
-      if (window.ethereum.providers) {
-        ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
+      // Get signer using web3Utils
+      const signer = await web3Utils.createSigner();
+      if (!signer) {
+        return {
+          success: false,
+          error: 'Unable to get signer from MetaMask'
+        };
       }
-
-      // Get provider and signer
-      const provider = new BrowserProvider(ethereum);
-      const signer = await provider.getSigner();
       
       // Get contract instance
       const contract = getPatentNFTContract(signer);
@@ -101,41 +94,18 @@ export class MintingService {
       };
       
     } catch (error: any) {
-      console.error('Minting failed:', error);
-      
-      // Handle specific error cases
-      if (error.code === 'ACTION_REJECTED') {
-        return {
-          success: false,
-          error: 'Transaction was rejected by user'
-        };
-      }
-      
-      if (error.message?.includes('insufficient funds')) {
-        return {
-          success: false,
-          error: 'Insufficient funds for minting'
-        };
-      }
-      
+      const errorMessage = web3Utils.handleTransactionError(error);
       return {
         success: false,
-        error: error.message || 'Minting failed. Please try again.'
+        error: errorMessage
       };
     }
   }
 
   async checkMintingEligibility(patentNumber: string): Promise<boolean> {
     try {
-      if (!window.ethereum) return false;
-      
-      // Select the correct provider
-      let ethereum = window.ethereum;
-      if (window.ethereum.providers) {
-        ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
-      }
-      
-      const provider = new BrowserProvider(ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) return false;
       const contract = getPatentNFTContract(provider);
       
       // Check if patent is already minted
@@ -143,29 +113,20 @@ export class MintingService {
       return !exists;
       
     } catch (error) {
-      console.error('Error checking minting eligibility:', error);
       return false;
     }
   }
 
   async getMintingPrice(): Promise<number> {
     try {
-      if (!window.ethereum) return 0.1; // Default price
-      
-      // Select the correct provider
-      let ethereum = window.ethereum;
-      if (window.ethereum.providers) {
-        ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
-      }
-      
-      const provider = new BrowserProvider(ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) return 0.1; // Default price
       const contract = getPatentNFTContract(provider);
       
       const priceInWei = await contract.getMintingPrice();
       return parseFloat(ethers.formatEther(priceInWei));
       
     } catch (error) {
-      console.error('Error getting minting price:', error);
       return 0.1; // Default fallback price
     }
   }
@@ -173,7 +134,6 @@ export class MintingService {
   async addNFTToMetaMask(tokenId: string, patentNumber: string): Promise<void> {
     try {
       if (!window.ethereum) {
-        console.warn('MetaMask not available, cannot add NFT');
         return;
       }
 
@@ -181,7 +141,6 @@ export class MintingService {
       const contractAddress = import.meta.env.VITE_PATENT_NFT_ADDRESS;
       
       if (!contractAddress) {
-        console.error('Contract address not found in environment');
         return;
       }
 
@@ -204,7 +163,6 @@ export class MintingService {
         });
       } catch (watchError: any) {
         // MetaMask might not support ERC721 on local networks
-        console.warn('wallet_watchAsset failed, this is normal on local networks:', watchError.message);
         
         // Instead, copy contract info to clipboard as fallback
         const contractInfo = `Contract: ${contractAddress}\nToken ID: ${tokenId}\nType: ERC721`;
@@ -213,7 +171,6 @@ export class MintingService {
         throw new Error(`NFT info copied to clipboard. MetaMask may not support NFT import on local networks. Contract: ${contractAddress}, Token ID: ${tokenId}`);
       }
     } catch (error: any) {
-      console.error('Failed to add NFT to MetaMask:', error);
       throw error; // Let the UI handle the error message
     }
   }
@@ -222,12 +179,8 @@ export class MintingService {
     try {
       if (!window.ethereum) return;
 
-      let ethereum = window.ethereum;
-      if (window.ethereum.providers) {
-        ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
-      }
-
-      const provider = new BrowserProvider(ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) return;
       const contract = getPatentNFTContract(provider);
 
       // Get user's NFT balance
@@ -253,11 +206,9 @@ export class MintingService {
           // Add small delay to avoid overwhelming MetaMask
           await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (error) {
-          console.error(`Error adding NFT at index ${i}:`, error);
         }
       }
     } catch (error) {
-      console.error('Error adding user NFTs to MetaMask:', error);
     }
   }
 
@@ -274,10 +225,9 @@ export class MintingService {
       
       return null;
     } catch (error) {
-      console.error('Error extracting token ID:', error);
       return null;
     }
   }
 }
 
-export const mintingService = MintingService.getInstance();
+export const mintingService = MintingService.getInstance() as MintingService;

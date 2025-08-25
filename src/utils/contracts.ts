@@ -1,24 +1,7 @@
 import { ethers, BrowserProvider, JsonRpcSigner, Contract } from 'ethers';
 import toast from 'react-hot-toast';
+import { PATENT_NFT_ABI } from './contractABIs';
 
-// Import contract ABIs - using dynamic imports to avoid Vite issues
-let PatentNFTAbi: any = null;
-let contractAddresses: any = null;
-
-// Load contract artifacts dynamically
-const loadContractArtifacts = async () => {
-  if (!PatentNFTAbi) {
-    try {
-      PatentNFTAbi = await import('../../artifacts/contracts/PatentNFT.sol/PatentNFT.json');
-    } catch (error) {
-      console.error('Failed to load PatentNFT ABI:', error);
-      // Fallback ABI for basic functionality
-      PatentNFTAbi = { abi: [] };
-    }
-  }
-
-  // Contract addresses now come from environment variables
-};
 
 // Contract addresses from environment variables
 const getContractAddresses = () => {
@@ -32,29 +15,11 @@ export const getPatentNFTContract = (
 ): Contract => {
   const addresses = getContractAddresses();
 
-  // Use a minimal ABI for the functions we need
-  const minimalAbi = [
-    "function mintPatentNFT(address to, string memory patentNumber) external payable returns (uint256)",
-    "function getMintingPrice() external view returns (uint256)",
-    "function patentExists(string memory patentNumber) external view returns (bool)",
-    "function totalSupply() external view returns (uint256)",
-    "function balanceOf(address owner) external view returns (uint256)",
-    "function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256)",
-    "function tokenURI(uint256 tokenId) external view returns (string memory)",
-    "function getPatent(uint256 tokenId) external view returns (string memory title, string memory inventor, uint256 filingDate, string memory patentNumber, bool isVerified)",
-    "function approve(address to, uint256 tokenId) external",
-    "function getApproved(uint256 tokenId) external view returns (address)",
-    "function setApprovalForAll(address operator, bool approved) external",
-    "function isApprovedForAll(address owner, address operator) external view returns (bool)",
-    "function ownerOf(uint256 tokenId) external view returns (address)",
-    "event PatentMinted(uint256 tokenId, address owner, string patentNumber)",
-    "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-    "event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)"
-  ];
+  // Use centralized ABI definition
 
   return new Contract(
     addresses.PatentNFT,
-    minimalAbi,
+    PATENT_NFT_ABI,
     providerOrSigner
   );
 };
@@ -104,7 +69,7 @@ export const mintPatentNFT = async (
 
     if (receipt.status === 1) {
       // Find the PatentMinted event to get the token ID
-      const mintEvent = receipt.logs.find(log => {
+      const mintEvent = receipt.logs.find((log: any) => {
         try {
           const parsedLog = contract.interface.parseLog(log);
           return parsedLog?.name === 'PatentMinted';
@@ -131,7 +96,6 @@ export const mintPatentNFT = async (
     }
 
   } catch (error: any) {
-    console.error('Error minting NFT:', error);
     toast.error('Failed to mint NFT', { id: 'minting' });
     
     let errorMessage = 'Unknown error occurred';
@@ -151,7 +115,6 @@ export const getMintingPrice = async (provider: BrowserProvider): Promise<string
     const price = await contract.getMintingPrice();
     return ethers.formatEther(price);
   } catch (error) {
-    console.error('Error getting minting price:', error);
     return '0.05'; // fallback price
   }
 };
@@ -161,7 +124,6 @@ export const checkPatentExists = async (provider: BrowserProvider, patentNumber:
     const contract = getPatentNFTContract(provider);
     return await contract.patentExists(patentNumber);
   } catch (error) {
-    console.error('Error checking patent existence:', error);
     return false;
   }
 };
@@ -182,13 +144,11 @@ export const getUserNFTs = async (signer: any, userAddress: string): Promise<any
           tokenURI,
         });
       } catch (error) {
-        console.error(`Error fetching NFT at index ${i}:`, error);
       }
     }
 
     return nfts;
   } catch (error) {
-    console.error('Error getting user NFTs:', error);
     return [];
   }
 };

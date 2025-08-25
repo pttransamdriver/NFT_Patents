@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Bot, Filter, FileText, Calendar, User, Building, Zap, Sparkles, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usptoApi } from '../services/usptoApi';
+import { patentApi } from '../services/patentApi';
 import { aiSearchService } from '../services/aiSearchService';
 import { mintingService } from '../services/mintingService';
 import { useWeb3 } from '../contexts/Web3Context';
@@ -35,7 +35,7 @@ const PatentSearchPage: React.FC = () => {
     
     setIsLoading(true);
     try {
-      const results = await usptoApi.searchPatents({
+      const results = await patentApi.searchPatents({
         query: searchQuery,
         rows: 20
       });
@@ -62,7 +62,7 @@ const PatentSearchPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Use real AI to convert natural language to USPTO search terms
+      // Use real AI to convert natural language to patent search terms
       const aiResponse = await aiSearchService.convertNaturalLanguageToSearch({
         naturalLanguageQuery: query,
         maxResults: 20
@@ -71,7 +71,7 @@ const PatentSearchPage: React.FC = () => {
       setAiExplanation(aiResponse.explanation);
       setAiConfidence(aiResponse.confidence);
 
-      const results = await usptoApi.searchPatents({
+      const results = await patentApi.searchPatents({
         query: aiResponse.searchTerms,
         rows: 20
       });
@@ -80,7 +80,7 @@ const PatentSearchPage: React.FC = () => {
       console.error('AI search failed:', error);
       // Fallback to rule-based search
       const searchTerms = convertAiQueryToSearchTerms(query);
-      const results = await usptoApi.searchPatents({
+      const results = await patentApi.searchPatents({
         query: searchTerms,
         rows: 20
       });
@@ -177,7 +177,7 @@ const PatentSearchPage: React.FC = () => {
             AI-Powered Patent Search
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-            Search through millions of USPTO patents using natural language queries or advanced filters
+            Search through millions of patents using natural language queries or advanced filters
           </p>
         </motion.div>
 
@@ -511,7 +511,7 @@ const PatentSearchPage: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400">
               {isAiMode 
                 ? 'Use natural language to find patents or try one of the example queries above'
-                : 'Enter keywords, patent numbers, or inventor names to search the USPTO database'
+                : 'Enter keywords, patent numbers, or inventor names to search the patent database'
               }
             </p>
             {!isConnected && (

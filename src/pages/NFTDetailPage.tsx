@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ethers } from 'ethers';
@@ -8,8 +8,8 @@ import {
   Eye, Activity, DollarSign
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { mockNFTs } from '../data/mockData';
 import { useWeb3 } from '../contexts/Web3Context';
+import { marketplaceService, MarketplaceListing } from '../services/marketplaceService';
 import toast from 'react-hot-toast';
 
 const NFTDetailPage: React.FC = () => {
@@ -18,15 +18,80 @@ const NFTDetailPage: React.FC = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
+  const [nft, setNft] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const nft = mockNFTs.find(n => n.id === id);
+  useEffect(() => {
+    loadNFTData();
+  }, [id]);
+
+  // Convert MarketplaceListing to NFT format (same as MarketplacePage)
+  const convertListingToNFT = (listing: MarketplaceListing) => {
+    return {
+      id: listing.listingId,
+      patentNumber: listing.patentNumber || `Unknown-${listing.tokenId}`,
+      title: listing.title || `Patent NFT #${listing.tokenId}`,
+      description: `Patent NFT available for purchase at ${listing.priceInEth} ETH`,
+      inventor: listing.inventor || 'Unknown',
+      assignee: 'Unknown',
+      filingDate: new Date().toISOString(),
+      category: 'Technology', // Default category
+      status: 'active' as const,
+      price: parseFloat(listing.priceInEth),
+      priceChange: 0,
+      owner: listing.seller,
+      creator: listing.seller,
+      mintDate: new Date().toISOString(),
+      isListed: true,
+      views: 0,
+      likes: 0,
+      imageUrl: listing.imageUrl,
+      ipfsHash: '',
+      transactionHistory: [],
+      // Add marketplace-specific properties
+      listingId: listing.listingId,
+      priceInEth: listing.priceInEth
+    };
+  };
+
+  const loadNFTData = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      // Search through marketplace listings to find the NFT by listingId
+      const result = await marketplaceService.getMarketplaceListings(1, 1000);
+      const foundListing = result.listings.find(listing => listing.listingId === id);
+      if (foundListing) {
+        setNft(convertListingToNFT(foundListing) as any);
+      } else {
+        setNft(null);
+      }
+    } catch (error) {
+      console.error('Failed to load NFT data:', error);
+      setNft(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading NFT details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!nft) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">NFT Not Found</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">The NFT you're looking for doesn't exist.</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">The NFT you're looking for doesn't exist or is no longer listed.</p>
           <Link to="/marketplace" className="text-blue-600 hover:text-blue-700">
             Browse Marketplace
           </Link>
@@ -35,7 +100,7 @@ const NFTDetailPage: React.FC = () => {
     );
   }
 
-  const isOwner = account === nft.owner;
+  const isOwner = account === nft.seller;
   const priceHistory = [
     { date: '2024-01-15', price: 10.2 },
     { date: '2024-01-10', price: 8.7 },
@@ -71,12 +136,18 @@ const NFTDetailPage: React.FC = () => {
       const provider = new ethers.BrowserProvider(ethereum);
       const signer = await provider.getSigner();
       
-      // For now, simulate a transaction (since this is mock data)
-      // In a real app, you'd call the marketplace contract
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Use marketplace service to buy the NFT
+      const result = await marketplaceService.buyNFT((nft as any).listingId, (nft as any).priceInEth);
       
       toast.dismiss(loadingToast);
-      toast.success('Purchase completed! (Simulated transaction)');
+      
+      if (result.success) {
+        toast.success('Purchase completed successfully!');
+        // Refresh NFT data after purchase
+        await loadNFTData();
+      } else {
+        throw new Error(result.error || 'Purchase failed');
+      }
       
     } catch (error: any) {
       console.error('Purchase failed:', error);
@@ -310,7 +381,7 @@ const NFTDetailPage: React.FC = () => {
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium">
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  View on USPTO
+                  View Patent
                 </button>
               </div>
             </div>

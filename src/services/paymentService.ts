@@ -1,4 +1,7 @@
-import { ethers, BrowserProvider } from 'ethers';
+import { ethers } from 'ethers';
+import { web3Utils } from '../utils/web3Utils';
+import { BaseSingleton } from '../utils/baseSingleton';
+import { SEARCH_PAYMENT_ABI } from '../utils/contractABIs';
 
 export interface PSPPayment {
   userAddress: string;
@@ -23,32 +26,12 @@ export enum PaymentToken {
   PSP = 2
 }
 
-// SearchPayment Contract ABI for credit management
-const SEARCH_PAYMENT_ABI = [
-  'function getUserCredits(address user) view returns (uint256)',
-  'function payWithETH() payable returns (bool)',
-  'function payWithUSDC() returns (bool)',
-  'function payWithPSP() returns (bool)',
-  'function getSearchPrice(uint8 token) view returns (uint256)',
-  'function getAllSearchPrices() view returns (uint256 ethPrice, uint256 usdcPrice, uint256 pspPrice)',
-  'function useCredit(address user) returns (bool)',
-  'event PaymentReceived(address indexed user, uint8 indexed token, uint256 amount, uint256 creditsAdded)',
-  'event CreditUsed(address indexed user, uint256 creditsRemaining)'
-];
-
-export class PaymentService {
-  private static instance: PaymentService;
+export class PaymentService extends BaseSingleton {
   private searchPaymentAddress: string;
 
   constructor() {
+    super();
     this.searchPaymentAddress = import.meta.env.VITE_SEARCH_PAYMENT_ADDRESS || '';
-  }
-
-  public static getInstance(): PaymentService {
-    if (!PaymentService.instance) {
-      PaymentService.instance = new PaymentService();
-    }
-    return PaymentService.instance;
   }
 
   /**
@@ -60,7 +43,10 @@ export class PaymentService {
         return 0;
       }
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, provider);
       
       const credits = await contract.getUserCredits(userAddress);
@@ -80,8 +66,10 @@ export class PaymentService {
         return false;
       }
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await web3Utils.createSigner();
+      if (!signer) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
       
       const transaction = await contract.useCredit(userAddress);
@@ -137,7 +125,10 @@ export class PaymentService {
         };
       }
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, provider);
       
       const [ethPrice, usdcPrice, pspPrice] = await contract.getAllSearchPrices();
@@ -178,8 +169,11 @@ export class PaymentService {
         return { success: false, error: 'Please connect your MetaMask wallet first.' };
       }
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const provider = await web3Utils.createProvider();
+      const signer = await web3Utils.createSigner();
+      if (!signer || !provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
 
       // Get ETH price
@@ -243,8 +237,10 @@ export class PaymentService {
         return { success: false, error: 'MetaMask not available or contract address not configured' };
       }
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await web3Utils.createSigner();
+      if (!signer) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
 
       // Pay with USDC (approval handled separately in the UI)
@@ -276,8 +272,10 @@ export class PaymentService {
         return { success: false, error: 'MetaMask not available or contract address not configured' };
       }
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await web3Utils.createSigner();
+      if (!signer) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
 
       // Pay with PSP (approval handled separately in the UI)
@@ -357,4 +355,4 @@ export const requestMetaMaskConnection = async (): Promise<{ connected: boolean;
   }
 };
 
-export const paymentService = PaymentService.getInstance();
+export const paymentService = PaymentService.getInstance() as PaymentService;

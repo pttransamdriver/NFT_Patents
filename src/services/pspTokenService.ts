@@ -1,59 +1,8 @@
-import { ethers, BrowserProvider, JsonRpcSigner } from 'ethers';
+import { ethers, JsonRpcSigner } from 'ethers';
+import { web3Utils } from '../utils/web3Utils';
+import { BaseSingleton } from '../utils/baseSingleton';
 import { paymentService, PSPPayment, PaymentResult } from './paymentService';
-
-// PSP Token Contract ABI (minimal interface)
-const PSP_TOKEN_ABI = [
-  // Read functions
-  'function balanceOf(address owner) view returns (uint256)',
-  'function allowance(address owner, address spender) view returns (uint256)',
-  'function totalSupply() view returns (uint256)',
-  'function name() view returns (string)',
-  'function symbol() view returns (string)',
-  'function decimals() view returns (uint8)',
-  'function getTokenPrice() view returns (uint256)',
-  'function calculateTokensForETH(uint256 ethAmount) view returns (uint256)',
-  'function calculateETHForTokens(uint256 tokenAmount) view returns (uint256)',
-  
-  // Write functions
-  'function transfer(address to, uint256 amount) returns (bool)',
-  'function approve(address spender, uint256 amount) returns (bool)',
-  'function transferFrom(address from, address to, uint256 amount) returns (bool)',
-  'function purchaseTokens() payable returns (bool)',
-  'function redeemTokens(uint256 tokenAmount) returns (bool)',
-  
-  // Events
-  'event Transfer(address indexed from, address indexed to, uint256 value)',
-  'event Approval(address indexed owner, address indexed spender, uint256 value)',
-  'event TokensPurchased(address indexed buyer, uint256 amount, uint256 ethPaid)'
-];
-
-// SearchPayment Contract ABI (enhanced for multi-token support)
-const SEARCH_PAYMENT_ABI = [
-  // Legacy functions
-  'function payForSearch() returns (bool)',
-  'function getSearchPrice() view returns (uint256)',
-  'function getPSPTokenAddress() view returns (address)',
-
-  // New multi-token functions
-  'function payWithETH() payable returns (bool)',
-  'function payWithUSDC() returns (bool)',
-  'function payWithPSP() returns (bool)',
-  'function getSearchPrice(uint8 token) view returns (uint256)',
-  'function getAllSearchPrices() view returns (uint256 ethPrice, uint256 usdcPrice, uint256 pspPrice)',
-  'function getTokenAddresses() view returns (address pspAddress, address usdcAddress)',
-  'function getUserStats(address user) view returns (uint256 ethPaid, uint256 usdcPaid, uint256 pspPaid, uint256 searchesPurchased)',
-  'function getUserTokenStats(address user, uint8 token) view returns (uint256 totalPaid)'
-];
-
-// USDC Contract ABI (minimal interface)
-const USDC_ABI = [
-  'function balanceOf(address owner) view returns (uint256)',
-  'function transfer(address to, uint256 amount) returns (bool)',
-  'function transferFrom(address from, address to, uint256 amount) returns (bool)',
-  'function approve(address spender, uint256 amount) returns (bool)',
-  'function allowance(address owner, address spender) view returns (uint256)',
-  'function decimals() view returns (uint8)'
-];
+import { PSP_TOKEN_ABI, SEARCH_PAYMENT_ABI, USDC_ABI } from '../utils/contractABIs';
 
 // Payment token enum (matches contract)
 export enum PaymentToken {
@@ -94,23 +43,16 @@ export interface UserPaymentStats {
   searchesPurchased: number;
 }
 
-export class PSPTokenService {
-  private static instance: PSPTokenService;
+export class PSPTokenService extends BaseSingleton {
   private pspTokenAddress: string;
   private usdcTokenAddress: string;
   private searchPaymentAddress: string;
 
   constructor() {
+    super();
     this.pspTokenAddress = import.meta.env.VITE_PSP_TOKEN_ADDRESS || '';
     this.usdcTokenAddress = import.meta.env.VITE_USDC_TOKEN_ADDRESS || '';
     this.searchPaymentAddress = import.meta.env.VITE_SEARCH_PAYMENT_ADDRESS || '';
-  }
-
-  public static getInstance(): PSPTokenService {
-    if (!PSPTokenService.instance) {
-      PSPTokenService.instance = new PSPTokenService();
-    }
-    return PSPTokenService.instance;
   }
 
   /**
@@ -122,7 +64,10 @@ export class PSPTokenService {
         throw new Error('MetaMask not available or PSP token address not configured');
       }
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.pspTokenAddress, PSP_TOKEN_ABI, provider);
 
       const [name, symbol, decimals, totalSupply, userBalance, tokenPrice] = await Promise.all([
@@ -158,8 +103,10 @@ export class PSPTokenService {
         return { success: false, error: 'MetaMask not available or PSP token address not configured' };
       }
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await web3Utils.createSigner();
+      if (!signer) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.pspTokenAddress, PSP_TOKEN_ABI, signer);
 
       // Calculate how many tokens will be purchased
@@ -201,8 +148,10 @@ export class PSPTokenService {
         return { success: false, error: 'MetaMask not available or contract addresses not configured' };
       }
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await web3Utils.createSigner();
+      if (!signer) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       
       const pspContract = new ethers.Contract(this.pspTokenAddress, PSP_TOKEN_ABI, signer);
       const searchContract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
@@ -262,7 +211,10 @@ export class PSPTokenService {
         return '0';
       }
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.pspTokenAddress, PSP_TOKEN_ABI, provider);
       
       const balance = await contract.balanceOf(userAddress);
@@ -282,7 +234,10 @@ export class PSPTokenService {
         return '0';
       }
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.pspTokenAddress, PSP_TOKEN_ABI, provider);
       
       const tokenAmountWei = ethers.parseEther(tokenAmount);
@@ -304,7 +259,10 @@ export class PSPTokenService {
         return '0';
       }
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.pspTokenAddress, PSP_TOKEN_ABI, provider);
       
       const ethAmountWei = ethers.parseEther(ethAmount);
@@ -318,19 +276,12 @@ export class PSPTokenService {
   }
 
   /**
-   * Get search price in PSP tokens (legacy)
+   * Get search price in PSP tokens - delegates to paymentService
    */
   async getSearchPrice(): Promise<string> {
     try {
-      if (!window.ethereum || !this.searchPaymentAddress) {
-        return '500'; // Default 500 PSP
-      }
-
-      const provider = new BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, provider);
-
-      const price = await contract.getSearchPrice();
-      return ethers.formatEther(price);
+      const pricing = await paymentService.getSearchPricing();
+      return pricing.pspPrice;
     } catch (error) {
       console.error('Failed to get search price:', error);
       return '500'; // Default fallback
@@ -338,29 +289,16 @@ export class PSPTokenService {
   }
 
   /**
-   * Get all search prices for different payment methods
+   * Get all search prices for different payment methods - delegates to paymentService
    */
   async getAllSearchPrices(): Promise<MultiTokenPricing> {
     try {
-      if (!window.ethereum || !this.searchPaymentAddress) {
-        return {
-          ethPrice: '0.002',
-          usdcPrice: '5',
-          pspPrice: '500',
-          equivalentUSD: '5.00'
-        };
-      }
-
-      const provider = new BrowserProvider(window.ethereum);
-      const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, provider);
-
-      const [ethPrice, usdcPrice, pspPrice] = await contract.getAllSearchPrices();
-
+      const pricing = await paymentService.getSearchPricing();
       return {
-        ethPrice: ethers.formatEther(ethPrice),
-        usdcPrice: ethers.formatUnits(usdcPrice, 6), // USDC has 6 decimals
-        pspPrice: ethers.formatEther(pspPrice),
-        equivalentUSD: '5.00'
+        ethPrice: pricing.ethPrice,
+        usdcPrice: pricing.usdcPrice,
+        pspPrice: pricing.pspPrice,
+        equivalentUSD: pricing.usdEquivalent
       };
     } catch (error) {
       console.error('Failed to get all search prices:', error);
@@ -395,8 +333,10 @@ export class PSPTokenService {
         return { success: false, error: 'Please connect your MetaMask wallet first.' };
       }
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await web3Utils.createSigner();
+      if (!signer) {
+        throw new Error('Unable to connect to MetaMask');
+      }
 
       const pspContract = new ethers.Contract(this.pspTokenAddress, PSP_TOKEN_ABI, signer);
       const searchContract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, signer);
@@ -469,7 +409,10 @@ export class PSPTokenService {
         };
       }
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.searchPaymentAddress, SEARCH_PAYMENT_ABI, provider);
 
       const [ethPaid, usdcPaid, pspPaid, searchesPurchased] = await contract.getUserStats(userAddress);
@@ -500,7 +443,10 @@ export class PSPTokenService {
         return '0';
       }
 
-      const provider = new BrowserProvider(window.ethereum);
+      const provider = await web3Utils.createProvider();
+      if (!provider) {
+        throw new Error('Unable to connect to MetaMask');
+      }
       const contract = new ethers.Contract(this.usdcTokenAddress, USDC_ABI, provider);
 
       const balance = await contract.balanceOf(userAddress);
@@ -512,4 +458,4 @@ export class PSPTokenService {
   }
 }
 
-export const pspTokenService = PSPTokenService.getInstance();
+export const pspTokenService = PSPTokenService.getInstance() as PSPTokenService;

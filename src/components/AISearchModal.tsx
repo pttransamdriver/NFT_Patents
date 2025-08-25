@@ -663,7 +663,7 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
               </h5>
               <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                 <li>• Natural language queries: "Find renewable energy patents from 2020-2023"</li>
-                <li>• Smart search term optimization for USPTO database</li>
+                <li>• Smart search term optimization for patent database</li>
                 <li>• Confidence scoring and search explanation</li>
                 <li>• Better results than keyword-only search</li>
               </ul>

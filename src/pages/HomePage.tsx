@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Shield, Zap, TrendingUp, ArrowRight, FileText } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
-import { mockNFTs } from '../data/mockData';
 
 const HomePage: React.FC = () => {
-  const featuredNFTs = mockNFTs.slice(0, 4);
+  // Remove featured NFTs for now - this was using mock data
+  const featuredNFTs: any[] = [];
 
   const features = [
     {
@@ -17,7 +17,7 @@ const HomePage: React.FC = () => {
     {
       icon: Shield,
       title: 'Verified Patents',
-      description: 'All NFTs are backed by authentic USPTO patents with verified ownership.',
+      description: 'All NFTs are backed by authentic patents with verified ownership.'
     },
     {
       icon: Zap,
@@ -58,7 +58,7 @@ const HomePage: React.FC = () => {
               <span className="text-gray-900 dark:text-white">IP Reimagined On-Chain</span>
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-              Discover, mint, and trade USPTO patent NFTs on the world's first AI-powered patent marketplace. 
+              Discover, mint, and trade patent NFTs on the world's first AI-powered patent marketplace. 
               Turn innovation into digital assets.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

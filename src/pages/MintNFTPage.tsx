@@ -29,25 +29,13 @@ const MintNFTPage: React.FC = () => {
   ]);
   const { provider, signer, account, connectWallet, isConnected } = useWeb3();
 
-  const mockPatentData = {
-    patentNumber: 'US-12325364-B1',
-    title: 'Advanced Quantum Error Correction System',
-    abstract: 'A revolutionary quantum error correction method that significantly reduces decoherence in quantum computing systems through novel stabilizer codes and real-time error detection.',
-    inventors: ['Dr. Sarah Chen', 'Prof. Michael Rodriguez', 'Dr. James Wilson'],
-    assignee: 'Quantum Dynamics Corporation',
-    filingDate: '2023-03-15',
-    status: 'active',
-    category: 'Computing',
-    estimatedValue: '15.2 ETH',
-    isAvailable: true
-  };
 
-  // Updated patent number validation to handle real USPTO formats
+  // Updated patent number validation to handle real patent formats
   const validatePatentNumber = (patentNum: string): boolean => {
     // Remove spaces and convert to uppercase
     const cleanPatent = patentNum.replace(/\s/g, '').toUpperCase();
     
-    // Modern USPTO formats:
+    // Modern patent formats:
     // US-XXXXXXXX-XX (e.g., US-12325364-B1)
     // US XXXXXXXX XX (with spaces)
     // USXXXXXXXX (without separators)
@@ -128,7 +116,7 @@ const MintNFTPage: React.FC = () => {
       console.error('Patent verification error:', error);
       setVerificationResult({
         isValid: false,
-        error: `Verification failed: ${error.message || 'Unable to connect to USPTO database'}`
+        error: `Verification failed: ${error.message || 'Unable to connect to patent database'}`
       });
     } finally {
       setIsVerifying(false);
@@ -199,7 +187,7 @@ const MintNFTPage: React.FC = () => {
             Mint Patent NFT
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Transform your USPTO patent into a unique digital asset
+            Transform your patent into a unique digital asset
           </p>
         </motion.div>
 
@@ -267,7 +255,7 @@ const MintNFTPage: React.FC = () => {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  USPTO Patent Number
+                  Patent Number
                 </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -280,7 +268,7 @@ const MintNFTPage: React.FC = () => {
                   />
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  Enter the complete USPTO patent number. Supports modern formats (US-12325364-B1) and older formats (US10,123,456)
+                  Enter the complete patent number. Supports modern formats (US-12325364-B1) and older formats (US10,123,456)
                 </p>
               </div>
 

@@ -18,7 +18,7 @@ const Footer: React.FC = () => {
               </span>
             </Link>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
-              The premier marketplace for USPTO patent NFTs. Discover, mint, and trade patent NFTs with AI-powered search technology.
+              The premier marketplace for patent NFTs. Discover, mint, and trade patent NFTs with AI-powered search technology.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">

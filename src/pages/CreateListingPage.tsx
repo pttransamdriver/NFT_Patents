@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tag, Calendar, DollarSign, Clock, ArrowLeft, CheckCircle } from 'lucide-react';
-import { mockNFTs } from '../data/mockData';
 import { useWeb3 } from '../contexts/Web3Context';
 import toast from 'react-hot-toast';
 
@@ -18,7 +17,8 @@ const CreateListingPage: React.FC = () => {
   const [reservePrice, setReservePrice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const nft = mockNFTs.find(n => n.id === id);
+  // Mock NFT data removed - implement real NFT lookup
+  const nft = null;
 
   if (!nft) {
     return (

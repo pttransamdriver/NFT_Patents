@@ -35,17 +35,17 @@ export class PatentPdfService {
    */
   async fetchPatentPdf(patentNumber: string): Promise<Blob | null> {
     try {
-      // Try USPTO first
-      const usptoUrl = this.getUSPTOPdfUrl(patentNumber);
-      let response = await fetch(usptoUrl);
+      // Try Google Patents first
+      const googleUrl = this.getGooglePatentsPdfUrl(patentNumber);
+      let response = await fetch(googleUrl);
       
       if (response.ok) {
         return await response.blob();
       }
 
-      // Try Google Patents as fallback
-      const googleUrl = this.getGooglePatentsPdfUrl(patentNumber);
-      response = await fetch(googleUrl);
+      // Try alternative Google Patents URL as fallback
+      const alternativeUrl = `https://patents.google.com/patent/${patentNumber}.pdf`;
+      response = await fetch(alternativeUrl);
       
       if (response.ok) {
         return await response.blob();
@@ -203,9 +203,9 @@ export class PatentPdfService {
   }
 
   /**
-   * Generate USPTO PDF URL
+   * Generate Google Patents PDF URL
    */
-  private getUSPTOPdfUrl(patentNumber: string): string {
+  private getGooglePatentsPdfUrl(patentNumber: string): string {
     // Clean patent number (remove spaces, hyphens)
     const cleanNumber = patentNumber.replace(/[^\w]/g, '');
     
@@ -218,18 +218,13 @@ export class PatentPdfService {
     const [, country, number] = match;
     
     if (country === 'US') {
-      return `https://patft.uspto.gov/netacgi/nph-Parser?Sect1=PTO1&Sect2=HITOFF&d=PALL&p=1&u=%2Fnetahtml%2FPTO%2Fsrchnum.htm&r=1&f=G&l=50&s1=${number}.PN.&OS=PN/${number}&RS=PN/${number}`;
+      // Google Patents PDF URLs (when available)
+      return `https://patents.google.com/patent/${patentNumber}/en?oq=${patentNumber}`;
     }
     
     return `https://worldwide.espacenet.com/patent/search/family/simple/pdf/${patentNumber}`;
   }
 
-  /**
-   * Generate Google Patents PDF URL
-   */
-  private getGooglePatentsPdfUrl(patentNumber: string): string {
-    return `https://patents.google.com/patent/${patentNumber}/pdf`;
-  }
 
   /**
    * Generate placeholder PDF when patent PDF is not available

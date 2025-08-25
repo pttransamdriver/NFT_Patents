@@ -25,7 +25,7 @@ export class SecurityUtils {
   static validatePatentNumber(patentNumber: string): boolean {
     if (!patentNumber || typeof patentNumber !== 'string') return false;
     
-    // Basic USPTO patent number format validation
+    // Basic patent number format validation
     const patentRegex = /^US-?\d{7,8}-?[A-Z]\d?$/i;
     return patentRegex.test(patentNumber.replace(/\s/g, ''));
   }

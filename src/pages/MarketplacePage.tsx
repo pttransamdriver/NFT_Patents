@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Copy, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
 import MyNFTsModal from '../components/modals/MyNFTsModal';
-import { mockNFTs } from '../data/mockData';
 import { useWeb3 } from '../contexts/Web3Context';
 import { getUserNFTs, getPatentNFTContract } from '../utils/contracts';
 import { ethers } from 'ethers';
@@ -454,7 +453,7 @@ const MarketplacePage: React.FC = () => {
             Patent NFT Marketplace
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Discover and trade USPTO patent NFTs from leading innovators worldwide
+            Discover and trade patent NFTs from leading innovators worldwide
           </p>
         </motion.div>
 
@@ -755,11 +754,6 @@ const MarketplacePage: React.FC = () => {
                 </span>
               )}
             </p>
-            {import.meta.env.VITE_DEBUG === 'true' && (
-              <p className="text-xs text-gray-500 mt-1">
-                Debug: MarketplaceListings: {marketplaceListings.length}, Loading: {marketplaceLoading.toString()}
-              </p>
-            )}
           </div>
           
           <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
