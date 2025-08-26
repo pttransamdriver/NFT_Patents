@@ -12,7 +12,7 @@ export const NETWORKS = {
     name: "localhost",
     rpcUrl: "http://127.0.0.1:8545",
     chainId: 31337,
-    privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    privateKey: process.env.LOCALHOST_PRIVATE_KEY
   },
   sepolia: {
     name: "sepolia", 
