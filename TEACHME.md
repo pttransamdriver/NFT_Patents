@@ -86,7 +86,7 @@ src/
 │   ├── MintNFTPage.tsx  # Convert patent to NFT
 │   └── MarketplacePage.tsx # Browse & buy patent NFTs
 ├── services/            # Business logic layer
-│   ├── usptoApi.ts      # Patent data fetching
+│   ├── usptoApi.ts      # Google Patent data fetching
 │   ├── mintingService.ts # NFT creation logic
 │   ├── paymentService.ts # Payment processing
 │   ├── marketplaceService.ts # Marketplace interactions
@@ -142,7 +142,7 @@ const MintNFTPage = () => {
 
 #### 2. **Modal-Based User Experience Pattern**
 
-**Problem**: Page redirects were disrupting user flow and creating blank screen issues.
+**Problem**: Page redirects were disrupting user flow.
 
 **Solution**: Replace redirect-based actions with modal popups for seamless UX.
 
