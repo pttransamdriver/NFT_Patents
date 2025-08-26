@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tag, Calendar, DollarSign, Clock, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useWeb3 } from '../contexts/Web3Context';
+import { getUserNFTs } from '../utils/contracts';
+import { marketplaceService } from '../services/marketplaceService';
 import toast from 'react-hot-toast';
 
 const CreateListingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isConnected, account } = useWeb3();
+  const { isConnected, account, signer } = useWeb3();
   
   const [listingType, setListingType] = useState<'fixed' | 'auction'>('fixed');
   const [price, setPrice] = useState('');
@@ -16,16 +18,95 @@ const CreateListingPage: React.FC = () => {
   const [startingBid, setStartingBid] = useState('');
   const [reservePrice, setReservePrice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [nft, setNft] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock NFT data removed - implement real NFT lookup
-  const nft = null;
+  useEffect(() => {
+    const fetchNFT = async () => {
+      if (!id || !isConnected || !account || !signer) {
+        setIsLoading(false);
+        setError('Wallet not connected or invalid NFT ID');
+        return;
+      }
 
-  if (!nft) {
+      try {
+        setIsLoading(true);
+        const userNFTs = await getUserNFTs(signer, account);
+        
+        if (userNFTs.length === 0) {
+          setError('You don\'t have any NFTs yet. Go to the search page to mint your first Patent NFT!');
+          return;
+        }
+        
+        const foundNFT = userNFTs.find(nftItem => nftItem.tokenId === id);
+        
+        if (foundNFT) {
+          // Create a more complete NFT object
+          setNft({
+            id: foundNFT.tokenId,
+            tokenId: foundNFT.tokenId,
+            title: `Patent NFT #${foundNFT.tokenId}`,
+            owner: account,
+            patentNumber: `NFT-${foundNFT.tokenId}`,
+            category: 'Technology',
+            inventor: 'You',
+            price: '0.1',
+            isListed: false,
+            description: 'Patent NFT minted from your collection'
+          });
+        } else {
+          setError(`NFT #${id} not found. You can only list NFTs that you own.`);
+        }
+      } catch (err) {
+        console.error('Error fetching NFT:', err);
+        setError('Failed to load NFT data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchNFT();
+  }, [id, isConnected, account, signer]);
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">NFT Not Found</h2>
-          <p className="text-gray-600 dark:text-gray-400">The NFT you're trying to list doesn't exist.</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Loading NFT...</h2>
+          <p className="text-gray-600 dark:text-gray-400">Please wait while we fetch your NFT details.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !nft) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            {error || 'NFT Not Found'}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            {error || 'The NFT you\'re trying to list doesn\'t exist or you don\'t own it.'}
+          </p>
+          <div className="mt-4 space-x-3">
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Back to Marketplace
+            </button>
+            {error?.includes('don\'t have any NFTs') && (
+              <button
+                onClick={() => navigate('/search')}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Mint Your First NFT
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -61,13 +142,28 @@ const CreateListingPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    toast.loading('Creating listing...', { id: 'listing' });
 
-    // Simulate listing process
-    setTimeout(() => {
-      toast.success(`NFT ${listingType === 'fixed' ? 'listed for sale' : 'auction created'} successfully!`);
+    try {
+      if (listingType === 'fixed') {
+        const result = await marketplaceService.listNFT(id!, price);
+        
+        if (result.success) {
+          toast.success('NFT listed for sale successfully!', { id: 'listing' });
+          setTimeout(() => navigate('/marketplace'), 1500);
+        } else {
+          toast.error(result.error || 'Failed to list NFT', { id: 'listing' });
+        }
+      } else {
+        // For now, auctions are not implemented in the smart contract
+        toast.error('Auctions are not yet supported', { id: 'listing' });
+      }
+    } catch (error: any) {
+      console.error('Listing error:', error);
+      toast.error(error.message || 'Failed to create listing', { id: 'listing' });
+    } finally {
       setIsSubmitting(false);
-      navigate(`/nft/${id}`);
-    }, 2000);
+    }
   };
 
   const durationOptions = [

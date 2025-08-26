@@ -93,13 +93,17 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
             listing.tokenId
         );
 
-        // Transfer payments
-        payable(listing.seller).transfer(sellerAmount);
-        payable(feeRecipient).transfer(platformFee);
+        // Transfer payments using secure call pattern
+        (bool sellerSuccess, ) = payable(listing.seller).call{value: sellerAmount}("");
+        require(sellerSuccess, "Seller payment failed");
+        
+        (bool feeSuccess, ) = payable(feeRecipient).call{value: platformFee}("");
+        require(feeSuccess, "Fee payment failed");
 
         // Refund excess payment
         if (msg.value > listing.price) {
-            payable(msg.sender).transfer(msg.value - listing.price);
+            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - listing.price}("");
+            require(refundSuccess, "Refund failed");
         }
 
         emit NFTSold(
@@ -178,6 +182,10 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
     }
 
     function emergencyWithdraw() external onlyOwner {
-        payable(owner()).transfer(address(this).balance);
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+        
+        (bool success, ) = payable(owner()).call{value: balance}("");
+        require(success, "Withdrawal failed");
     }
 }

@@ -48,10 +48,13 @@ The Patent NFT Marketplace consists of four main components and two external dep
 - 🔒 **Smart Contract Security**: ReentrancyGuard, Pausable, access controls
 - 🔄 **CORS-Free Integration**: Backend proxy eliminates browser limitations
 - 📱 **Responsive UI**: Modern React interface with Tailwind CSS
-- 🎯 **My NFTs Modal**: Integrated NFT management on marketplace page
+- 🎯 **Modal-Based Listing**: Seamless NFT listing with price validation and fee calculation
+- 🛒 **Buy Now Functionality**: Instant NFT purchasing with smart contract integration
+- 💰 **Make Offer System**: Price negotiation capabilities (UI ready, smart contract implementation pending)
 - 📱 **MetaMask Import Guide**: Step-by-step NFT import for local networks
 - 🔧 **Advanced Debugging**: Built-in tools for minting diagnostics
 - 🔍 **Patent Uniqueness**: Blockchain-enforced uniqueness prevents duplicate minting
+- 🏗️ **Modular Deployment**: Production-ready smart contract deployment with proper naming conventions
 
 ## 🚀 Quick Start
 
@@ -90,10 +93,10 @@ The Patent NFT Marketplace consists of four main components and two external dep
    # Terminal 1: Start local blockchain
    npx hardhat node
    
-   # Terminal 2: Deploy contracts
-   npx hardhat run scripts/deploy-all.js --network localhost
+   # Terminal 2: Deploy contracts (modular deployment)
+   npm run deploy:localhost
    
-   # Terminal 3: Start backend API
+   # Terminal 3: Start backend API  
    cd backend && npm start
    
    # Terminal 4: Start frontend
@@ -352,6 +355,9 @@ class Web3Utils {
   
   // Standardized connection checking
   async isConnected(): Promise<{ connected: boolean; account?: string }>
+  
+  // Centralized signer creation
+  async createSigner(): Promise<ethers.Signer | null>
 }
 ```
 
@@ -379,6 +385,12 @@ class MarketplaceService {
   
   // Purchase an NFT from marketplace
   async buyNFT(listingId: string, priceInEth: string): Promise<PurchaseResult>
+  
+  // Cancel an active listing
+  async cancelListing(listingId: string): Promise<CancelResult>
+  
+  // Get user's owned NFTs
+  async getUserNFTs(userAddress: string): Promise<UserNFT[]>
 }
 ```
 
@@ -547,20 +559,15 @@ npm run test:gas
 
 ### Mock Data Fallback
 
-When no API key is configured, the system uses enhanced mock data:
+**Important Note**: Mock data has been completely removed from the backend. The system now exclusively uses real Google Patents API data via SerpApi. When `SERPAPI_KEY` is set to "demo" or missing, the API returns an error requiring a valid key rather than falling back to mock data.
 
 ```javascript
-// Generates realistic patents with:
-const mockPatent = {
-  patent_id: "US5105702",           // Proper format
-  title: "Advanced Solar Cell...",  // Relevant to search
-  assignee: "Google LLC",          // Real company
-  inventor: "Dr. John Smith",      // Realistic name
-  classification: {                // Proper codes
-    cpc: "H01L31/551",
-    ipc: "H01L 31/76"
-  }
-};
+// Backend validation enforces real API usage:
+if (!serpApiKey || serpApiKey === 'demo' || serpApiKey === 'your_serpapi_key_here') {
+  return res.status(400).json({ 
+    error: 'SerpApi key required for real patent data access' 
+  });
+}
 ```
 
 ## 🔒 Security Features
@@ -707,8 +714,14 @@ The project is fully configured for Sepolia testnet deployment with production-r
 ### Deployment Commands
 
 ```bash
-# Deploy all contracts to Sepolia
+# Deploy all contracts to Sepolia (modular approach)
 npm run deploy:sepolia
+
+# Or deploy individual contracts:
+npx hardhat run scripts/deploy/001_deploy_psp_token.js --network sepolia
+npx hardhat run scripts/deploy/002_deploy_search_payment.js --network sepolia  
+npx hardhat run scripts/deploy/003_deploy_patent_nft.js --network sepolia
+npx hardhat run scripts/deploy/004_deploy_marketplace.js --network sepolia
 
 # Verify contracts on Etherscan (commands provided after deployment)
 npx hardhat verify --network sepolia <contract_address> <constructor_args>

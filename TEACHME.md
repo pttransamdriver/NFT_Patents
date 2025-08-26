@@ -11,7 +11,7 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 - Use actual patent PDFs as NFT images for visual differentiation
 - Ensure each patent can only be minted once (global uniqueness)
 - Collect 5% fees (2.5% minting + 2.5% marketplace)
-- Support multiple payment methods (ETH, USDC, Patent Pennies)
+- Support multiple payment methods (ETH, USDC, Patent Pennies Tokens PSP)
 - Scale to handle thousands of patents and users
 
 ---
@@ -22,11 +22,11 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 ┌─────────────────────────────────────────────────────────────┐
 │                    FRONTEND (React + Vite)                  │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   Pages     │  │  Services   │  │      Components    │  │
+│  │   Pages     │  │  Services   │  │      Components     │  │
 │  │             │  │             │  │                     │  │
-│  │ Search      │  │ USPTO API   │  │ NFT Cards          │  │
-│  │ Mint        │  │ Minting     │  │ Modals             │  │
-│  │ Marketplace │  │ Payment     │  │ Debug Tools        │  │
+│  │ Search      │  │ Google API  │  │ NFT Cards           │  │
+│  │ Mint        │  │ Minting     │  │ Modals              │  │
+│  │ Marketplace │  │ Payment     │  │ Debug Tools         │  │
 │  │             │  │ Marketplace │  │                     │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -37,8 +37,8 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
 │  │ CORS Proxy      │  │ Metadata Store  │  │ IPFS Utils  │  │
 │  │                 │  │                 │  │             │  │
-│  │ USPTO/Google    │  │ NFT Metadata    │  │ PDF Processing │
-│  │ Patents API     │  │ IPFS Hashes     │  │ Image Storage │
+│  │ Google       │  │  | NFT Metadata    │  │ PDF Processing │
+│  │ Patents API     │  │ IPFS Hashes     │  │ Image Storage  │
 │  │                 │  │                 │  │             │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -49,9 +49,9 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
 │  │ PatentNFT   │  │ PSPToken    │  │ NFTMarketplace      │  │
 │  │             │  │             │  │                     │  │
-│  │ Mint NFTs   │  │ AI Search   │  │ List & Buy NFTs    │  │
-│  │ Track       │  │ Payments    │  │ Fee Collection     │  │
-│  │ Uniqueness  │  │ Patent      │  │ 2.5% Platform Fee  │  │
+│  │ Mint NFTs   │  │ AI Search   │  │ List & Buy NFTs     │  │
+│  │ Track       │  │ Payments    │  │ Fee Collection      │  │
+│  │ Uniqueness  │  │ Patent      │  │ 2.5% Platform Fee   │  │
 │  │             │  │ Pennies     │  │                     │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -139,7 +139,35 @@ const MintNFTPage = () => {
 }
 ```
 
-#### 2. **Context Pattern for Global State**
+#### 2. **Modal-Based User Experience Pattern**
+
+**Problem**: Page redirects were disrupting user flow and creating blank screen issues.
+
+**Solution**: Replace redirect-based actions with modal popups for seamless UX.
+
+```typescript
+// Before: Redirect to listing page
+const handleListForSale = () => {
+  navigate('/create-listing', { state: { nft } });
+  // User sees blank screen, loses context
+};
+
+// After: Modal-based listing
+const handleListForSale = () => {
+  setShowListModal(true); // Opens modal overlay
+  // User stays on same page, maintains context
+};
+
+// ListNFTModal.tsx - Reusable across all NFT components
+<ListNFTModal 
+  isOpen={showListModal}
+  onClose={() => setShowListModal(false)}
+  nft={nft}
+  onSuccess={handleListingSuccess}
+/>
+```
+
+#### 3. **Context Pattern for Global State**
 
 **Why**: Wallet connection and Web3 state needed across many components.
 
@@ -154,7 +182,7 @@ export const Web3Provider = ({ children }) => {
 }
 ```
 
-#### 3. **Custom Hook Pattern**
+#### 4. **Custom Hook Pattern**
 
 **Why**: Reuse complex stateful logic across components.
 
@@ -183,27 +211,28 @@ const usePatentSearch = () => {
 
 **Problem 1: CORS (Cross-Origin Resource Sharing)**
 ```
-Browser → Direct call to USPTO API ❌ BLOCKED by CORS policy
-Browser → Our backend → USPTO API ✅ WORKS (no CORS on server)
+Browser → Direct call to Google Patents API ❌ BLOCKED by CORS policy
+Browser → Our backend → Google Patents API ✅ WORKS (no CORS on server)
 ```
 
 **Problem 2: Complex Data Processing**
 - PDF to image conversion requires Node.js libraries
 - IPFS integration needs server-side processing
 - NFT metadata needs to be served from a reliable endpoint
+- Real patent data validation and transformation
 
 ### Backend Structure
 
 ```javascript
 // server.js - Main entry point
 ├── CORS Proxy Routes
-│   ├── /api/uspto/search    # Proxy to patent APIs
-│   └── /api/uspto/patent/:id # Get specific patent
+│   ├── /api/uspto/search    # Proxy to Google Patents API (real data only)
+│   └── /api/uspto/patent/:id # Get specific patent details
 ├── Metadata Routes  
 │   ├── /metadata/:patent    # Serve NFT metadata JSON
 │   └── /metadata/:patent/ipfs # Store IPFS hashes
 └── Utility Routes
-    ├── /api/health         # Health check
+    ├── /api/health         # Health check with SerpApi validation
     └── /debug/metadata     # Debug metadata store
 ```
 
@@ -214,15 +243,32 @@ Browser → Our backend → USPTO API ✅ WORKS (no CORS on server)
 **What it does**: Acts as a middleman between frontend and patent APIs.
 
 ```javascript
-// Why this works:
+// Real API implementation with validation:
 app.get('/api/uspto/search', async (req, res) => {
-  // Server can call any API without CORS restrictions
-  const response = await axios.get(USPTO_API_URL, { params: req.query });
+  const serpApiKey = process.env.SERPAPI_KEY;
   
-  // Transform data to consistent format
-  const transformedData = transformUSPTOData(response.data);
+  // Enforce real API usage - no mock data fallback
+  if (!serpApiKey || serpApiKey === 'demo' || serpApiKey === 'your_serpapi_key_here') {
+    return res.status(400).json({ 
+      error: 'SerpApi key required for real patent data access' 
+    });
+  }
   
-  // Send back to frontend
+  // Call Google Patents via SerpApi
+  const response = await axios.get('https://serpapi.com/search', {
+    params: {
+      api_key: serpApiKey,
+      engine: 'google_patents',
+      q: req.query.criteria,
+      num: Math.max(10, Math.min(req.query.rows || 20, 100))
+    },
+    timeout: 45000 // Increased timeout for reliability
+  });
+  
+  // Transform Google Patents data to consistent format
+  const patents = response.data?.organic_results || [];
+  const transformedData = transformGooglePatentsData(patents);
+  
   res.json(transformedData);
 });
 ```
@@ -271,9 +317,10 @@ PSPToken.sol         // Patent Search Pennies - Layer 2 token
 
 NFTMarketplace.sol   // Secondary market for trading
 ├── List NFTs for sale
-├── Buy/sell functionality
+├── Buy/sell functionality (Buy Now - fully implemented)
+├── Make Offer system (UI ready, contract implementation pending)
 ├── Platform fee collection (2.5%)
-└── Listing management
+└── Listing management with cancellation
 ```
 
 ### Why This Separation?
@@ -293,17 +340,27 @@ User wants to mint patent NFT:
 4. Contract → Sets patentExists[patentNumber] = true [Prevent future duplicates]
 5. Contract → Emits PatentMinted event [Frontend can listen for confirmation]
 
-User wants to list NFT for sale:
-1. Frontend → PatentNFT.approve(marketplace, tokenId) [Allow marketplace to transfer]
-2. Frontend → NFTMarketplace.listNFT(nftContract, tokenId, price)
-3. Contract → Creates listing with unique ID
-4. Contract → Emits NFTListed event
+User wants to list NFT for sale (Modal-based):
+1. User clicks "List for Sale" → Opens ListNFTModal
+2. User sets price and confirms → Modal validates input
+3. Frontend → PatentNFT.approve(marketplace, tokenId) [Allow marketplace to transfer]
+4. Frontend → NFTMarketplace.listNFT(nftContract, tokenId, price)
+5. Contract → Creates listing with unique ID
+6. Contract → Emits NFTListed event
+7. Modal shows success message and closes
 
-User wants to buy NFT:
-1. Frontend → NFTMarketplace.buyNFT(listingId) [Send ETH payment]
-2. Contract → Transfers NFT to buyer
-3. Contract → Pays seller (95%) and platform (5%)
-4. Contract → Emits NFTSold event
+User wants to buy NFT (Buy Now):
+1. User clicks "Buy Now" on marketplace listing
+2. Frontend → NFTMarketplace.buyNFT(listingId) [Send ETH payment]
+3. Contract → Transfers NFT to buyer
+4. Contract → Pays seller (97.5%) and platform (2.5%)
+5. Contract → Emits NFTSold event
+6. Frontend shows success toast and refreshes data
+
+User wants to make an offer (UI ready, contract pending):
+1. User clicks "Make Offer" → Opens offer modal
+2. User enters offer amount → Currently shows success toast
+3. Future: Store offer on-chain for seller to accept/reject
 ```
 
 ---
@@ -521,19 +578,26 @@ VITE_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 ```bash
 1. Development (localhost)
    ├── npx hardhat node          # Local blockchain
-   ├── npx hardhat run scripts/deploy-all.js --network localhost
+   ├── npm run deploy:localhost  # Modular deployment system
    └── npm run dev               # Frontend connects to localhost
 
 2. Testing (Sepolia)
    ├── Get Sepolia ETH from faucet
    ├── Update .env with Sepolia config
-   ├── npm run deploy:sepolia    # Deploy to testnet
+   ├── npm run deploy:sepolia    # Deploys all 4 contracts individually
    └── Verify contracts on Etherscan
 
 3. Production (Mainnet)
    ├── Audit smart contracts
-   ├── Deploy to Mainnet with production backend
+   ├── Deploy with modular scripts for safer deployment
    └── Monitor with analytics and error tracking
+
+# Modular Deployment Structure:
+scripts/deploy/
+├── 001_deploy_psp_token.js       # PSP Token first
+├── 002_deploy_search_payment.js  # Search Payment (depends on PSP)
+├── 003_deploy_patent_nft.js      # Patent NFT contract
+└── 004_deploy_marketplace.js     # Marketplace (depends on NFT)
 ```
 
 ---
@@ -661,23 +725,46 @@ class NewFeatureService {
   }
 }
 
-// 3. Create component
-const NewFeatureComponent = () => {
+// 3. Create modal component (preferred UX pattern)
+const NewFeatureModal = ({ isOpen, onClose, onSuccess }) => {
   const [data, setData] = useState<NewFeature>();
   
-  useEffect(() => {
-    newFeatureService.getNewFeature().then(setData);
-  }, []);
+  const handleSubmit = async () => {
+    const result = await newFeatureService.processNewFeature(data);
+    if (result.success) {
+      toast.success('Feature completed!');
+      onClose();
+      if (onSuccess) onSuccess();
+    }
+  };
   
-  return <div>{data?.name}</div>;
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div className="modal-backdrop">
+          <motion.div className="modal-content">
+            {/* Feature UI */}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 };
 
-// 4. Add to page
+// 4. Integrate with existing pages
 const SomePage = () => {
+  const [showNewFeatureModal, setShowNewFeatureModal] = useState(false);
+  
   return (
     <div>
-      <ExistingComponent />
-      <NewFeatureComponent />
+      <button onClick={() => setShowNewFeatureModal(true)}>
+        New Feature
+      </button>
+      <NewFeatureModal
+        isOpen={showNewFeatureModal}
+        onClose={() => setShowNewFeatureModal(false)}
+        onSuccess={handleFeatureSuccess}
+      />
     </div>
   );
 };
@@ -711,11 +798,15 @@ const SomePage = () => {
 
 This architecture enables the Patent NFT Marketplace to achieve its goals through:
 
-✅ **Global Patent Access**: Backend proxy + multiple API integration  
+✅ **Global Patent Access**: Backend proxy + Google Patents API integration (real data only)  
 ✅ **NFT Uniqueness**: Smart contract enforcement with `patentExists` mapping  
 ✅ **Visual Differentiation**: PDF→image conversion via IPFS  
 ✅ **Scalable Marketplace**: Pagination + real contract data  
 ✅ **Revenue Generation**: Multi-layer fee collection (minting + marketplace)  
 ✅ **Multi-token Support**: Flexible payment system with PSP tokens  
+✅ **Seamless UX**: Modal-based interactions replace disruptive page redirects  
+✅ **Production Ready**: Modular deployment system with proper smart contract architecture  
+✅ **Buy Now Functionality**: Complete NFT purchasing workflow with smart contract integration  
+✅ **Real API Data**: No mock data - exclusive use of Google Patents via SerpApi  
 
 The modular, service-oriented architecture allows each component to excel at its specific responsibility while maintaining clean integration points between frontend, backend, and blockchain layers.

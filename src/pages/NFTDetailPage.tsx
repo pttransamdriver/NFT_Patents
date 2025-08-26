@@ -10,6 +10,7 @@ import {
 import { format } from 'date-fns';
 import { useWeb3 } from '../contexts/Web3Context';
 import { marketplaceService, MarketplaceListing } from '../services/marketplaceService';
+import ListNFTModal from '../components/modals/ListNFTModal';
 import toast from 'react-hot-toast';
 
 const NFTDetailPage: React.FC = () => {
@@ -17,6 +18,7 @@ const NFTDetailPage: React.FC = () => {
   const { isConnected, connectWallet, account } = useWeb3();
   const [isLiked, setIsLiked] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
   const [nft, setNft] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -329,13 +331,13 @@ const NFTDetailPage: React.FC = () => {
 
               {isOwner && (
                 <div className="space-y-3">
-                  <Link
-                    to={`/create-listing/${nft.id}`}
+                  <button
+                    onClick={() => setShowListModal(true)}
                     className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
                   >
                     <Tag className="w-5 h-5 mr-2" />
                     {nft.isListed ? 'Update Listing' : 'List for Sale'}
-                  </Link>
+                  </button>
                 </div>
               )}
             </div>
@@ -483,6 +485,26 @@ const NFTDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* List NFT Modal */}
+      {nft && (
+        <ListNFTModal
+          isOpen={showListModal}
+          onClose={() => setShowListModal(false)}
+          nft={{
+            id: nft.id,
+            tokenId: nft.tokenId || nft.id,
+            title: nft.title,
+            patentNumber: nft.patentNumber,
+            category: nft.category,
+            inventor: nft.inventor,
+            imageUrl: nft.imageUrl
+          }}
+          onSuccess={() => {
+            loadNFTData(); // Refresh NFT data after successful listing
+          }}
+        />
+      )}
     </div>
   );
 };

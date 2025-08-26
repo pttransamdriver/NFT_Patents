@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Copy, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
 import MyNFTsModal from '../components/modals/MyNFTsModal';
+import ListNFTModal from '../components/modals/ListNFTModal';
 import { useWeb3 } from '../contexts/Web3Context';
 import { getUserNFTs, getPatentNFTContract } from '../utils/contracts';
 import { ethers } from 'ethers';
@@ -871,76 +872,30 @@ const MarketplacePage: React.FC = () => {
         )}
 
         {/* Listing Modal */}
-        {showListingModal && selectedNFT && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
-            >
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                🏷️ List NFT on Marketplace
-              </h3>
-              
-              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <h4 className="font-medium text-gray-900 dark:text-white">{selectedNFT.title}</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Token ID: #{selectedNFT.id} • Patent: {selectedNFT.patentNumber}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Will be listed on the smart contract marketplace</p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Listing Price (ETH)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={listingPrice}
-                  onChange={(e) => setListingPrice(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-
-              <div className="mb-6 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <div className="text-sm text-green-800 dark:text-green-200">
-                  <div className="flex justify-between mb-1">
-                    <span>Listing Price:</span>
-                    <span>{listingPrice || '0.00'} ETH</span>
-                  </div>
-                  <div className="flex justify-between mb-1">
-                    <span>Platform Fee (5%):</span>
-                    <span>{listingPrice ? (parseFloat(listingPrice) * 0.05).toFixed(4) : '0.00'} ETH</span>
-                  </div>
-                  <div className="flex justify-between font-semibold border-t border-green-200 dark:border-green-700 pt-1">
-                    <span>You'll Receive:</span>
-                    <span>{listingPrice ? (parseFloat(listingPrice) * 0.95).toFixed(4) : '0.00'} ETH</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    setShowListingModal(false);
-                    setSelectedNFT(null);
-                    setListingPrice('');
-                  }}
-                  className="flex-1 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmListing}
-                  disabled={isListing || !listingPrice || parseFloat(listingPrice) <= 0}
-                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200"
-                >
-                  {isListing ? 'Listing...' : 'List on Marketplace'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
+        {selectedNFT && (
+          <ListNFTModal
+            isOpen={showListingModal}
+            onClose={() => {
+              setShowListingModal(false);
+              setSelectedNFT(null);
+              setListingPrice('');
+            }}
+            nft={{
+              id: selectedNFT.id,
+              tokenId: selectedNFT.tokenId || selectedNFT.id,
+              title: selectedNFT.title,
+              patentNumber: selectedNFT.patentNumber,
+              category: selectedNFT.category,
+              inventor: selectedNFT.inventor,
+              imageUrl: selectedNFT.imageUrl
+            }}
+            onSuccess={() => {
+              setShowListingModal(false);
+              setSelectedNFT(null);
+              setListingPrice('');
+              // The modal handles success notifications
+            }}
+          />
         )}
 
         {/* External NFT Listing Modal */}

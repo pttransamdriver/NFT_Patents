@@ -6,6 +6,7 @@ import { useWeb3 } from '../../contexts/Web3Context';
 import { getPatentNFTContract } from '../../utils/contracts';
 import { mintingService } from '../../services/mintingService';
 import MetaMaskNFTGuide from './MetaMaskNFTGuide';
+import ListNFTModal from './ListNFTModal';
 
 interface UserNFT {
   tokenId: string;
@@ -31,6 +32,7 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
   const [selectedNFT, setSelectedNFT] = useState<UserNFT | null>(null);
   const [sellPrice, setSellPrice] = useState('');
   const [showSellForm, setShowSellForm] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
   const [showMetaMaskGuide, setShowMetaMaskGuide] = useState(false);
   const [selectedNFTForGuide, setSelectedNFTForGuide] = useState<UserNFT | null>(null);
   const { isConnected, account, provider } = useWeb3();
@@ -117,7 +119,7 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
 
   const handleSellNFT = (nft: UserNFT) => {
     setSelectedNFT(nft);
-    setShowSellForm(true);
+    setShowListModal(true);
   };
 
   const confirmSell = () => {
@@ -395,6 +397,31 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
           contractAddress={import.meta.env.VITE_PATENT_NFT_ADDRESS || ''}
           tokenId={selectedNFTForGuide.tokenId}
           patentNumber={selectedNFTForGuide.patentNumber}
+        />
+      )}
+
+      {/* List NFT Modal */}
+      {selectedNFT && (
+        <ListNFTModal
+          isOpen={showListModal}
+          onClose={() => {
+            setShowListModal(false);
+            setSelectedNFT(null);
+          }}
+          nft={{
+            id: selectedNFT.tokenId,
+            tokenId: selectedNFT.tokenId,
+            title: selectedNFT.title,
+            patentNumber: selectedNFT.patentNumber,
+            category: 'Technology',
+            inventor: selectedNFT.inventor,
+            imageUrl: undefined
+          }}
+          onSuccess={() => {
+            setShowListModal(false);
+            setSelectedNFT(null);
+            loadUserNFTs(); // Refresh the NFTs list
+          }}
         />
       )}
     </AnimatePresence>
