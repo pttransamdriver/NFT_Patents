@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol"; // Access control for admin
  * @dev NFT contract for tokenizing patents with verification system
  * Inherits from ERC721URIStorage (NFT with metadata) and Ownable (access control)
  */
-contract PatentNFT is ERC721URIStorage, ERC721Enumerable, Ownable {
+contract PatentNFT is ERC721URIStorage, ERC721Enumerable, Ownable { // This Contract "PatentNFT" has the ERC721URIStorage and ERC721Enumerable and Ownable contracts imported from OpenZeppelin so it says "is" in this line
     // Private counter to track and assign unique token IDs
     uint256 private _tokenIds;
     
