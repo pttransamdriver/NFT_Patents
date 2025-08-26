@@ -8,8 +8,9 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 
 **Key Requirements**:
 - Convert real patents from patent offices into tradeable NFTs
-- Use actual patent PDFs as NFT images for visual differentiation
-- Ensure each patent can only be minted once (global uniqueness)
+- Take the front page of the Patent's PDF and compress that front page into a single page PDF.
+- Use that single page PDF in the place of an image for visual differentiation
+- Ensure each patent can only be minted once (global uniqueness) using the Patent ID from the patent office
 - Collect 5% fees (2.5% minting + 2.5% marketplace)
 - Support multiple payment methods (ETH, USDC, Patent Pennies Tokens PSP)
 - Scale to handle thousands of patents and users
