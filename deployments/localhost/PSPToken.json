@@ -1,8 +1,8 @@
 {
   "contractName": "PSPToken",
-  "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-  "transactionHash": "0xe8bb5f8d29a29899099b68002a74e44ea997820eca123134e60a9a6d875204ac",
-  "deploymentTime": "2025-08-25T17:28:51.852Z",
+  "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "transactionHash": "0xe3d37bf3052d35413688e2b80d539ab7f5279c2e504c89e851a4f98cd9e9c770",
+  "deploymentTime": "2025-08-27T00:08:08.929Z",
   "network": "localhost",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "constructorArgs": [
@@ -19,16 +19,16 @@
     "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "gasLimit": "1451940",
     "gasPrice": null,
-    "hash": "0xe8bb5f8d29a29899099b68002a74e44ea997820eca123134e60a9a6d875204ac",
-    "maxFeePerGas": "2381451402",
+    "hash": "0xe3d37bf3052d35413688e2b80d539ab7f5279c2e504c89e851a4f98cd9e9c770",
+    "maxFeePerGas": "3000000000",
     "maxPriorityFeePerGas": "1000000000",
     "maxFeePerBlobGas": null,
-    "nonce": 3,
+    "nonce": 0,
     "signature": {
       "_type": "signature",
       "networkV": null,
-      "r": "0xc69a59cfbc1753af1073e8443e7d20acf63761716631cbbf385a6e9a946c41be",
-      "s": "0x13e9925792d449f29cd08fa644da3a0b59fe3302c5e2e88b528db99977c55ba9",
+      "r": "0xb5fd3a7a304e907b5f95f1cd5b4b024d1792164ea9ce0ba7ab9ddb85ff7eed1f",
+      "s": "0x559881b9123249d8c06722143de72fd66f7c3c747ab12410c35edbe8b9bac8b0",
       "v": 28
     },
     "to": null,

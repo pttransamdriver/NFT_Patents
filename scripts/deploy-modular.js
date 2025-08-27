@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { deployPSPToken } from "./deploy/001_deploy_psp_token.js";
 import { deploySearchPayment } from "./deploy/002_deploy_search_payment.js";
 import { deployPatentNFT } from "./deploy/003_deploy_patent_nft.js";

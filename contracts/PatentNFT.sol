@@ -123,34 +123,94 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, Ownable { // This Cont
     }
     /**
      * @dev Internal function to validate the format of a patent number.
-     * Supports US, EP, CN, JP, KR patent number formats
+     * Supports international patent formats: US, EP, CN, JP, KR, TR, WO, GB, DE, FR, IN, BR, RU, CA, AU
      */
     function validatePatentNumber(string memory _patentNumber) internal pure returns (bool) {
         bytes memory patentBytes = bytes(_patentNumber);
         uint256 length = patentBytes.length;
         
-        // Must be at least 8 characters (US1234567)
-        if (length < 8 || length > 15) return false;
+        // Must be at least 6 characters for international patents
+        if (length < 6 || length > 20) return false;
         
-        // Check US format: US followed by 6-8 digits
-        if (length >= 8 && 
-            patentBytes[0] == 'U' && patentBytes[1] == 'S' &&
-            _isDigit(patentBytes[2])) {
-            return _validateDigitSequence(patentBytes, 2);
-        }
-        
-        // Check EP format: EP followed by digits and optional letter
-        if (length >= 8 && 
-            patentBytes[0] == 'E' && patentBytes[1] == 'P' &&
-            _isDigit(patentBytes[2])) {
-            return true; // EP validation can be more complex, simplified for now
-        }
-        
-        // Check CN format: CN followed by digits and optional letter
-        if (length >= 8 && 
-            patentBytes[0] == 'C' && patentBytes[1] == 'N' &&
-            _isDigit(patentBytes[2])) {
-            return true;
+        // Check for 2-letter country codes followed by digits/letters
+        if (length >= 6) {
+            bytes1 first = patentBytes[0];
+            bytes1 second = patentBytes[1];
+            
+            // US format: US followed by digits and optional letters
+            if (first == 'U' && second == 'S' && _isDigit(patentBytes[2])) {
+                return _validateDigitSequence(patentBytes, 2);
+            }
+            
+            // EP format: EP followed by digits and optional letters
+            if (first == 'E' && second == 'P' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // CN format: CN followed by digits and optional letters
+            if (first == 'C' && second == 'N' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // JP format: JP followed by digits and optional letters
+            if (first == 'J' && second == 'P' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // KR format: KR followed by digits and optional letters
+            if (first == 'K' && second == 'R' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // TR format: TR followed by digits and optional letters (Turkish patents)
+            if (first == 'T' && second == 'R' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // WO format: WO followed by digits and optional letters (WIPO/PCT)
+            if (first == 'W' && second == 'O' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // GB format: GB followed by digits and optional letters (UK patents)
+            if (first == 'G' && second == 'B' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // DE format: DE followed by digits and optional letters (German patents)
+            if (first == 'D' && second == 'E' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // FR format: FR followed by digits and optional letters (French patents)
+            if (first == 'F' && second == 'R' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // IN format: IN followed by digits and optional letters (Indian patents)
+            if (first == 'I' && second == 'N' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // BR format: BR followed by digits and optional letters (Brazilian patents)
+            if (first == 'B' && second == 'R' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // RU format: RU followed by digits and optional letters (Russian patents)
+            if (first == 'R' && second == 'U' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // CA format: CA followed by digits and optional letters (Canadian patents)
+            if (first == 'C' && second == 'A' && _isDigit(patentBytes[2])) {
+                return true;
+            }
+            
+            // AU format: AU followed by digits and optional letters (Australian patents)
+            if (first == 'A' && second == 'U' && _isDigit(patentBytes[2])) {
+                return true;
+            }
         }
         
         return false;

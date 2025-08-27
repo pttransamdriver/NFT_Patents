@@ -8,8 +8,9 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 
 **Key Requirements**:
 - Convert real patents from patent offices into tradeable NFTs
-- Take the front page of the Patent's PDF and compress that front page into a single page PDF.
-- Use that single page PDF in the place of an image for visual differentiation
+- **PDF-First Approach**: Extract and compress only the front page of each patent's PDF into a single-page PDF document
+- **Use PDF as NFT Image**: Store the single-page PDF on IPFS and use it directly as the NFT's visual representation (instead of converting to traditional image formats like PNG/JPG)
+- **Innovative Visual Identity**: Each NFT displays as an actual PDF document, maintaining the authentic patent document format while keeping IPFS storage costs minimal
 - Ensure each patent can only be minted once (global uniqueness) using the Patent ID from the patent office
 - Collect 5% fees (2.5% minting + 2.5% marketplace)
 - Support multiple payment methods (ETH, USDC, Patent Pennies Tokens PSP)
@@ -217,10 +218,10 @@ Browser → Our backend → Google Patents API ✅ WORKS (no CORS on server)
 ```
 
 **Problem 2: Complex Data Processing**
-- PDF to image conversion requires Node.js libraries
-- IPFS integration needs server-side processing
-- NFT metadata needs to be served from a reliable endpoint
-- Real patent data validation and transformation
+- **PDF extraction and compression**: Extract first page from multi-page patent PDFs and compress into single-page PDF documents using Node.js libraries
+- **IPFS integration**: Upload single-page PDFs directly to IPFS (no image conversion needed)
+- **NFT metadata**: Serve reliable metadata endpoints pointing to PDF documents as NFT images
+- **Patent document processing**: Validate and transform real patent data while maintaining document integrity
 
 ### Backend Structure
 
@@ -574,32 +575,148 @@ VITE_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 - **Local Blockchain**: `npx hardhat node` gives instant feedback
 - **Console Logs**: `console.log()` works inside smart contracts for debugging
 
+### Environment Setup for Deployment
+
+#### 1. Configure Environment Variables
+
+**For Sepolia Testnet Deployment:**
+```bash
+# Edit .env file and replace with actual values:
+SEPOLIA_PRIVATE_KEY=0x[your_deployment_wallet_private_key]
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/[your_api_key]
+ETHERSCAN_API_KEY=[your_etherscan_api_key]
+```
+
+**Security Best Practices:**
+- Use a **dedicated deployment wallet** with minimal funds
+- Never commit private keys to git (already in .gitignore)
+- Get free RPC from [Alchemy](https://www.alchemy.com/) or [Infura](https://infura.io/)
+- Get free Etherscan API key from [Etherscan](https://etherscan.io/apis)
+
+#### 2. Fund Your Deployment Wallet
+
+**Sepolia Testnet:**
+- Get free ETH from [Sepolia Faucet](https://sepoliafaucet.com/)
+- Need ~0.1 ETH for all contract deployments
+
+**Mainnet:**
+- Ensure sufficient ETH for gas fees (~0.05-0.1 ETH)
+- Use gas estimation tools for accurate costs
+
 ### Deployment Pipeline
+
+#### Recommended: Sequential Individual Deployment
+
+**Why individual deployment is better:**
+- Clear dependency management
+- Better error handling and debugging
+- Stop and fix if one contract fails
+- Standard production practice
 
 ```bash
 1. Development (localhost)
    ├── npx hardhat node          # Local blockchain
-   ├── npm run deploy:localhost  # Modular deployment system
-   └── npm run dev               # Frontend connects to localhost
+   ├── npm run deploy:psp localhost      # PSP Token
+   ├── npm run deploy:search localhost   # Search Payment  
+   ├── npm run deploy:nft localhost      # Patent NFT
+   ├── npm run deploy:marketplace localhost # Marketplace
+   └── npm run dev               # Frontend connects
 
 2. Testing (Sepolia)
    ├── Get Sepolia ETH from faucet
-   ├── Update .env with Sepolia config
-   ├── npm run deploy:sepolia    # Deploys all 4 contracts individually
-   └── Verify contracts on Etherscan
+   ├── Update .env with real Sepolia config
+   ├── npm run deploy:psp sepolia        # Deploy in order
+   ├── npm run deploy:search sepolia     # (depends on PSP)
+   ├── npm run deploy:nft sepolia        # (depends on PSP)
+   ├── npm run deploy:marketplace sepolia # (depends on NFT)
+   └── npm run verify sepolia            # Verify all contracts
 
 3. Production (Mainnet)
    ├── Audit smart contracts
-   ├── Deploy with modular scripts for safer deployment
+   ├── Deploy with individual scripts for safer deployment
    └── Monitor with analytics and error tracking
-
-# Modular Deployment Structure:
-scripts/deploy/
-├── 001_deploy_psp_token.js       # PSP Token first
-├── 002_deploy_search_payment.js  # Search Payment (depends on PSP)
-├── 003_deploy_patent_nft.js      # Patent NFT contract
-└── 004_deploy_marketplace.js     # Marketplace (depends on NFT)
 ```
+
+#### Alternative: Legacy All-at-Once Deployment
+
+```bash
+# Deploy all contracts in one transaction
+npm run deploy:legacy          # localhost
+npm run deploy:legacy:sepolia  # sepolia testnet
+```
+
+### Contract Dependencies & Deployment Order
+
+**Critical: Deploy in this exact order:**
+
+```bash
+1. PSP Token (no dependencies)
+   └── Creates ERC20 token for AI search payments
+
+2. SearchPayment (requires PSP Token address)
+   └── Handles payment processing with PSP tokens
+
+3. PatentNFT (requires PSP Token address)
+   └── Mints unique patent NFTs, collects fees
+
+4. NFTMarketplace (requires PatentNFT address)  
+   └── Secondary market for trading patent NFTs
+```
+
+### Deployment Script Structure
+
+```bash
+scripts/deploy/
+├── 001_deploy_psp_token.js       # PSP Token (independent)
+├── 002_deploy_search_payment.js  # Search Payment (needs PSP)
+├── 003_deploy_patent_nft.js      # Patent NFT (needs PSP)
+├── 004_deploy_marketplace.js     # Marketplace (needs NFT)
+└── ../utils/deployment-utils.js   # Shared utilities
+
+# Each script includes:
+├── Environment variable loading (dotenv)
+├── Network-specific wallet creation
+├── Contract deployment with constructor args
+├── Address saving to deployments/ folder
+├── .env file updates with new addresses
+└── Deployment verification
+```
+
+### Post-Deployment Checklist
+
+```bash
+1. ✅ Verify contracts on Etherscan
+   npm run verify sepolia
+
+2. ✅ Update frontend environment variables
+   # Addresses auto-saved to .env during deployment
+
+3. ✅ Test all functionality on testnet
+   # Mint NFT, list for sale, buy NFT
+
+4. ✅ Fund contracts if needed
+   # Add initial PSP tokens for rewards
+
+5. ✅ Monitor deployment
+   # Check transaction confirmations
+   # Verify contract interactions work
+```
+
+### Troubleshooting Common Issues
+
+**"Private key not configured"**
+- Check `.env` file has correct `SEPOLIA_PRIVATE_KEY`
+- Ensure no placeholder values remain
+- Private key must start with `0x`
+
+**"Insufficient funds"**
+- Check deployment wallet has enough ETH
+- Use gas estimation: `npx hardhat run scripts/estimate-gas.js`
+
+**"Contract verification fails"**
+- Verify Etherscan API key is correct
+- Wait a few minutes after deployment
+- Check contract source code matches deployed bytecode
 
 ---
 
@@ -801,7 +918,7 @@ This architecture enables the Patent NFT Marketplace to achieve its goals throug
 
 ✅ **Global Patent Access**: Backend proxy + Google Patents API integration (real data only)  
 ✅ **NFT Uniqueness**: Smart contract enforcement with `patentExists` mapping  
-✅ **Visual Differentiation**: PDF→image conversion via IPFS  
+✅ **Visual Differentiation**: Single-page PDF extraction and compression via IPFS (no image conversion - maintains authentic document format)  
 ✅ **Scalable Marketplace**: Pagination + real contract data  
 ✅ **Revenue Generation**: Multi-layer fee collection (minting + marketplace)  
 ✅ **Multi-token Support**: Flexible payment system with PSP tokens  

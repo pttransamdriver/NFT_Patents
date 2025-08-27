@@ -3,6 +3,8 @@ const cors = require('cors');
 const axios = require('axios');
 const metadataStore = require('./metadata');
 const { ethers } = require('ethers');
+const { PDFDocument } = require('pdf-lib');
+const multer = require('multer');
 require('dotenv').config({ path: '../.env' });
 
 const {
@@ -33,6 +35,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Configure multer for file uploads (in-memory storage)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Initialize database on startup
 initializeDatabase().catch(console.error);
@@ -484,6 +489,219 @@ app.post('/metadata/:patentNumber/ipfs', async (req, res) => {
   } catch (error) {
     console.error('IPFS metadata update error:', error);
     res.status(500).json({ error: 'Failed to update IPFS metadata' });
+  }
+});
+
+// ========================================
+// PDF Processing Endpoints
+// ========================================
+
+/**
+ * Extract first page from uploaded PDF and return compressed single-page PDF
+ */
+app.post('/api/pdf/extract-first-page', upload.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No PDF file uploaded' });
+    }
+
+    if (req.file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ error: 'File must be a PDF' });
+    }
+
+    // Load the original PDF
+    const originalPdf = await PDFDocument.load(req.file.buffer);
+    const pageCount = originalPdf.getPageCount();
+
+    if (pageCount === 0) {
+      return res.status(400).json({ error: 'PDF contains no pages' });
+    }
+
+    // Create new PDF with only first page
+    const newPdf = await PDFDocument.create();
+    const [firstPage] = await newPdf.copyPages(originalPdf, [0]);
+    newPdf.addPage(firstPage);
+
+    // Save compressed PDF
+    const pdfBytes = await newPdf.save({
+      useObjectStreams: false, // Better compression
+    });
+
+    // Calculate compression stats
+    const originalSize = req.file.buffer.length;
+    const compressedSize = pdfBytes.length;
+    const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
+
+    // Return the compressed PDF
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'attachment; filename="first-page.pdf"',
+      'X-Original-Size': originalSize,
+      'X-Compressed-Size': compressedSize,
+      'X-Compression-Ratio': `${compressionRatio}%`,
+      'X-Original-Pages': pageCount,
+      'X-Compressed-Pages': 1
+    });
+
+    res.send(Buffer.from(pdfBytes));
+
+  } catch (error) {
+    console.error('PDF processing error:', error);
+    res.status(500).json({ 
+      error: 'Failed to process PDF',
+      message: error.message 
+    });
+  }
+});
+
+/**
+ * Process patent PDF from URL - fetch, extract first page, return compressed PDF
+ */
+app.post('/api/pdf/process-patent', async (req, res) => {
+  try {
+    const { patentNumber, pdfUrl } = req.body;
+
+    if (!patentNumber || !pdfUrl) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: patentNumber and pdfUrl' 
+      });
+    }
+
+    // Fetch PDF from URL
+    const response = await axios.get(pdfUrl, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'Patent NFT Marketplace/1.0'
+      }
+    });
+
+    if (response.status !== 200) {
+      return res.status(400).json({ error: 'Failed to fetch PDF from URL' });
+    }
+
+    // Load and process PDF
+    const originalPdf = await PDFDocument.load(response.data);
+    const pageCount = originalPdf.getPageCount();
+
+    if (pageCount === 0) {
+      return res.status(400).json({ error: 'PDF contains no pages' });
+    }
+
+    // Extract first page
+    const newPdf = await PDFDocument.create();
+    const [firstPage] = await newPdf.copyPages(originalPdf, [0]);
+    newPdf.addPage(firstPage);
+
+    // Save compressed PDF
+    const pdfBytes = await newPdf.save({
+      useObjectStreams: false,
+    });
+
+    // Calculate stats
+    const originalSize = response.data.length;
+    const compressedSize = pdfBytes.length;
+    const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
+
+    res.json({
+      success: true,
+      patentNumber,
+      stats: {
+        originalSize,
+        compressedSize,
+        compressionRatio: `${compressionRatio}%`,
+        originalPages: pageCount,
+        compressedPages: 1
+      },
+      pdf: {
+        data: Buffer.from(pdfBytes).toString('base64'),
+        mimeType: 'application/pdf',
+        filename: `${patentNumber}-page1.pdf`
+      }
+    });
+
+  } catch (error) {
+    console.error('Patent PDF processing error:', error);
+    
+    if (error.code === 'ECONNABORTED') {
+      return res.status(408).json({ error: 'PDF fetch timeout' });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to process patent PDF',
+      message: error.message 
+    });
+  }
+});
+
+/**
+ * Generate placeholder single-page PDF for patents without available PDFs
+ */
+app.post('/api/pdf/generate-placeholder', async (req, res) => {
+  try {
+    const { patentNumber, title, inventor, assignee } = req.body;
+
+    if (!patentNumber) {
+      return res.status(400).json({ error: 'Patent number is required' });
+    }
+
+    // Create placeholder PDF
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
+
+    // Add patent information
+    page.drawText(`Patent Number: ${patentNumber}`, {
+      x: 50, y: 750, size: 24,
+    });
+
+    if (title) {
+      page.drawText(`Title: ${title}`, {
+        x: 50, y: 700, size: 16,
+      });
+    }
+
+    if (inventor) {
+      page.drawText(`Inventor: ${inventor}`, {
+        x: 50, y: 660, size: 14,
+      });
+    }
+
+    if (assignee) {
+      page.drawText(`Assignee: ${assignee}`, {
+        x: 50, y: 620, size: 14,
+      });
+    }
+
+    page.drawText('Original PDF not available from patent office.', {
+      x: 50, y: 550, size: 12,
+    });
+
+    page.drawText('This single-page PDF serves as the NFT visual representation.', {
+      x: 50, y: 520, size: 12,
+    });
+
+    page.drawText('Patent NFT Marketplace - PDF-First Approach', {
+      x: 50, y: 490, size: 10,
+    });
+
+    const pdfBytes = await pdfDoc.save();
+
+    res.json({
+      success: true,
+      patentNumber,
+      pdf: {
+        data: Buffer.from(pdfBytes).toString('base64'),
+        mimeType: 'application/pdf',
+        filename: `${patentNumber}-placeholder.pdf`
+      }
+    });
+
+  } catch (error) {
+    console.error('Placeholder PDF generation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate placeholder PDF',
+      message: error.message 
+    });
   }
 });
 

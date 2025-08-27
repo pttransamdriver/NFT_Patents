@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import hre from "hardhat";
 import { ethers } from "ethers";
 import {

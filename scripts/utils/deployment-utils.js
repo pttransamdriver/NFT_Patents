@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { ethers } from "ethers";
 import fs from "fs";
 import { fileURLToPath } from 'url';

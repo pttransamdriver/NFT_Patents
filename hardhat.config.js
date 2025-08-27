@@ -28,7 +28,7 @@ export default {
     sepolia: {
       type: "http", 
       url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
-      accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
+      accounts: (process.env.SEPOLIA_PRIVATE_KEY && process.env.SEPOLIA_PRIVATE_KEY !== "your_sepolia_private_key_here") ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
       chainId: 11155111
     }
   },

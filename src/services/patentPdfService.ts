@@ -6,7 +6,7 @@ import html2canvas from 'html2canvas';
 
 /**
  * Service for handling patent PDF processing and IPFS storage
- * Converts patent PDFs to images and stores both on IPFS
+ * Extracts and compresses first page of patent PDFs into single-page PDFs for NFT use
  */
 export class PatentPdfService {
   private helia: any = null;
@@ -61,41 +61,33 @@ export class PatentPdfService {
   }
 
   /**
-   * Convert PDF to image for NFT display
-   * @param pdfBlob - PDF file as blob
-   * @returns Image blob
+   * Extract and compress first page of PDF into a single-page PDF
+   * @param pdfBlob - Original multi-page PDF file as blob
+   * @returns Single-page PDF blob containing only the first page
    */
-  async convertPdfToImage(pdfBlob: Blob): Promise<Blob> {
+  async extractFirstPagePdf(pdfBlob: Blob): Promise<Blob> {
     try {
-      const arrayBuffer = await pdfBlob.arrayBuffer();
-      const pdf = await getDocument({ data: arrayBuffer }).promise;
-      const page = await pdf.getPage(1); // Get first page
-
-      // Create canvas for rendering
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d')!;
+      // Load the original PDF
+      const originalPdfBytes = await pdfBlob.arrayBuffer();
+      const originalPdf = await PDFDocument.load(originalPdfBytes);
       
-      // Set up viewport (high resolution for better quality)
-      const viewport = page.getViewport({ scale: 2.0 });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-
-      // Render page to canvas
-      await page.render({
-        canvasContext: context,
-        viewport: viewport
-      }).promise;
-
-      // Convert canvas to blob
-      return new Promise((resolve) => {
-        canvas.toBlob((blob) => {
-          resolve(blob!);
-        }, 'image/png');
+      // Create a new PDF document
+      const newPdf = await PDFDocument.create();
+      
+      // Copy only the first page from the original PDF
+      const [firstPage] = await newPdf.copyPages(originalPdf, [0]);
+      newPdf.addPage(firstPage);
+      
+      // Save the new single-page PDF with compression
+      const pdfBytes = await newPdf.save({
+        useObjectStreams: false, // Better compression
       });
+      
+      return new Blob([pdfBytes], { type: 'application/pdf' });
 
     } catch (error) {
-      console.error('Error converting PDF to image:', error);
-      return this.generatePlaceholderImage();
+      console.error('Error extracting first page from PDF:', error);
+      return this.generatePlaceholderPdf(error.message || 'Unknown error');
     }
   }
 
@@ -161,39 +153,86 @@ export class PatentPdfService {
   }
 
   /**
-   * Process patent for NFT creation - fetches PDF, converts to image, stores both on IPFS
+   * Process patent for NFT creation using backend PDF processing
    * @param patentNumber - Patent number
-   * @returns Object containing IPFS hashes for PDF and image
+   * @returns Object containing IPFS hashes for original PDF and compressed single-page PDF
    */
   async processPatentForNFT(patentNumber: string): Promise<{
-    pdfHash: string;
-    imageHash: string;
-    imageUrl: string;
+    originalPdfHash: string;
+    singlePagePdfHash: string;
+    pdfUrl: string;
   }> {
     try {
-      // 1. Fetch patent PDF
-      const pdfBlob = await this.fetchPatentPdf(patentNumber);
-      if (!pdfBlob) {
-        throw new Error('Could not fetch patent PDF');
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      
+      // 1. Try to fetch and process patent PDF via backend
+      let pdfBlob: Blob;
+      
+      try {
+        // Try to get PDF from Google Patents/USPTO via backend
+        const pdfUrl = this.getGooglePatentsPdfUrl(patentNumber);
+        
+        const response = await fetch(`${apiBaseUrl}/api/pdf/process-patent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patentNumber, pdfUrl })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          // Convert base64 back to blob
+          const pdfData = atob(result.pdf.data);
+          const uint8Array = new Uint8Array(pdfData.length);
+          for (let i = 0; i < pdfData.length; i++) {
+            uint8Array[i] = pdfData.charCodeAt(i);
+          }
+          pdfBlob = new Blob([uint8Array], { type: 'application/pdf' });
+          
+          console.log('✅ PDF processing stats:', result.stats);
+        } else {
+          throw new Error('Backend PDF processing failed');
+        }
+        
+      } catch (error) {
+        console.warn('⚠️ Backend PDF processing failed, generating placeholder:', error.message);
+        
+        // Fallback: generate placeholder PDF via backend
+        const response = await fetch(`${apiBaseUrl}/api/pdf/generate-placeholder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            patentNumber,
+            title: `Patent ${patentNumber}`,
+            inventor: 'Unknown',
+            assignee: 'Unassigned'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate placeholder PDF');
+        }
+
+        const result = await response.json();
+        // Convert base64 to blob
+        const pdfData = atob(result.pdf.data);
+        const uint8Array = new Uint8Array(pdfData.length);
+        for (let i = 0; i < pdfData.length; i++) {
+          uint8Array[i] = pdfData.charCodeAt(i);
+        }
+        pdfBlob = new Blob([uint8Array], { type: 'application/pdf' });
       }
 
-      // 2. Convert PDF to image
-      const imageBlob = await this.convertPdfToImage(pdfBlob);
+      // 2. Store single-page PDF on IPFS (we only have the compressed version now)
+      const singlePagePdfHash = await this.storeOnIPFS(pdfBlob, `${patentNumber}-page1.pdf`);
 
-      // 3. Store both on IPFS
-      const [pdfHash, imageHash] = await Promise.all([
-        this.storeOnIPFS(pdfBlob, `${patentNumber}.pdf`),
-        this.storeOnIPFS(imageBlob, `${patentNumber}.png`)
-      ]);
-
-      // 4. Generate image URL
+      // 3. Generate PDF URL (using single-page PDF as the NFT "image")
       const ipfsGateway = import.meta.env.VITE_IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
-      const imageUrl = `${ipfsGateway}${imageHash}`;
+      const pdfUrl = `${ipfsGateway}${singlePagePdfHash}`;
 
       return {
-        pdfHash,
-        imageHash,
-        imageUrl
+        originalPdfHash: singlePagePdfHash, // We only have the single-page version
+        singlePagePdfHash,                   // Compressed first page for NFT display
+        pdfUrl                              // URL to single-page PDF (used as NFT image)
       };
 
     } catch (error) {
@@ -227,7 +266,7 @@ export class PatentPdfService {
 
 
   /**
-   * Generate placeholder PDF when patent PDF is not available
+   * Generate placeholder single-page PDF when patent PDF is not available
    */
   private async generatePlaceholderPdf(patentNumber: string): Promise<Blob> {
     try {
@@ -241,20 +280,26 @@ export class PatentPdfService {
         size: 24,
       });
       
-      page.drawText('PDF not available from patent office.', {
+      page.drawText('Original PDF not available from patent office.', {
         x: 50,
         y: 700,
         size: 16,
       });
       
-      page.drawText('This is a placeholder document for NFT purposes.', {
+      page.drawText('This single-page PDF serves as the NFT visual representation.', {
         x: 50,
         y: 650,
         size: 12,
       });
+      
+      page.drawText('Patent NFT Marketplace - PDF-First Approach', {
+        x: 50,
+        y: 600,
+        size: 10,
+      });
 
       const pdfBytes = await pdfDoc.save();
-      return new Blob([pdfBytes], { type: 'application/pdf' });
+      return new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
     } catch (error) {
       console.error('Error generating placeholder PDF:', error);

@@ -93,8 +93,14 @@ The Patent NFT Marketplace consists of four main components and two external dep
    # Terminal 1: Start local blockchain
    npx hardhat node
    
-   # Terminal 2: Deploy contracts (modular deployment)
-   npm run deploy:localhost
+   # Terminal 2: Deploy contracts individually (recommended)
+   npm run deploy:psp localhost
+   npm run deploy:search localhost  
+   npm run deploy:nft localhost
+   npm run deploy:marketplace localhost
+   
+   # Alternative: Deploy all at once (legacy method)
+   npm run deploy:legacy
    
    # Terminal 3: Start backend API  
    cd backend && npm start
@@ -696,7 +702,117 @@ curl "http://localhost:3001/api/uspto/search?criteria=test"
 
 ---
 
-## 🚀 Sepolia Deployment
+## 🚀 Deployment Guide
+
+### Environment Setup for Production
+
+#### 1. Configure Environment Variables
+
+**For Sepolia Testnet:**
+```bash
+# Edit .env file with your actual deployment values:
+SEPOLIA_PRIVATE_KEY=0x[your_deployment_wallet_private_key]
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/[your_api_key]  
+ETHERSCAN_API_KEY=[your_etherscan_api_key]
+```
+
+**Security Best Practices:**
+- ✅ Use a **dedicated deployment wallet** with minimal funds
+- ✅ Never commit private keys to git (already in .gitignore)
+- ✅ Get free RPC from [Alchemy](https://www.alchemy.com/) or [Infura](https://infura.io/)
+- ✅ Get free Etherscan API key from [Etherscan](https://etherscan.io/apis)
+
+#### 2. Fund Your Deployment Wallet
+
+**Sepolia Testnet:**
+- Get free ETH from [Sepolia Faucet](https://sepoliafaucet.com/)
+- Need ~0.1 ETH for all contract deployments
+
+**Mainnet:**
+- Ensure sufficient ETH for gas fees (~0.05-0.1 ETH)
+- Use gas estimation tools for accurate costs
+
+### Recommended: Sequential Individual Deployment
+
+**Why individual deployment is better:**
+- ✅ Clear dependency management  
+- ✅ Better error handling and debugging
+- ✅ Stop and fix if one contract fails
+- ✅ Standard production practice
+
+```bash
+# Deploy contracts in dependency order:
+
+1. PSP Token (no dependencies)
+   npm run deploy:psp sepolia
+   
+2. SearchPayment (requires PSP Token address)
+   npm run deploy:search sepolia
+   
+3. PatentNFT (requires PSP Token address)
+   npm run deploy:nft sepolia
+   
+4. NFTMarketplace (requires PatentNFT address)
+   npm run deploy:marketplace sepolia
+
+# Verify all contracts
+npm run verify sepolia
+```
+
+### Contract Dependencies
+
+**Critical: Deploy in this exact order**
+```
+1. PSP Token ←─── (no dependencies)
+2. SearchPayment ←─── PSP Token
+3. PatentNFT ←─── PSP Token  
+4. NFTMarketplace ←─── PatentNFT
+```
+
+### Alternative: Legacy All-at-Once Deployment
+
+```bash
+# Deploy all contracts in one transaction (not recommended for production)
+npm run deploy:legacy:sepolia
+```
+
+### Post-Deployment Checklist
+
+```bash
+1. ✅ Verify contracts on Etherscan
+   npm run verify sepolia
+
+2. ✅ Update frontend environment variables
+   # Contract addresses automatically saved to .env
+
+3. ✅ Test all functionality on testnet
+   # Mint NFT → List for sale → Buy NFT
+
+4. ✅ Fund contracts if needed
+   # Add initial PSP tokens for user rewards
+
+5. ✅ Monitor deployment  
+   # Check transaction confirmations
+   # Verify contract interactions work
+```
+
+### Troubleshooting
+
+**"Private key not configured"**
+- Check `.env` file has correct `SEPOLIA_PRIVATE_KEY`
+- Ensure no placeholder values remain (`your_sepolia_private_key_here`)
+- Private key must start with `0x`
+
+**"Insufficient funds"**
+- Check deployment wallet has enough ETH for gas
+- Use gas estimation tools for mainnet deployments
+
+**Contract verification fails**
+- Verify Etherscan API key is correct
+- Wait a few minutes after deployment before verifying
+- Check contract source code matches deployed bytecode
+
+## 🚀 Sepolia Testnet Ready
 
 The project is fully configured for Sepolia testnet deployment with production-ready features:
 

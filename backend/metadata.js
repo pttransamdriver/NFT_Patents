@@ -29,29 +29,33 @@ class MetadataStore {
   }
 
   /**
-   * Update IPFS hashes for a patent
+   * Update IPFS hashes for a patent (PDF-first approach)
    * @param {string} patentNumber - Patent number
-   * @param {Object} ipfsData - Object containing pdfHash, imageHash, imageUrl
+   * @param {Object} ipfsData - Object containing singlePagePdfHash, originalPdfHash, pdfUrl
    */
   updateIPFSData(patentNumber, ipfsData) {
     const existing = this.getMetadata(patentNumber) || this.createDefaultMetadata(patentNumber);
     
     this.storeMetadata(patentNumber, {
       ...existing,
-      image: ipfsData.imageUrl,
-      ipfsImageHash: ipfsData.imageHash,
-      ipfsPdfHash: ipfsData.pdfHash,
+      image: ipfsData.pdfUrl, // Use PDF URL as the "image" for NFT marketplaces
+      ipfsSinglePagePdfHash: ipfsData.singlePagePdfHash,
+      ipfsOriginalPdfHash: ipfsData.originalPdfHash,
       properties: {
         ...existing.properties,
+        document_type: "patent_pdf",
+        compression_stats: ipfsData.stats || {},
         files: [
           {
-            uri: `https://ipfs.io/ipfs/${ipfsData.pdfHash}`,
-            type: "application/pdf"
+            uri: ipfsData.pdfUrl,
+            type: "application/pdf",
+            description: "Single-page patent document (NFT visual representation)"
           },
-          {
-            uri: ipfsData.imageUrl,
-            type: "image/png"
-          }
+          ...(ipfsData.originalPdfHash && ipfsData.originalPdfHash !== ipfsData.singlePagePdfHash ? [{
+            uri: `https://ipfs.io/ipfs/${ipfsData.originalPdfHash}`,
+            type: "application/pdf",
+            description: "Original full patent document"
+          }] : [])
         ]
       },
       updatedAt: new Date().toISOString()
