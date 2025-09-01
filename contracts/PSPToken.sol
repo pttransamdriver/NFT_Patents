@@ -92,14 +92,18 @@ contract PSPToken is ERC20, ERC20Burnable, Ownable, Pausable {
     
     /**
      * @dev Spend tokens on behalf of user (only authorized contracts)
+     * Requires user approval - uses transferFrom model for security
      * @param user User whose tokens to spend
      * @param amount Amount of tokens to spend
      */
     function spendTokensFor(address user, uint256 amount) external {
         require(authorizedSpenders[msg.sender], "Not authorized to spend tokens");
-        require(balanceOf(user) >= amount, "Insufficient user token balance");
         
-        _burn(user, amount);
+        // Transfer from user to this contract (requires user approval)
+        _transfer(user, address(this), amount);
+        
+        // Burn the tokens from this contract
+        _burn(address(this), amount);
     }
     
     /**

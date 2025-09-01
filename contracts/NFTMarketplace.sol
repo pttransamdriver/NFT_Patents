@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -19,6 +19,9 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
 
     mapping(uint256 => Listing) public listings;
     mapping(address => mapping(uint256 => uint256)) public tokenToListing;
+    
+    // Pull payments pattern
+    mapping(address => uint256) public pendingWithdrawals;
     
     uint256 public platformFeePercent = 250; // 2.5% (250 basis points)
     address public feeRecipient;
@@ -41,8 +44,12 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
     );
 
     event ListingCancelled(uint256 indexed listingId);
+    
+    event FundsDeposited(address indexed recipient, uint256 amount);
+    event FundsWithdrawn(address indexed recipient, uint256 amount);
 
     constructor(address _feeRecipient) Ownable(msg.sender) {
+        require(_feeRecipient != address(0), "Fee recipient cannot be zero address");
         feeRecipient = _feeRecipient;
     }
 
@@ -79,6 +86,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
         require(listing.active, "Listing not active");
         require(msg.value >= listing.price, "Insufficient payment");
         require(msg.sender != listing.seller, "Cannot buy your own NFT");
+        require(feeRecipient != address(0), "Fee recipient not set");
 
         listing.active = false;
         tokenToListing[listing.nftContract][listing.tokenId] = 0;
@@ -93,17 +101,18 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
             listing.tokenId
         );
 
-        // Transfer payments using secure call pattern
-        (bool sellerSuccess, ) = payable(listing.seller).call{value: sellerAmount}("");
-        require(sellerSuccess, "Seller payment failed");
+        // Credit seller and fee recipient using pull payments pattern
+        if (sellerAmount > 0) {
+            _creditAccount(listing.seller, sellerAmount);
+        }
         
-        (bool feeSuccess, ) = payable(feeRecipient).call{value: platformFee}("");
-        require(feeSuccess, "Fee payment failed");
+        if (platformFee > 0) {
+            _creditAccount(feeRecipient, platformFee);
+        }
 
         // Refund excess payment
         if (msg.value > listing.price) {
-            (bool refundSuccess, ) = payable(msg.sender).call{value: msg.value - listing.price}("");
-            require(refundSuccess, "Refund failed");
+            _creditAccount(msg.sender, msg.value - listing.price);
         }
 
         emit NFTSold(
@@ -178,7 +187,25 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
     }
 
     function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        require(_feeRecipient != address(0), "Fee recipient cannot be zero address");
         feeRecipient = _feeRecipient;
+    }
+
+    function _creditAccount(address recipient, uint256 amount) internal {
+        pendingWithdrawals[recipient] += amount;
+        emit FundsDeposited(recipient, amount);
+    }
+
+    function withdrawFunds() external nonReentrant {
+        uint256 amount = pendingWithdrawals[msg.sender];
+        require(amount > 0, "No funds to withdraw");
+        
+        pendingWithdrawals[msg.sender] = 0;
+        
+        (bool sent, ) = payable(msg.sender).call{value: amount}("");
+        require(sent, "Withdraw failed");
+        
+        emit FundsWithdrawn(msg.sender, amount);
     }
 
     function emergencyWithdraw() external onlyOwner {

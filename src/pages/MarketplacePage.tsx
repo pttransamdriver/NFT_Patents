@@ -68,6 +68,20 @@ const MarketplacePage: React.FC = () => {
   const categories = ['All', 'Clean Energy', 'Healthcare', 'Transportation', 'Computing', 'Materials', 'Energy Storage'];
   const statusOptions = ['All', 'active', 'expired', 'pending'];
 
+  // Function to refresh a specific NFT's listing status
+  const refreshNFTListingStatus = async (nftId: string) => {
+    try {
+      const isListed = await marketplaceService.isNFTListed(nftId);
+      setRealNFTs(prevNFTs => 
+        prevNFTs.map(nft => 
+          nft.id === nftId ? { ...nft, isListed: isListed } : nft
+        )
+      );
+    } catch (error) {
+      console.error('Error refreshing NFT listing status:', error);
+    }
+  };
+
   // Fetch user's minted NFTs from multiple sources
   useEffect(() => {
     const fetchUserNFTs = async () => {
@@ -103,6 +117,9 @@ const MarketplacePage: React.FC = () => {
                 };
               }
               
+              // Check if this NFT is already listed on the marketplace
+              const isListed = await marketplaceService.isNFTListed(tokenId.toString());
+              
               formattedNFTs.push({
                 id: tokenId.toString(),
                 contractAddress: import.meta.env.VITE_PATENT_NFT_ADDRESS,
@@ -115,7 +132,7 @@ const MarketplacePage: React.FC = () => {
                 status: 'active' as const,
                 price: 0.1, // Default price for listing
                 priceChange: 0,
-                isListed: false, // Not listed yet
+                isListed: isListed, // Check actual marketplace status
                 owner: account,
                 mintDate: new Date(Number(patentData.filingDate) * 1000).toISOString(),
                 filingDate: new Date(Number(patentData.filingDate) * 1000).toISOString(),
@@ -212,6 +229,10 @@ const MarketplacePage: React.FC = () => {
                     }
                   } catch {}
                   
+                  // For external NFTs, we can't easily check marketplace status with different contract addresses
+                  // So we'll default to false but this could be enhanced later
+                  const isListed = false; // TODO: Implement cross-contract listing check
+                  
                   formattedNFTs.push({
                     id: `${contractAddress}-${tokenId}`,
                     contractAddress,
@@ -224,7 +245,7 @@ const MarketplacePage: React.FC = () => {
                     status: 'active' as const,
                     price: 0.1,
                     priceChange: 0,
-                    isListed: false,
+                    isListed: isListed,
                     owner: account,
                     mintDate: new Date().toISOString(),
                     filingDate: new Date().toISOString(),
@@ -304,9 +325,8 @@ const MarketplacePage: React.FC = () => {
       if (result.success) {
         alert(`NFT "${selectedNFT.title}" successfully listed for ${listingPrice} ETH!\nTransaction hash: ${result.txHash}`);
         
-        // Remove the NFT from user's owned NFTs since it's now listed
-        const updatedUserNFTs = realNFTs.filter(nft => nft.id !== selectedNFT.id);
-        setRealNFTs(updatedUserNFTs);
+        // Refresh the NFT listing status from blockchain
+        await refreshNFTListingStatus(selectedNFT.id);
         
         // Add a small delay before refreshing to allow blockchain to process
         setTimeout(async () => {
@@ -348,6 +368,9 @@ const MarketplacePage: React.FC = () => {
         
         // Refresh user NFTs to reflect changes
         setNftRefreshTrigger(prev => prev + 1);
+        
+        // Also refresh the NFT listing status in the marketplace page
+        await refreshNFTListingStatus(nft.tokenId);
         
         // Add a small delay before refreshing marketplace to allow blockchain to process
         setTimeout(async () => {
@@ -636,10 +659,15 @@ const MarketplacePage: React.FC = () => {
                   </p>
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => handleListNFT(nft)}
-                      className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                      onClick={nft.isListed ? undefined : () => handleListNFT(nft)}
+                      disabled={nft.isListed}
+                      className={`flex-1 px-3 py-2 text-sm rounded transition-colors ${
+                        nft.isListed 
+                          ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
                     >
-                      🏷️ List for Sale
+                      {nft.isListed ? '🔒 Already Listed' : '🏷️ List for Sale'}
                     </button>
                     <button className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       🔍 View

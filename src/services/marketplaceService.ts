@@ -43,6 +43,33 @@ export class MarketplaceService extends BaseSingleton {
   }
 
   /**
+   * Check if a specific NFT is already listed on the marketplace
+   */
+  async isNFTListed(tokenId: string): Promise<boolean> {
+    try {
+      const provider = await web3Utils.createProvider();
+      if (!provider) return false;
+
+      const nftContract = import.meta.env.VITE_PATENT_NFT_ADDRESS;
+      
+      if (!nftContract) return false;
+
+      // Get all active listings and check if this NFT is among them
+      const allListings = await this.getMarketplaceListings(1, 1000); // Get large number to check all
+      
+      return allListings.listings.some(listing => 
+        listing.nftContract.toLowerCase() === nftContract.toLowerCase() && 
+        listing.tokenId === tokenId && 
+        listing.active
+      );
+
+    } catch (error) {
+      console.error('Error checking NFT listing status:', error);
+      return false; // Default to not listed on error
+    }
+  }
+
+  /**
    * Fetch all active marketplace listings with pagination
    */
   async getMarketplaceListings(page: number = 1, limit: number = 20): Promise<PaginatedListings> {

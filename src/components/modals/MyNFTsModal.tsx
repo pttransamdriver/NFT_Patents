@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useWeb3 } from '../../contexts/Web3Context';
 import { getPatentNFTContract } from '../../utils/contracts';
 import { mintingService } from '../../services/mintingService';
+import { marketplaceService } from '../../services/marketplaceService';
 import MetaMaskNFTGuide from './MetaMaskNFTGuide';
 import ListNFTModal from './ListNFTModal';
 
@@ -16,6 +17,7 @@ interface UserNFT {
   inventor: string;
   filingDate: string;
   isVerified: boolean;
+  isListed?: boolean;
 }
 
 interface MyNFTsModalProps {
@@ -75,6 +77,9 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
             console.log(`Could not get tokenURI for token ${tokenId}`);
           }
 
+          // Check if this NFT is listed on the marketplace
+          const isListed = await marketplaceService.isNFTListed(tokenId.toString());
+
           userNFTs.push({
             tokenId: tokenId.toString(),
             tokenURI,
@@ -82,7 +87,8 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
             title: patentData.title || `Patent NFT #${tokenId}`,
             inventor: patentData.inventor || 'Unknown',
             filingDate: new Date(Number(patentData.filingDate) * 1000).toLocaleDateString(),
-            isVerified: patentData.isVerified || false
+            isVerified: patentData.isVerified || false,
+            isListed: isListed
           });
         } catch (error) {
           console.error(`Error loading NFT at index ${i}:`, error);
@@ -122,13 +128,15 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
     setShowListModal(true);
   };
 
-  const confirmSell = () => {
+  const confirmSell = async () => {
     if (selectedNFT && sellPrice && onSellNFT) {
-      onSellNFT(selectedNFT, sellPrice);
+      await onSellNFT(selectedNFT, sellPrice);
       setShowSellForm(false);
       setSelectedNFT(null);
       setSellPrice('');
       toast.success('NFT listed for sale!');
+      // Refresh NFT list to update listing status
+      loadUserNFTs();
     }
   };
 
@@ -277,11 +285,16 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
                         {/* Actions */}
                         <div className="grid grid-cols-2 gap-2">
                           <button
-                            onClick={() => handleSellNFT(nft)}
-                            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded font-medium transition-colors flex items-center justify-center space-x-1"
+                            onClick={nft.isListed ? undefined : () => handleSellNFT(nft)}
+                            disabled={nft.isListed}
+                            className={`px-3 py-1.5 text-xs rounded font-medium transition-colors flex items-center justify-center space-x-1 ${
+                              nft.isListed 
+                                ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed' 
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
                           >
                             <DollarSign className="w-3 h-3" />
-                            <span>Sell</span>
+                            <span>{nft.isListed ? 'Already Listed' : 'List for Sale'}</span>
                           </button>
                           <div className="grid grid-cols-2 gap-1">
                             <button
