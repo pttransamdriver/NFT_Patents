@@ -111,25 +111,31 @@ export class MarketplaceService extends BaseSingleton {
         try {
           const listing = allActiveListings[i];
 
-          // Get patent-specific data
-          let patentData = null;
-          try {
-            patentData = await patentNFTContract.getPatent(listing.tokenId);
-          } catch (error) {
-          }
-
-          // Get metadata URI and extract patent number
+          // Get metadata URI and extract patent information
           let metadataUri = '';
           let imageUrl = '';
+          let patentData = null;
+          
           try {
             metadataUri = await patentNFTContract.tokenURI(listing.tokenId);
-            // Fetch metadata to get image
+            // Fetch metadata to get all information
             const metadataResponse = await fetch(metadataUri);
             if (metadataResponse.ok) {
               const metadata = await metadataResponse.json();
               imageUrl = metadata.image || '';
+              
+              // Extract patent data from attributes
+              const getAttribute = (traitType: string) => 
+                metadata.attributes?.find((attr: any) => attr.trait_type === traitType)?.value;
+              
+              patentData = {
+                patentNumber: getAttribute('Patent Number') || `Unknown-${listing.tokenId}`,
+                title: metadata.name || `Untitled Patent NFT #${listing.tokenId}`,
+                inventor: getAttribute('Inventor') || 'Unknown'
+              };
             }
           } catch (error) {
+            console.warn(`Could not fetch metadata for token ${listing.tokenId}:`, error);
           }
 
           const marketplaceListing: MarketplaceListing = {

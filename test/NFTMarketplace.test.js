@@ -24,8 +24,9 @@ describe("NFTMarketplace", function () {
     marketplace = await NFTMarketplace.deploy(feeRecipient.address);
     await marketplace.waitForDeployment();
     
-    // Mint an NFT to seller for testing
-    await patentNFT.mintPatent(seller.address, TEST_PATENT, TEST_URI);
+    // Mint an NFT to seller for testing using new payable method
+    const mintingPrice = await patentNFT.getMintingPrice();
+    await patentNFT.connect(seller).mintPatentNFT(seller.address, TEST_PATENT, { value: mintingPrice });
   });
 
   describe("Deployment", function () {
@@ -250,7 +251,8 @@ describe("NFTMarketplace", function () {
 
     it("Should return all active listings", async function () {
       // Create second NFT and listing
-      await patentNFT.mintPatent(seller.address, "US7654321", "ipfs://QmTest2");
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(seller).mintPatentNFT(seller.address, "US7654321", { value: mintingPrice });
       await patentNFT.connect(seller).approve(await marketplace.getAddress(), 2);
       await marketplace.connect(seller).listNFT(await patentNFT.getAddress(), 2, ethers.parseEther("2.0"));
       
@@ -376,8 +378,9 @@ describe("NFTMarketplace", function () {
 
     it("Should handle multiple listings and cancellations correctly", async function () {
       // Create more NFTs
-      await patentNFT.mintPatent(seller.address, "US7654321", "ipfs://QmTest2");
-      await patentNFT.mintPatent(seller.address, "US1111111", "ipfs://QmTest3");
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(seller).mintPatentNFT(seller.address, "US7654321", { value: mintingPrice });
+      await patentNFT.connect(seller).mintPatentNFT(seller.address, "US1111111", { value: mintingPrice });
       
       await patentNFT.connect(seller).approve(await marketplace.getAddress(), 2);
       await patentNFT.connect(seller).approve(await marketplace.getAddress(), 3);

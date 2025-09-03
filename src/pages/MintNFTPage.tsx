@@ -152,13 +152,15 @@ const MintNFTPage: React.FC = () => {
     }
 
     try {
-      // Import the contract functions
-      const { mintPatentNFT } = await import('../utils/contracts');
+      // Use the MintingService for consistent metadata handling
+      const { MintingService } = await import('../services/mintingService');
+      const mintingService = new MintingService();
       
-      const result = await mintPatentNFT(signer, {
+      const result = await mintingService.mintPatentNFT({
         patentNumber: verificationResult.patent.patentNumber,
-        title: verificationResult.patent.title,
-        inventor: verificationResult.patent.inventors[0] || 'Unknown'
+        price: 0.1, // Default price in ETH
+        userAddress: account || '',
+        patentData: verificationResult.patent
       });
 
       if (result.success) {

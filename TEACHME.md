@@ -12,7 +12,7 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 - **Use PDF as NFT Image**: Store the single-page PDF on IPFS and use it directly as the NFT's visual representation (instead of converting to traditional image formats like PNG/JPG)
 - **Innovative Visual Identity**: Each NFT displays as an actual PDF document, maintaining the authentic patent document format while keeping IPFS storage costs minimal
 - Ensure each patent can only be minted once (global uniqueness) using the Patent ID from the patent office
-- Collect 5% fees (2.5% minting + 2.5% marketplace)
+- Collect fees (0.05 ETH minting + 2.5% marketplace)
 - Support multiple payment methods (ETH, USDC, Patent Pennies Tokens PSP)
 - Scale to handle thousands of patents and users
 
@@ -39,8 +39,8 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
 │  │ CORS Proxy      │  │ Metadata Store  │  │ IPFS Utils  │  │
 │  │                 │  │                 │  │             │  │
-│  │ Google       │  │  | NFT Metadata    │  │ PDF Processing │
-│  │ Patents API     │  │ IPFS Hashes     │  │ Image Storage  │
+│  │ Google       │  │  | Rich NFT Metadata │  │ PDF Processing │
+│  │ Patents API     │  │ Patent Info + IPFS │  │ Image Storage  │
 │  │                 │  │                 │  │             │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -69,34 +69,252 @@ This document explains how the Patent NFT Marketplace is structured, why it's bu
 
 ## 🖥️ Frontend Architecture Deep Dive
 
-### Project Structure Explained
+### Complete Project Structure for New Developers
 
 ```
-src/
-├── components/           # Reusable UI pieces
-│   ├── layout/          # Header, Footer (used on every page)
-│   ├── marketplace/     # NFTCard (displays patent NFTs)
-│   ├── modals/          # Popup windows (My NFTs, MetaMask guide)
-│   └── debug/           # Development tools (MintDebugger)
-├── contexts/            # Global state management
-│   ├── Web3Context.tsx  # Blockchain connection state
-│   ├── WalletContext.tsx # MetaMask wallet state
-│   └── ThemeContext.tsx # Light/dark mode
-├── pages/               # Full page components
-│   ├── PatentSearchPage.tsx # Search patents & start minting
-│   ├── MintNFTPage.tsx  # Convert patent to NFT
-│   └── MarketplacePage.tsx # Browse & buy patent NFTs
-├── services/            # Business logic layer
-│   ├── usptoApi.ts      # Google Patent data fetching
-│   ├── mintingService.ts # NFT creation logic
-│   ├── paymentService.ts # Payment processing
-│   ├── marketplaceService.ts # Marketplace interactions
-│   └── patentPdfService.ts # PDF processing & IPFS
-└── utils/               # Helper functions
-    ├── contracts.ts     # Smart contract interfaces
-    ├── metamask.ts      # Wallet utilities
-    └── web3Utils.ts     # Blockchain helpers
+NFT_Patents/                                    # 🏛️ Root directory
+├── 📁 Frontend (React/TypeScript/Vite)
+│   ├── src/
+│   │   ├── 📁 components/                      # Reusable UI components
+│   │   │   ├── 📄 AISearchModal.tsx            # AI-powered patent search modal
+│   │   │   ├── layout/                         # Layout components used on every page
+│   │   │   │   ├── 📄 Header.tsx               # Navigation bar, wallet connection
+│   │   │   │   └── 📄 Footer.tsx               # Site footer with links
+│   │   │   ├── marketplace/                    # NFT marketplace UI components  
+│   │   │   │   └── 📄 NFTCard.tsx              # Individual NFT card display
+│   │   │   └── modals/                         # Modal popup components
+│   │   │       ├── 📄 ListNFTModal.tsx         # List NFT for sale modal
+│   │   │       ├── 📄 MetaMaskNFTGuide.tsx     # Guide for viewing NFTs in MetaMask
+│   │   │       └── 📄 MyNFTsModal.tsx          # View owned NFTs modal
+│   │   │
+│   │   ├── 📁 contexts/                        # React Context providers (global state)
+│   │   │   ├── 📄 ThemeContext.tsx             # Light/dark mode state
+│   │   │   ├── 📄 WalletContext.tsx            # MetaMask wallet connection state
+│   │   │   └── 📄 Web3Context.tsx              # Ethereum blockchain connection state
+│   │   │
+│   │   ├── 📁 pages/                           # Full page components (routes)
+│   │   │   ├── 📄 HomePage.tsx                 # Landing page with project overview
+│   │   │   ├── 📄 PatentSearchPage.tsx         # Main search interface with AI search
+│   │   │   ├── 📄 MintNFTPage.tsx              # Convert patent to NFT workflow
+│   │   │   ├── 📄 MarketplacePage.tsx          # Browse and buy NFTs
+│   │   │   ├── 📄 NFTDetailPage.tsx            # Individual NFT detail view
+│   │   │   ├── 📄 CreateListingPage.tsx        # Create marketplace listing
+│   │   │   └── 📄 UserProfilePage.tsx          # User profile and owned NFTs
+│   │   │
+│   │   ├── 📁 services/                        # Business logic layer (API calls, blockchain interactions)
+│   │   │   ├── 📄 aiSearchService.ts           # AI-powered patent search functionality
+│   │   │   ├── 📄 marketplaceService.ts        # NFT marketplace interactions
+│   │   │   ├── 📄 mintingService.ts            # NFT minting with rich metadata
+│   │   │   ├── 📄 patentApi.ts                 # Google Patents API integration
+│   │   │   ├── 📄 patentPdfService.ts          # PDF processing and IPFS storage
+│   │   │   ├── 📄 paymentService.ts            # Payment processing (ETH, USDC, PSP)
+│   │   │   └── 📄 pspTokenService.ts           # PSP token management
+│   │   │
+│   │   ├── 📁 utils/                           # Helper functions and utilities
+│   │   │   ├── 📄 baseSingleton.ts             # Singleton pattern base class
+│   │   │   ├── 📄 contractABIs.ts              # Smart contract ABIs and interfaces
+│   │   │   ├── 📄 contracts.ts                 # Smart contract interaction utilities
+│   │   │   ├── 📄 ipfsDebug.ts                 # IPFS debugging utilities
+│   │   │   ├── 📄 metamask.ts                  # MetaMask wallet utilities
+│   │   │   ├── 📄 security.ts                  # Security validation functions
+│   │   │   └── 📄 web3Utils.ts                 # Web3 blockchain utilities
+│   │   │
+│   │   ├── 📁 types/                           # TypeScript type definitions
+│   │   │   └── 📄 index.ts                     # All interface definitions (NFT, Patent, User, etc.)
+│   │   │
+│   │   ├── 📄 App.tsx                          # Main app component with routing
+│   │   ├── 📄 main.tsx                         # App entry point
+│   │   └── 📄 vite-env.d.ts                    # Vite environment type definitions
+│   │
+│   ├── 📄 index.html                           # HTML entry point
+│   ├── 📄 package.json                         # Frontend dependencies and scripts
+│   ├── 📄 vite.config.ts                       # Vite build configuration
+│   ├── 📄 tailwind.config.js                   # Tailwind CSS configuration
+│   ├── 📄 tsconfig.json                        # TypeScript configuration
+│   └── 📄 eslint.config.js                     # ESLint code quality rules
+│
+├── 📁 Backend (Node.js/Express)
+│   ├── 📄 server.js                            # Express server with API routes
+│   ├── 📄 metadata.js                          # NFT metadata storage and management
+│   ├── 📄 patents-db.json                      # Local patent data cache
+│   ├── 📄 package.json                         # Backend dependencies
+│   └── 📄 README.md                            # Backend-specific documentation
+│
+├── 📁 Smart Contracts (Solidity)
+│   ├── 📄 PatentNFT.sol                        # ERC721 NFT contract with payable minting
+│   ├── 📄 PSPToken.sol                         # ERC20 utility token for payments
+│   ├── 📄 SearchPayment.sol                    # Multi-token payment processing
+│   └── 📄 NFTMarketplace.sol                   # Secondary market for trading NFTs
+│
+├── 📁 Testing & Quality Assurance
+│   ├── test/                                   # Smart contract tests
+│   │   ├── 📄 PatentNFT.test.js               # NFT contract unit tests
+│   │   ├── 📄 PSPToken.test.js                # PSP token contract tests
+│   │   ├── 📄 SearchPayment.test.js           # Payment contract tests
+│   │   ├── 📄 NFTMarketplace.test.js          # Marketplace contract tests
+│   │   └── 📄 Integration.test.js             # End-to-end workflow tests
+│   ├── 📄 SECURITY.md                          # Security considerations and audits
+│   ├── 📄 slither.config.json                 # Slither security analyzer config
+│   └── 📄 .solhint.json                       # Solidity linting rules
+│
+├── 📁 Deployment & DevOps
+│   ├── scripts/
+│   │   ├── deploy/                            # Modular deployment scripts
+│   │   │   ├── 📄 001_deploy_psp_token.js     # Deploy PSP token contract
+│   │   │   ├── 📄 002_deploy_search_payment.js # Deploy search payment contract  
+│   │   │   ├── 📄 003_deploy_patent_nft.js    # Deploy NFT contract
+│   │   │   └── 📄 004_deploy_marketplace.js   # Deploy marketplace contract
+│   │   ├── emergency/                         # Emergency management scripts
+│   │   │   ├── 📄 pauseAll.js                 # Emergency pause all contracts
+│   │   │   └── 📄 unpauseAll.js              # Resume all contracts
+│   │   ├── utils/                             # Deployment utilities
+│   │   │   ├── 📄 constants.js                # Deployment constants
+│   │   │   └── 📄 deployment-utils.js         # Shared deployment functions
+│   │   ├── 📄 deploy-all.js                   # Legacy: Deploy all contracts at once
+│   │   ├── 📄 deploy-modular.js              # Modern: Modular deployment orchestrator
+│   │   └── 📄 verify-deployment.js           # Verify deployed contracts
+│   │
+│   ├── deployments/                           # Deployment artifacts and addresses
+│   │   └── localhost/                         # Local deployment addresses
+│   │       ├── 📄 PSPToken.json               # PSP token deployment info
+│   │       ├── 📄 SearchPayment.json          # Search payment deployment info
+│   │       ├── 📄 PatentNFT.json              # NFT contract deployment info
+│   │       └── 📄 NFTMarketplace.json         # Marketplace deployment info
+│   │
+│   ├── 📄 hardhat.config.js                   # Hardhat blockchain development config
+│   └── ignition/                              # Alternative deployment system
+│       └── modules/
+│           └── 📄 PatentNFT.ts                # Hardhat Ignition deployment module
+│
+├── 📁 Build & Development
+│   ├── artifacts/                             # Compiled contract artifacts
+│   │   └── contracts/                         # Generated contract ABIs and bytecode
+│   ├── cache/                                 # Build cache files
+│   ├── docs/                                  # Built frontend for GitHub Pages
+│   └── node_modules/                          # Project dependencies (auto-generated)
+│
+└── 📁 Documentation & Configuration
+    ├── 📄 README.md                           # Main project documentation
+    ├── 📄 TEACHME.md                          # Architecture deep dive (this file!)
+    ├── 📄 package.json                        # Root package.json with scripts
+    ├── 📄 .env.example                        # Environment variables template
+    └── 📄 .gitignore                          # Git ignore rules
 ```
+
+### 🎯 Key Directory Purposes for New Developers
+
+**🎨 Frontend (`src/`)**
+- **Components**: Reusable UI pieces that can be used across multiple pages
+- **Pages**: Full page views that correspond to different routes in the application  
+- **Services**: Business logic layer that handles all API calls and blockchain interactions
+- **Contexts**: Global state management using React Context API
+- **Utils**: Helper functions and utilities used throughout the application
+
+**🔧 Backend (`backend/`)**
+- **server.js**: Express API server that handles CORS proxy, metadata storage, and PDF processing
+- **metadata.js**: Manages NFT metadata storage with rich patent information
+
+**⛓️ Smart Contracts (`contracts/`)**
+- **PatentNFT.sol**: Core NFT contract with payable minting and metadata management
+- **PSPToken.sol**: Utility token for AI search payments
+- **SearchPayment.sol**: Handles multi-token payment processing
+- **NFTMarketplace.sol**: Secondary market for buying/selling NFTs
+
+**🧪 Testing (`test/`)**
+- **Unit Tests**: Individual contract function testing
+- **Integration Tests**: Full workflow testing across multiple contracts
+
+**🚀 Deployment (`scripts/`)**
+- **Modular Deployment**: Each contract deployed independently with proper dependency management
+- **Emergency Scripts**: Safety mechanisms for production environments
+- **Verification**: Contract verification on block explorers
+
+### 🧭 New Developer Navigation Guide
+
+**👶 Start Here (First-time setup):**
+1. **📄 README.md** - Project overview and setup instructions
+2. **📄 package.json** - Available npm scripts and dependencies
+3. **📄 .env.example** - Environment variables you need to configure
+
+**🎨 Understanding the Frontend:**
+1. **📄 src/App.tsx** - Main app structure and routing
+2. **📄 src/pages/HomePage.tsx** - Start with the landing page to understand the flow
+3. **📄 src/services/** - Business logic layer (start here to understand how things work)
+4. **📄 src/components/** - UI components (after understanding the logic)
+
+**⛓️ Understanding Smart Contracts:**
+1. **📄 contracts/PatentNFT.sol** - Core NFT functionality (start here)
+2. **📄 test/PatentNFT.test.js** - Read tests to understand expected behavior
+3. **📄 contracts/NFTMarketplace.sol** - Marketplace functionality
+4. **📄 scripts/deploy/** - Deployment process
+
+**🔧 Understanding the Backend:**
+1. **📄 backend/server.js** - All API endpoints and functionality
+2. **📄 backend/metadata.js** - How NFT metadata is managed
+
+**📚 Key Files Every Developer Should Understand:**
+
+**Critical Frontend Files:**
+- **📄 src/services/mintingService.ts** - How NFTs are created with rich metadata
+- **📄 src/services/marketplaceService.ts** - How marketplace interactions work
+- **📄 src/contexts/Web3Context.tsx** - Blockchain connection management
+- **📄 src/utils/contracts.ts** - Smart contract interaction utilities
+
+**Critical Backend Files:**
+- **📄 backend/server.js** - API routes for patent search, metadata, PDF processing
+- **📄 backend/metadata.js** - NFT metadata storage with patent information
+
+**Critical Smart Contract Files:**
+- **📄 contracts/PatentNFT.sol** - NFT minting with uniqueness enforcement
+- **📄 contracts/NFTMarketplace.sol** - Trading functionality
+
+**🛠️ Development Workflow Understanding:**
+
+**For Frontend Development:**
+```
+src/pages/ → defines user interfaces
+    ↓
+src/services/ → handles business logic & API calls  
+    ↓
+src/utils/ → provides blockchain interaction utilities
+    ↓
+backend/server.js → serves data and handles CORS
+    ↓
+contracts/*.sol → executes on blockchain
+```
+
+**For Smart Contract Development:**
+```
+contracts/*.sol → write contract logic
+    ↓
+test/*.test.js → write comprehensive tests
+    ↓
+scripts/deploy/ → deploy to blockchain
+    ↓
+src/utils/contractABIs.ts → update frontend interfaces
+```
+
+**📖 Learning Path for New Developers:**
+
+**Week 1: Understanding the Stack**
+- Read README.md and TEACHME.md completely
+- Set up local environment and run the project
+- Understand the three-layer architecture (Frontend → Backend → Blockchain)
+
+**Week 2: Frontend Deep Dive**
+- Study the service layer pattern in `src/services/`
+- Understand React Context usage in `src/contexts/`
+- Follow one complete user flow (e.g., search → mint → list → buy)
+
+**Week 3: Smart Contracts**  
+- Read and understand `PatentNFT.sol` 
+- Run and understand the test suite
+- Deploy contracts locally and understand the deployment process
+
+**Week 4: Integration & Advanced Features**
+- Understand the metadata flow from search to NFT display
+- Study the IPFS integration for PDF storage
+- Explore the payment system with multiple tokens
 
 ### Why This Structure?
 
@@ -135,7 +353,8 @@ const MintNFTPage = () => {
     const result = await mintingService.mintPatentNFT({
       patentNumber: patent.patentNumber,
       price: 0.1,
-      userAddress: account
+      userAddress: account,
+      patentData: patent // Pass full patent data for rich metadata
     });
   }
 }
@@ -280,20 +499,25 @@ app.get('/api/uspto/search', async (req, res) => {
 **Why needed**: Smart contracts need a URL for NFT metadata, but that URL must be reliable and permanent.
 
 ```javascript
-// metadata.js - Stores NFT metadata
+// metadata.js - Stores Rich NFT metadata with full patent information
 class MetadataStore {
   storeMetadata(patentNumber, metadata) {
-    // Stores: patent title, image URL, IPFS hashes
+    // Stores: patent title, inventor, assignee, filing date, 
+    //         abstract, image URL, IPFS hashes, status, etc.
+    // Full patent data captured from search results
   }
   
   getMetadata(patentNumber) {
-    // Returns JSON compatible with OpenSea/NFT standards
+    // Returns rich JSON with actual patent information:
+    // - name: Real patent title (not "Untitled Patent #1")
+    // - description: Patent abstract/description
+    // - attributes: Patent number, inventor, assignee, filing date, etc.
   }
 }
 
 // When smart contract calls tokenURI():
-// Returns: "http://localhost:3001/metadata/US1234567"
-// Which serves proper NFT metadata JSON
+// Returns: "http://localhost:3001/api/metadata/US1234567"
+// Which serves rich NFT metadata with actual patent information
 ```
 
 ---
@@ -306,10 +530,11 @@ class MetadataStore {
 
 ```solidity
 PatentNFT.sol        // Handles NFT minting and patent uniqueness
-├── Mints patent NFTs
+├── Mints patent NFTs with payable function (0.05 ETH)
 ├── Tracks patent existence (prevents duplicates) 
-├── Collects minting fees
-└── Manages metadata URIs
+├── Collects minting fees with withdrawal functions
+├── Manages rich metadata URIs pointing to backend API
+└── Both public payable and admin-only minting functions
 
 PSPToken.sol         // Patent Search Pennies - Layer 2 token
 ├── ERC20 token for AI search payments
@@ -335,12 +560,15 @@ NFTMarketplace.sol   // Secondary market for trading
 ### Contract Interaction Flow
 
 ```
-User wants to mint patent NFT:
+User wants to mint patent NFT (Enhanced Flow):
 1. Frontend → PatentNFT.patentExists(patentNumber) [Check if already minted]
-2. Frontend → PatentNFT.getMintingPrice() [Get current price]  
-3. Frontend → PatentNFT.mintPatentNFT(user, patentNumber) [Mint with ETH payment]
-4. Contract → Sets patentExists[patentNumber] = true [Prevent future duplicates]
-5. Contract → Emits PatentMinted event [Frontend can listen for confirmation]
+2. Frontend → PatentNFT.getMintingPrice() [Get current price - 0.05 ETH]  
+3. Backend → Store rich metadata with full patent data (title, inventor, etc.)
+4. Frontend → PatentNFT.mintPatentNFT(user, patentNumber) [Mint with ETH payment]
+5. Contract → Sets patentExists[patentNumber] = true [Prevent future duplicates]
+6. Contract → Sets tokenURI to backend metadata endpoint
+7. Contract → Emits PatentMinted event [Frontend can listen for confirmation]
+8. Result → NFT now contains real patent title and information
 
 User wants to list NFT for sale (Modal-based):
 1. User clicks "List for Sale" → Opens ListNFTModal
@@ -405,13 +633,14 @@ async mintPatentNFT(params) {
   // 1. Process patent PDF → image → IPFS
   const pdfData = await patentPdfService.processPatentForNFT(params.patentNumber);
   
-  // 2. Store IPFS data in backend
-  await fetch(`${API_BASE_URL}/metadata/${params.patentNumber}/ipfs`, {
+  // 2. Store rich metadata in backend with full patent data
+  await fetch(`${API_BASE_URL}/api/metadata/${params.patentNumber}`, {
     method: 'POST',
     body: JSON.stringify({
       pdfHash: pdfData.pdfHash,
       imageHash: pdfData.imageHash,
-      imageUrl: pdfData.imageUrl
+      imageUrl: pdfData.imageUrl,
+      patentData: params.patentData // Full patent info from search
     })
   });
   
@@ -422,23 +651,36 @@ async mintPatentNFT(params) {
   return { success: true, txHash: tx.hash };
 }
 
-// Backend stores the IPFS data
-app.post('/metadata/:patentNumber/ipfs', (req, res) => {
+// Backend stores rich patent metadata
+app.post('/api/metadata/:patentNumber', (req, res) => {
   const { patentNumber } = req.params;
-  const { pdfHash, imageHash, imageUrl } = req.body;
+  const { pdfHash, imageHash, imageUrl, patentData } = req.body;
   
-  metadataStore.updateIPFSData(patentNumber, { pdfHash, imageHash, imageUrl });
+  metadataStore.storeMetadata(patentNumber, { 
+    pdfHash, imageHash, imageUrl, 
+    patentData: patentData // Full patent information
+  });
   res.json({ success: true });
 });
 
-// Backend serves metadata when smart contract calls tokenURI
-app.get('/metadata/:patentNumber', (req, res) => {
+// Backend serves rich metadata when smart contract calls tokenURI
+app.get('/api/metadata/:patentNumber', (req, res) => {
   const metadata = metadataStore.getMetadata(req.params.patentNumber);
+  const patentData = metadata.patentData || {};
+  
   res.json({
-    name: `Patent NFT - ${patentNumber}`,
+    name: patentData.title || `Patent NFT - ${patentNumber}`, // Real patent title
+    description: patentData.abstract || patentData.description || "Patent converted to NFT",
     image: metadata.imageUrl, // IPFS URL
-    description: "Patent converted to NFT...",
-    // ... full NFT metadata
+    attributes: [
+      { trait_type: "Patent Number", value: patentNumber },
+      { trait_type: "Title", value: patentData.title || "Unknown" },
+      { trait_type: "Inventor", value: patentData.inventor || "Unknown" },
+      { trait_type: "Assignee", value: patentData.assignee || "Unknown" },
+      { trait_type: "Filing Date", value: patentData.filingDate || "Unknown" },
+      { trait_type: "Country", value: patentData.country || "Unknown" },
+      { trait_type: "Status", value: patentData.status || "Unknown" }
+    ]
   });
 });
 ```
@@ -458,16 +700,23 @@ async getMarketplaceListings(page = 1, limit = 20) {
   for (let i = startIndex; i <= endIndex; i++) {
     const listing = await marketplaceContract.listings(i);
     if (listing.active) {
-      // 4. Get patent metadata from backend
-      const metadataResponse = await fetch(`${API_BASE_URL}/metadata/${patentNumber}`);
+      // 4. Get rich patent metadata from backend
+      const metadataResponse = await fetch(`${API_BASE_URL}/api/metadata/${patentNumber}`);
       const metadata = await metadataResponse.json();
       
-      // 5. Combine blockchain data + metadata
+      // 5. Extract patent information from metadata attributes
+      const getAttribute = (traitType) => 
+        metadata.attributes?.find(attr => attr.trait_type === traitType)?.value;
+      
+      // 6. Combine blockchain data + rich metadata
       listings.push({
         listingId: listing.listingId,
         price: listing.price,
         seller: listing.seller,
-        title: metadata.name,
+        title: metadata.name, // Real patent title
+        patentNumber: getAttribute('Patent Number'),
+        inventor: getAttribute('Inventor'),
+        assignee: getAttribute('Assignee'),
         imageUrl: metadata.image
       });
     }
@@ -926,5 +1175,8 @@ This architecture enables the Patent NFT Marketplace to achieve its goals throug
 ✅ **Production Ready**: Modular deployment system with proper smart contract architecture  
 ✅ **Buy Now Functionality**: Complete NFT purchasing workflow with smart contract integration  
 ✅ **Real API Data**: No mock data - exclusive use of Google Patents via SerpApi  
+✅ **Rich Metadata System**: NFTs display actual patent titles, inventors, and information instead of generic placeholders  
+✅ **Enhanced User Experience**: Marketplace shows "Method and System for..." instead of "Untitled Patent #1"  
+✅ **Payable Minting**: Secure 0.05 ETH minting with proper access controls and withdrawal functions  
 
-The modular, service-oriented architecture allows each component to excel at its specific responsibility while maintaining clean integration points between frontend, backend, and blockchain layers.
+The modular, service-oriented architecture allows each component to excel at its specific responsibility while maintaining clean integration points between frontend, backend, and blockchain layers. The enhanced metadata system ensures users see professional, accurate patent information throughout the entire application experience.

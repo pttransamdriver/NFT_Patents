@@ -60,9 +60,9 @@ The Patent NFT Marketplace consists of three main components and two external de
 
 * 🌍 **Global Patent Search**: Query worldwide patents through Google Patents
 * 💎 **NFT Minting**: Convert the first page of patent PDFs into NFT assets (stored on IPFS)
-* 📄 **Patent Metadata**: NFT includes title, patent ID, inventors, and first-page PDF snapshot
-* 🏪 **Marketplace**: Trade patent NFTs with live listings and offers
-* 💰 **Multi-Token Payments**: ETH, USDC, PSP tokens supported
+* 📄 **Rich Patent Metadata**: NFTs include actual patent titles, numbers, inventors, assignees, filing dates, and descriptions from search results
+* 🏪 **Enhanced Marketplace**: Trade patent NFTs with proper patent information displayed (no more "Untitled Patent #1")
+* 💰 **Multi-Token Payments**: ETH, USDC, PSP tokens supported with secure payable minting (0.05 ETH)
 * 🔒 **Smart Contract Security**: ReentrancyGuard, Pausable, access controls
 * 📱 **Responsive UI**: Modern React + Tailwind design
 * 🔍 **Patent Uniqueness**: Prevents duplicate minting on-chain
@@ -140,10 +140,12 @@ Access locally:
 
 ### PatentNFT Contract
 
-* ERC721-compliant NFT contract
-* Metadata includes title, patent ID, inventors, IPFS image
-* Tracks uniqueness (no duplicate minting)
-* Owner-only verification system
+* ERC721-compliant NFT contract with payable minting (0.05 ETH)
+* Rich metadata includes actual patent titles, numbers, inventors, assignees, filing dates, and status
+* Tracks uniqueness (no duplicate minting via patent number normalization)
+* Metadata stored via backend API endpoints with full patent information
+* Both public payable minting and admin-only minting functions
+* Built-in withdrawal and price management functions
 
 ### PSPToken Contract
 
@@ -165,9 +167,12 @@ Access locally:
 
 * **Patent Search**: `/api/uspto/search?criteria=<query>` → returns Google Patents results
 * **Patent Details**: `/api/uspto/patent/:id` → returns patent data
+* **NFT Metadata**: `/api/metadata/:patentNumber` → stores and serves rich NFT metadata with patent information
+* **PDF Processing**: `/api/pdf/process-patent` → handles patent PDF processing for IPFS
 * **Health Check**: `/api/health` → backend + API status
 
 **CORS Proxy**: Handles frontend → Google Patents API requests server-side.
+**Enhanced Metadata**: Stores full patent information (title, inventor, assignee, etc.) for proper marketplace display.
 
 ---
 
@@ -193,21 +198,22 @@ Access locally:
 * **Listings**: Real-time NFT sales, pagination (20 per page)
 * **Buy Now**: Purchase directly with ETH/USDC/PSP
 * **Offers**: Make and receive offers on NFTs
-* **Patent Metadata**: Title, patent ID, inventors, PDF front page
+* **Rich Patent Metadata**: Real patent titles, numbers, inventors, assignees, filing dates, and descriptions
 * **IPFS Storage**: PDF front pages stored on decentralized IPFS
-* **Flows Supported**: Mint → List → Buy/Offer → Secondary Trade
+* **Enhanced Display**: Marketplace shows actual patent information instead of generic "Untitled Patent" labels
+* **Flows Supported**: Search → Mint with Rich Data → List → Buy/Offer → Secondary Trade
 
 ---
 
 ## User Flows:
 1. **Search Patents**: Use the search bar to find patents by keywords, inventors, or patent IDs.
-2. **Mint Patent NFT**: Select a patent from the search results and mint it as
-an NFT. This will also store the first page of the patent PDF on IPFS.
-3. **List NFT for Sale**: After minting, list your Patent NFT on the marketplace with a set price.
-4. **Buy NFT**: Browse the marketplace, select a patent you're interested in, and purchase it with ETH/USDC/PSP.
-5. **Make Offers**: If you find a patent NFT you like but it's not listed for sale, you can make an offer to the owner.
-6. **View Owned NFTs**: Check your wallet to see all the Patent NFTs you own. 
-7. **View Marketplace**: Browse the marketplace to see all the Patent NFTs for sale. 
+2. **Mint Patent NFT**: Select a patent from the search results and mint it as an NFT (0.05 ETH). The system captures the full patent information (title, inventor, assignee, filing date, etc.) and stores the first page PDF on IPFS.
+3. **Enhanced Metadata**: NFTs now include rich metadata with actual patent titles and information instead of generic placeholders.
+4. **List NFT for Sale**: After minting, list your Patent NFT on the marketplace with a set price - now displaying proper patent titles.
+5. **Buy NFT**: Browse the marketplace and see real patent information - titles, inventors, patent numbers, etc.
+6. **Make Offers**: If you find a patent NFT you like but it's not listed for sale, you can make an offer to the owner.
+7. **View Owned NFTs**: Check your wallet to see all the Patent NFTs you own with full patent details.
+8. **View Marketplace**: Browse the marketplace to see all Patent NFTs with their actual patent titles and information. 
 
 ---
 

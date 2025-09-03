@@ -263,13 +263,22 @@ app.get('/api/metadata/:patentNumber', (req, res) => {
       return res.status(404).json({ error: 'Metadata not found' });
     }
     
+    // Extract patent data if available
+    const patentData = metadata.patentData || {};
+    
     res.json({
-      name: `Patent NFT - ${patentNumber}`,
-      description: `Tokenized patent ${patentNumber}`,
+      name: patentData.title || `Patent NFT - ${patentNumber}`,
+      description: patentData.abstract || patentData.description || `Tokenized patent ${patentNumber}`,
       image: metadata.imageUrl || `https://via.placeholder.com/400x600?text=Patent+${patentNumber}`,
       external_url: `https://patents.google.com/patent/${patentNumber}`,
       attributes: [
         { trait_type: "Patent Number", value: patentNumber },
+        { trait_type: "Title", value: patentData.title || "Unknown" },
+        { trait_type: "Inventor", value: patentData.inventor || patentData.inventors?.[0] || "Unknown" },
+        { trait_type: "Assignee", value: patentData.assignee || "Unknown" },
+        { trait_type: "Filing Date", value: patentData.filingDate || "Unknown" },
+        { trait_type: "Country", value: patentData.country || "Unknown" },
+        { trait_type: "Status", value: patentData.status || patentData.legalStatus || "Unknown" },
         { trait_type: "Storage", value: "IPFS" },
         { trait_type: "Minted", value: metadata.timestamp }
       ]

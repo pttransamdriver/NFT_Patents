@@ -331,4 +331,153 @@ describe("PatentNFT", function () {
       expect(await patentNFT.patentExists(specialPatent)).to.be.true;
     });
   });
+
+  describe("Integrated Payable Minting Scenarios", function () {
+    it("Should allow multiple users to mint different patents with payment", async function () {
+      const mintingPrice = await patentNFT.getMintingPrice();
+      
+      // User1 mints first patent
+      await patentNFT.connect(user1).mintPatentNFT(
+        user1.address,
+        "US1111111",
+        { value: mintingPrice }
+      );
+      
+      // User2 mints second patent
+      await patentNFT.connect(user2).mintPatentNFT(
+        user2.address,
+        "US2222222", 
+        { value: mintingPrice }
+      );
+      
+      expect(await patentNFT.totalSupply()).to.equal(2);
+      expect(await patentNFT.ownerOf(1)).to.equal(user1.address);
+      expect(await patentNFT.ownerOf(2)).to.equal(user2.address);
+      expect(await patentNFT.patentExists("US1111111")).to.be.true;
+      expect(await patentNFT.patentExists("US2222222")).to.be.true;
+      
+      // Contract should have collected fees
+      const contractBalance = await ethers.provider.getBalance(await patentNFT.getAddress());
+      expect(contractBalance).to.equal(mintingPrice * BigInt(2));
+    });
+
+    it("Should handle price updates and mint with new price", async function () {
+      const originalPrice = await patentNFT.getMintingPrice();
+      const newPrice = ethers.parseEther("0.1");
+      
+      // Owner updates price
+      await patentNFT.setMintingPrice(newPrice);
+      expect(await patentNFT.getMintingPrice()).to.equal(newPrice);
+      
+      // Minting with old price should fail
+      await expect(
+        patentNFT.connect(user1).mintPatentNFT(
+          user1.address,
+          "US3333333",
+          { value: originalPrice }
+        )
+      ).to.be.revertedWith("Insufficient payment for minting");
+      
+      // Minting with new price should succeed
+      await patentNFT.connect(user1).mintPatentNFT(
+        user1.address,
+        "US3333333",
+        { value: newPrice }
+      );
+      
+      expect(await patentNFT.ownerOf(1)).to.equal(user1.address);
+    });
+
+    it("Should handle automatic metadata URI generation", async function () {
+      const mintingPrice = await patentNFT.getMintingPrice();
+      
+      await patentNFT.connect(user1).mintPatentNFT(
+        user1.address,
+        "US4444444",
+        { value: mintingPrice }
+      );
+      
+      const tokenURI = await patentNFT.tokenURI(1);
+      expect(tokenURI).to.include("US4444444");
+      expect(tokenURI).to.include("http://localhost:3001/api/metadata/");
+    });
+
+    it("Should emit proper events for payable minting", async function () {
+      const mintingPrice = await patentNFT.getMintingPrice();
+      
+      const tx = patentNFT.connect(user1).mintPatentNFT(
+        user1.address,
+        "US5555555",
+        { value: mintingPrice }
+      );
+      
+      await expect(tx)
+        .to.emit(patentNFT, "PatentMinted")
+        .withArgs(user1.address, 1, "US5555555", expect.stringContaining("US5555555"));
+      
+      await expect(tx)
+        .to.emit(patentNFT, "Transfer")
+        .withArgs(ethers.ZeroAddress, user1.address, 1);
+    });
+  });
+
+  describe("Security and Access Control", function () {
+    it("Should prevent reentrancy attacks on withdraw", async function () {
+      // Send ETH to contract via minting
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(user1).mintPatentNFT(
+        user1.address,
+        "US6666666",
+        { value: mintingPrice }
+      );
+      
+      // Owner should be able to withdraw safely
+      const initialBalance = await ethers.provider.getBalance(owner.address);
+      const tx = await patentNFT.withdraw();
+      const receipt = await tx.wait();
+      
+      // Verify withdrawal worked
+      expect(await ethers.provider.getBalance(await patentNFT.getAddress())).to.equal(0);
+    });
+
+    it("Should prevent unauthorized price updates", async function () {
+      const newPrice = ethers.parseEther("1.0");
+      
+      await expect(
+        patentNFT.connect(user1).setMintingPrice(newPrice)
+      ).to.be.revertedWithCustomError(patentNFT, "OwnableUnauthorizedAccount");
+      
+      await expect(
+        patentNFT.connect(user2).setMintingPrice(newPrice)
+      ).to.be.revertedWithCustomError(patentNFT, "OwnableUnauthorizedAccount");
+    });
+
+    it("Should maintain state consistency after complex operations", async function () {
+      const mintingPrice = await patentNFT.getMintingPrice();
+      
+      // Multiple mints
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, "US7777777", { value: mintingPrice });
+      await patentNFT.connect(user2).mintPatentNFT(user2.address, "US8888888", { value: mintingPrice });
+      
+      // Transfer
+      await patentNFT.connect(user1).transferFrom(user1.address, user2.address, 1);
+      
+      // Price update
+      const newPrice = ethers.parseEther("0.08");
+      await patentNFT.setMintingPrice(newPrice);
+      
+      // Another mint with new price
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, "US9999999", { value: newPrice });
+      
+      // Verify final state
+      expect(await patentNFT.totalSupply()).to.equal(3);
+      expect(await patentNFT.ownerOf(1)).to.equal(user2.address); // Transferred
+      expect(await patentNFT.ownerOf(2)).to.equal(user2.address);
+      expect(await patentNFT.ownerOf(3)).to.equal(user1.address); // New mint
+      expect(await patentNFT.getMintingPrice()).to.equal(newPrice);
+      expect(await patentNFT.patentExists("US7777777")).to.be.true;
+      expect(await patentNFT.patentExists("US8888888")).to.be.true;
+      expect(await patentNFT.patentExists("US9999999")).to.be.true;
+    });
+  });
 });

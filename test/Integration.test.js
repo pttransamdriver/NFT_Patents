@@ -57,8 +57,9 @@ describe("Integration Tests", function () {
 
   describe("Full Patent NFT Lifecycle", function () {
     it("Should complete full lifecycle: mint → list → buy", async function () {
-      // Step 1: Owner mints patent NFT
-      await patentNFT.mintPatent(user1.address, TEST_PATENT_1, TEST_URI_1);
+      // Step 1: User1 mints patent NFT with payment
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, TEST_PATENT_1, { value: mintingPrice });
       expect(await patentNFT.ownerOf(1)).to.equal(user1.address);
       expect(await patentNFT.patentExists(TEST_PATENT_1)).to.be.true;
       
@@ -92,11 +93,12 @@ describe("Integration Tests", function () {
 
     it("Should prevent duplicate patent minting", async function () {
       // Mint first patent
-      await patentNFT.mintPatent(user1.address, TEST_PATENT_1, TEST_URI_1);
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, TEST_PATENT_1, { value: mintingPrice });
       
       // Try to mint same patent again - should fail
       await expect(
-        patentNFT.mintPatent(user2.address, TEST_PATENT_1, TEST_URI_2)
+        patentNFT.connect(user2).mintPatentNFT(user2.address, TEST_PATENT_1, { value: mintingPrice })
       ).to.be.revertedWith("Patent already minted");
       
       // Verify only one NFT exists
@@ -105,8 +107,9 @@ describe("Integration Tests", function () {
 
     it("Should handle multiple patents and listings", async function () {
       // Mint multiple patents
-      await patentNFT.mintPatent(user1.address, TEST_PATENT_1, TEST_URI_1);
-      await patentNFT.mintPatent(user1.address, TEST_PATENT_2, TEST_URI_2);
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, TEST_PATENT_1, { value: mintingPrice });
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, TEST_PATENT_2, { value: mintingPrice });
       
       // List both NFTs
       await patentNFT.connect(user1).approve(await marketplace.getAddress(), 1);
@@ -185,7 +188,8 @@ describe("Integration Tests", function () {
   describe("Cross-Contract Interactions", function () {
     beforeEach(async function () {
       // Mint and list an NFT for testing
-      await patentNFT.mintPatent(user1.address, TEST_PATENT_1, TEST_URI_1);
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, TEST_PATENT_1, { value: mintingPrice });
       await patentNFT.connect(user1).approve(await marketplace.getAddress(), 1);
       await marketplace.connect(user1).listNFT(await patentNFT.getAddress(), 1, NFT_PRICE);
     });
@@ -297,12 +301,13 @@ describe("Integration Tests", function () {
       ];
       
       // Mint first variation
-      await patentNFT.mintPatent(user1.address, variations[0], TEST_URI_1);
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, variations[0], { value: mintingPrice });
       
       // All other variations should fail
       for (let i = 1; i < variations.length; i++) {
         await expect(
-          patentNFT.mintPatent(user2.address, variations[i], TEST_URI_2)
+          patentNFT.connect(user2).mintPatentNFT(user2.address, variations[i], { value: mintingPrice })
         ).to.be.revertedWith("Patent already minted");
       }
     });
@@ -312,7 +317,8 @@ describe("Integration Tests", function () {
       await marketplace.setPlatformFee(0);
       
       // Mint and list NFT
-      await patentNFT.mintPatent(user1.address, TEST_PATENT_1, TEST_URI_1);
+      const mintingPrice = await patentNFT.getMintingPrice();
+      await patentNFT.connect(user1).mintPatentNFT(user1.address, TEST_PATENT_1, { value: mintingPrice });
       await patentNFT.connect(user1).approve(await marketplace.getAddress(), 1);
       await marketplace.connect(user1).listNFT(await patentNFT.getAddress(), 1, NFT_PRICE);
       

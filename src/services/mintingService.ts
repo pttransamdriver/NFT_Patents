@@ -9,6 +9,7 @@ export interface MintingParams {
   patentNumber: string;
   price: number;
   userAddress: string;
+  patentData?: Patent;
 }
 
 export interface MintingResult {
@@ -42,11 +43,16 @@ export class MintingService extends BaseSingleton {
         imageHash = pdfData.imageHash;
         imageUrl = pdfData.imageUrl;
 
-        // Store IPFS metadata in backend
-        await fetch(`${import.meta.env.VITE_API_BASE_URL}/metadata/${params.patentNumber}/ipfs`, {
+        // Store IPFS metadata in backend with patent data
+        await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pdfHash, imageHash, imageUrl })
+          body: JSON.stringify({ 
+            pdfHash, 
+            imageHash, 
+            imageUrl,
+            patentData: params.patentData
+          })
         });
 
       } catch (pdfError) {

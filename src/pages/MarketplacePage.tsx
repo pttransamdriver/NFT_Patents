@@ -109,12 +109,17 @@ const MarketplacePage: React.FC = () => {
                 // Parse tokenURI to get metadata (this points to backend API)
                 const response = await fetch(tokenURI);
                 const metadata = await response.json();
+                
+                // Extract patent data from attributes
+                const getAttribute = (traitType: string) => 
+                  metadata.attributes?.find((attr: any) => attr.trait_type === traitType)?.value;
+                
                 patentData = {
                   title: metadata.name || `Patent NFT #${tokenId}`,
-                  inventor: 'Unknown',
+                  inventor: getAttribute('Inventor') || 'Unknown',
                   filingDate: BigInt(Math.floor(Date.now() / 1000)),
-                  patentNumber: `PATENT-${tokenId}`,
-                  isVerified: false
+                  patentNumber: getAttribute('Patent Number') || `PATENT-${tokenId}`,
+                  isVerified: true
                 };
               } catch (error) {
                 console.warn(`Could not get patent metadata for token ${tokenId}`, error);

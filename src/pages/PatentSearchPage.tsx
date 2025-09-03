@@ -131,7 +131,8 @@ const PatentSearchPage: React.FC = () => {
       const result = await mintingService.mintPatentNFT({
         patentNumber: patent.patentNumber,
         price: 0.1, // Default price in ETH
-        userAddress: address
+        userAddress: address,
+        patentData: patent
       });
 
       if (result.success) {
