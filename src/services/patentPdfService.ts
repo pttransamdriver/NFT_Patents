@@ -1,8 +1,9 @@
 import { PDFDocument } from 'pdf-lib';
-import { getDocument } from 'pdfjs-dist';
-import { createHelia } from 'helia';
-import { unixfs } from '@helia/unixfs';
-import html2canvas from 'html2canvas';
+// Temporarily disable Helia imports to fix ESM issues
+// import { getDocument } from 'pdfjs-dist';
+// import { createHelia } from 'helia';
+// import { unixfs } from '@helia/unixfs';
+// import html2canvas from 'html2canvas';
 
 /**
  * Service for handling patent PDF processing and IPFS storage
@@ -17,14 +18,19 @@ export class PatentPdfService {
   }
 
   /**
-   * Initialize IPFS connection
+   * Initialize IPFS connection - temporarily disabled for ESM fix
    */
   private async initializeIPFS() {
     try {
-      this.helia = await createHelia();
-      this.fs = unixfs(this.helia);
-    } catch (error) {
-      console.error('Failed to initialize IPFS:', error);
+      // Temporarily disable Helia to fix ESM import issues
+      console.log('📌 IPFS initialization skipped - using Pinata only');
+      this.helia = null;
+      this.fs = null;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn('⚠️ IPFS initialization failed, using Pinata fallback:', errorMessage);
+      this.helia = null;
+      this.fs = null;
     }
   }
 
@@ -92,27 +98,33 @@ export class PatentPdfService {
   }
 
   /**
-   * Store file on IPFS
+   * Store file on IPFS or fallback to Pinata
    * @param file - File to store
    * @param filename - Optional filename
    * @returns IPFS hash
    */
   async storeOnIPFS(file: Blob, filename?: string): Promise<string> {
+    // For development, skip Helia/IPFS and use Pinata directly
+    const skipDirectIPFS = import.meta.env.VITE_SKIP_DIRECT_IPFS === 'true';
+    
+    if (skipDirectIPFS || !this.fs) {
+      console.log('📌 Using Pinata for IPFS storage (skipping direct IPFS)');
+      return this.storeOnPinata(file, filename);
+    }
+    
     try {
-      if (!this.fs) {
-        await this.initializeIPFS();
-      }
-
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
-      const cid = await this.fs.addBytes(uint8Array);
-      return cid.toString();
+      // Temporarily disabled - use Pinata instead
+      throw new Error('Direct IPFS temporarily disabled');
 
-    } catch (error) {
-      console.error('Error storing on IPFS:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Error storing on IPFS:', errorMessage);
       
       // Fallback to Pinata if direct IPFS fails
+      console.log('📌 Falling back to Pinata...');
       return this.storeOnPinata(file, filename);
     }
   }
@@ -193,8 +205,9 @@ export class PatentPdfService {
           throw new Error('Backend PDF processing failed');
         }
         
-      } catch (error) {
-        console.warn('⚠️ Backend PDF processing failed, generating placeholder:', error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn('⚠️ Backend PDF processing failed, generating placeholder:', errorMessage);
         
         // Fallback: generate placeholder PDF via backend
         const response = await fetch(`${apiBaseUrl}/api/pdf/generate-placeholder`, {
@@ -254,7 +267,7 @@ export class PatentPdfService {
       throw new Error('Invalid patent number format');
     }
 
-    const [, country, number] = match;
+    const [, country] = match;
     
     if (country === 'US') {
       // Google Patents PDF URLs (when available)
@@ -309,6 +322,7 @@ export class PatentPdfService {
 
   /**
    * Generate placeholder image when PDF conversion fails
+   * @unused - keeping for potential future use
    */
   private async generatePlaceholderImage(): Promise<Blob> {
     const canvas = document.createElement('canvas');
@@ -344,9 +358,8 @@ export class PatentPdfService {
    * Cleanup IPFS connection
    */
   async dispose() {
-    if (this.helia) {
-      await this.helia.stop();
-    }
+    // Temporarily disabled
+    console.log('📌 IPFS cleanup skipped');
   }
 }
 

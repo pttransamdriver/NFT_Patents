@@ -34,14 +34,27 @@ const PatentSearchPage: React.FC = () => {
     if (!searchQuery.trim()) return;
     
     setIsLoading(true);
+    console.log('🎯 Starting patent search for:', searchQuery);
+    
     try {
       const results = await patentApi.searchPatents({
         query: searchQuery,
         rows: 20
       });
+      console.log('🎉 Search completed, results:', results.length);
       setSearchResults(results);
+      
+      if (results.length === 0) {
+        toast('No patents found for your search query. Try different keywords.', {
+          icon: '🔍'
+        });
+      } else {
+        toast.success(`Found ${results.length} patents!`);
+      }
     } catch (error) {
-      console.error('Search failed:', error);
+      console.error('❌ Search failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Search failed. Please try again.';
+      toast.error(errorMessage);
       setSearchResults([]);
     } finally {
       setIsLoading(false);

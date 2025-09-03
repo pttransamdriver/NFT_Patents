@@ -102,16 +102,26 @@ const MarketplacePage: React.FC = () => {
             try {
               const tokenId = await contract.tokenOfOwnerByIndex(account, BigInt(i));
               
-              // Get patent details from contract
+              // Get patent details from tokenURI since getPatent() doesn't exist
               let patentData;
               try {
-                patentData = await contract.getPatent(tokenId);
+                const tokenURI = await contract.tokenURI(tokenId);
+                // Parse tokenURI to get metadata (this points to backend API)
+                const response = await fetch(tokenURI);
+                const metadata = await response.json();
+                patentData = {
+                  title: metadata.name || `Patent NFT #${tokenId}`,
+                  inventor: 'Unknown',
+                  filingDate: BigInt(Math.floor(Date.now() / 1000)),
+                  patentNumber: `PATENT-${tokenId}`,
+                  isVerified: false
+                };
               } catch (error) {
-                console.warn(`Could not get patent details for token ${tokenId}`);
+                console.warn(`Could not get patent metadata for token ${tokenId}`, error);
                 patentData = {
                   title: `Patent NFT #${tokenId}`,
                   inventor: 'Unknown',
-                  filingDate: BigInt(Date.now() / 1000),
+                  filingDate: BigInt(Math.floor(Date.now() / 1000)),
                   patentNumber: `PATENT-${tokenId}`,
                   isVerified: false
                 };
@@ -157,7 +167,7 @@ const MarketplacePage: React.FC = () => {
           const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
           
           // Look for Transfer events TO this account
-          const toAddress = account.toLowerCase().padStart(64, '0');
+          const toAddress = account.toLowerCase().slice(2).padStart(64, '0'); // Remove 0x first, then pad
           const logs = await provider.getLogs({
             fromBlock: 0,
             toBlock: 'latest',

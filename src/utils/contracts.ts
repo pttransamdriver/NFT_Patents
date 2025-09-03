@@ -1,4 +1,4 @@
-import { ethers, BrowserProvider, JsonRpcSigner, Contract } from 'ethers';
+import { ethers, BrowserProvider, JsonRpcSigner, JsonRpcProvider, Contract } from 'ethers';
 import toast from 'react-hot-toast';
 import { PATENT_NFT_ABI } from './contractABIs';
 
@@ -14,7 +14,7 @@ const getContractAddresses = () => {
 };
 
 export const getPatentNFTContract = (
-  providerOrSigner: BrowserProvider | JsonRpcSigner
+  providerOrSigner: BrowserProvider | JsonRpcSigner | JsonRpcProvider
 ): Contract => {
   const addresses = getContractAddresses();
 
@@ -122,12 +122,24 @@ export const getMintingPrice = async (provider: BrowserProvider): Promise<string
   }
 };
 
-export const checkPatentExists = async (provider: BrowserProvider, patentNumber: string): Promise<boolean> => {
+export const checkPatentExists = async (provider: BrowserProvider | JsonRpcProvider, patentNumber: string): Promise<boolean> => {
   try {
     const contract = getPatentNFTContract(provider);
     return await contract.patentExists(patentNumber);
   } catch (error) {
+    console.warn(`Failed to check patent existence for ${patentNumber}:`, error);
     return false;
+  }
+};
+
+// Create a read-only provider for contract state queries
+export const createReadOnlyProvider = (): JsonRpcProvider | null => {
+  try {
+    const rpcUrl = import.meta.env.VITE_RPC_URL || 'http://127.0.0.1:8545';
+    return new JsonRpcProvider(rpcUrl);
+  } catch (error) {
+    console.warn('Failed to create read-only provider:', error);
+    return null;
   }
 };
 

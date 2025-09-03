@@ -36,7 +36,14 @@ export async function deployPatentNFT(networkName = "localhost", options = {}) {
     
     console.log("📄 Deploying ERC721 Patent NFT contract...");
     
-    const patentNFT = await PatentNFTFactory.deploy();
+    // Constructor arguments for PatentNFT
+    const royaltyReceiver = wallet.address; // Deploy with deployer as royalty receiver
+    const royaltyFeeNumerator = 500; // 5% royalty fee (500 basis points)
+    
+    console.log(`   👑 Royalty Receiver: ${royaltyReceiver}`);
+    console.log(`   💎 Royalty Fee: ${royaltyFeeNumerator / 100}%`);
+    
+    const patentNFT = await PatentNFTFactory.deploy(royaltyReceiver, royaltyFeeNumerator);
     await patentNFT.waitForDeployment();
     
     const address = await patentNFT.getAddress();
@@ -52,25 +59,24 @@ export async function deployPatentNFT(networkName = "localhost", options = {}) {
     const name = await patentNFT.name();
     const symbol = await patentNFT.symbol();
     const owner = await patentNFT.owner();
-    const mintingPrice = await patentNFT.getMintingPrice();
     
     console.log("\n📊 PatentNFT Contract Info:");
     console.log(`   📛 Name: ${name}`);
     console.log(`   🏷️  Symbol: ${symbol}`);
     console.log(`   👤 Owner: ${owner}`);
-    console.log(`   💰 Minting Price: ${ethers.formatEther(mintingPrice)} ETH`);
     
     // Save deployment data
     const deploymentData = {
       address,
       deployer: wallet.address,
-      constructorArgs: [],
+      constructorArgs: [royaltyReceiver, royaltyFeeNumerator],
       deploymentTransaction: deploymentTx,
       contractInfo: {
         name,
         symbol,
         owner,
-        mintingPrice: ethers.formatEther(mintingPrice)
+        royaltyReceiver,
+        royaltyFeeNumerator
       }
     };
     

@@ -66,14 +66,14 @@ export class MintingService extends BaseSingleton {
       // Get contract instance
       const contract = getPatentNFTContract(signer);
       
-      // Convert price to wei
-      const priceInWei = ethers.parseEther(params.price.toString());
+      // Get current minting price from contract
+      const mintingPrice = await contract.getMintingPrice();
       
-      // Call mint function on contract
+      // Call mint function on contract (payable)
       const tx = await contract.mintPatentNFT(
         params.userAddress,
         params.patentNumber,
-        { value: priceInWei }
+        { value: mintingPrice }
       );
       
       // Wait for transaction confirmation

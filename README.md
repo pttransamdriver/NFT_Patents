@@ -102,11 +102,17 @@ cp backend/.env.example backend/.env
 # Terminal 1: Start local blockchain
 npx hardhat node
 
-# Terminal 2: Deploy contracts (recommended)
-npm run deploy:psp localhost
-npm run deploy:search localhost  
-npm run deploy:nft localhost
-npm run deploy:marketplace localhost
+# Terminal 2: Deploy contracts (recommended - individual deployment)
+npm run deploy:psp
+npm run deploy:search
+npm run deploy:nft
+npm run deploy:marketplace
+
+# Alternative: Deploy all at once (modern method)
+npm run deploy
+
+# Alternative: Deploy all at once (legacy method)
+npm run deploy:legacy
 
 # Terminal 3: Start backend API
 cd backend && npm start
@@ -124,6 +130,13 @@ Access locally:
 ---
 
 ## 💾 Smart Contracts
+
+### NFT Marketplace Contract
+- Keep track of NFTs minted to prevent duplicates by using Patent ID in the JSON file
+- List, buy, and sell NFTs
+- 2.5% platform fee on sales
+- Supports ETH, USDC, PSP payments
+- Display user NFTs and marketplace listingss
 
 ### PatentNFT Contract
 
@@ -168,9 +181,10 @@ Access locally:
 
 **Pages:**
 
-* PatentSearchPage
-* MintNFTPage
-* MarketplacePage
+* Home Page: Expresses the vision and key features
+* PatentSearchPage: General Patent Search and AI assisted Patent search like a patent lawyer
+* MintNFTPage: Takes any patent you searched for and mints it into an NFT. One patent = one NFT with no duplicates verified on the blockchain.
+* MarketplacePage: Buy or sell NFTs that others or yourself have minted. 
 
 ---
 
@@ -182,6 +196,18 @@ Access locally:
 * **Patent Metadata**: Title, patent ID, inventors, PDF front page
 * **IPFS Storage**: PDF front pages stored on decentralized IPFS
 * **Flows Supported**: Mint → List → Buy/Offer → Secondary Trade
+
+---
+
+## User Flows:
+1. **Search Patents**: Use the search bar to find patents by keywords, inventors, or patent IDs.
+2. **Mint Patent NFT**: Select a patent from the search results and mint it as
+an NFT. This will also store the first page of the patent PDF on IPFS.
+3. **List NFT for Sale**: After minting, list your Patent NFT on the marketplace with a set price.
+4. **Buy NFT**: Browse the marketplace, select a patent you're interested in, and purchase it with ETH/USDC/PSP.
+5. **Make Offers**: If you find a patent NFT you like but it's not listed for sale, you can make an offer to the owner.
+6. **View Owned NFTs**: Check your wallet to see all the Patent NFTs you own. 
+7. **View Marketplace**: Browse the marketplace to see all the Patent NFTs for sale. 
 
 ---
 
@@ -227,6 +253,18 @@ npm run test:integration
 ---
 
 ## 📚 Developer Guide
+
+### Project Structure
+
+```
+NFT_Patents/
+├── contracts/        # Smart contracts
+├── backend/          # Backend API
+├── src/              # Frontend
+├── test/             # Hardhat tests
+├── scripts/          # Deployment scripts
+└── .env.example      # Environment variables
+```
 
 ### Adding New Patent Sources
 

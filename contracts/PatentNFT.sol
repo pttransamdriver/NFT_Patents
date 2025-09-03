@@ -15,8 +15,16 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
 
     // mapping from normalized patent hash → tokenId
     mapping(bytes32 => uint256) private _patentHashToTokenId;
+    
+    // Minting price in wei (0.05 ETH default)
+    uint256 public mintingPrice = 0.05 ether;
+    
+    // Platform fee percentage (250 = 2.5%)
+    uint256 public platformFeePercentage = 250;
 
     event PatentMinted(address indexed to, uint256 indexed tokenId, string patentNumber, string tokenURI);
+    event MintingPriceUpdated(uint256 oldPrice, uint256 newPrice);
+    event FeeWithdrawn(address indexed to, uint256 amount);
 
     constructor(address royaltyReceiver, uint96 royaltyFeeNumerator)
         ERC721("PatentNFT", "PAT")
@@ -30,7 +38,32 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
     // Minting
     // ------------------------
 
-    /// @notice Mint a new Patent NFT if the patent number is unique.
+    /// @notice Mint a new Patent NFT with payment (public function)
+    /// @param to Receiver of the NFT.
+    /// @param patentNumber Raw patent number string.
+    function mintPatentNFT(address to, string memory patentNumber) external payable nonReentrant returns (uint256) {
+        require(msg.value >= mintingPrice, "Insufficient payment for minting");
+        
+        bytes32 key = _normalizePatentId(patentNumber);
+        require(_patentHashToTokenId[key] == 0, "Patent already minted");
+
+        uint256 tokenId = ++_nextTokenId;
+        _safeMint(to, tokenId);
+        
+        // Generate metadata URI pointing to backend API
+        string memory uri = string(abi.encodePacked(
+            "http://localhost:3001/api/metadata/", 
+            patentNumber
+        ));
+        _setTokenURI(tokenId, uri);
+
+        _patentHashToTokenId[key] = tokenId;
+
+        emit PatentMinted(to, tokenId, patentNumber, uri);
+        return tokenId;
+    }
+    
+    /// @notice Admin-only mint function (for special cases)
     /// @param to Receiver of the NFT.
     /// @param patentNumber Raw patent number string.
     /// @param uri Metadata URI (IPFS JSON).
@@ -60,8 +93,20 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
     }
 
     // ------------------------
-    // Withdraw
+    // Price Management & Withdraw
     // ------------------------
+    
+    /// @notice Get current minting price
+    function getMintingPrice() external view returns (uint256) {
+        return mintingPrice;
+    }
+    
+    /// @notice Update minting price (owner only)
+    function setMintingPrice(uint256 newPrice) external onlyOwner {
+        uint256 oldPrice = mintingPrice;
+        mintingPrice = newPrice;
+        emit MintingPriceUpdated(oldPrice, newPrice);
+    }
 
     /// @notice Withdraw contract ETH balance to owner.
     function withdraw() external onlyOwner nonReentrant {
@@ -69,6 +114,7 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
         require(balance > 0, "No funds to withdraw");
         (bool success, ) = payable(owner()).call{value: balance}("");
         require(success, "Withdraw failed");
+        emit FeeWithdrawn(owner(), balance);
     }
 
     // ------------------------

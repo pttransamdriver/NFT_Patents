@@ -185,10 +185,22 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!window.ethereum || !mounted) return;
       
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        // Add timeout to prevent hanging
+        const accounts = await Promise.race([
+          window.ethereum.request({ method: 'eth_accounts' }),
+          new Promise<string[]>((_, reject) => 
+            setTimeout(() => reject(new Error('MetaMask connection timeout')), 3000)
+          )
+        ]);
+        
         if (accounts.length > 0 && mounted) {
           const browserProvider = new BrowserProvider(window.ethereum);
-          const web3Signer = await browserProvider.getSigner();
+          const web3Signer = await Promise.race([
+            browserProvider.getSigner(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Signer timeout')), 3000)
+            )
+          ]);
           const network = await browserProvider.getNetwork();
           
           if (mounted) {
@@ -197,10 +209,12 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
             setAccount(accounts[0]);
             setChainId(Number(network.chainId));
             setIsConnected(true);
+            console.log('✅ Web3 initialized successfully');
           }
         }
       } catch (error) {
-        console.error("Error initializing Web3:", error);
+        console.warn("Web3 initialization failed (this is OK for read-only operations):", error);
+        // Don't set error state, just leave disconnected for read-only operations
       }
     };
 

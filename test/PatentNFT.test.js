@@ -87,6 +87,92 @@ describe("PatentNFT", function () {
     });
   });
 
+  describe("Payable Patent Minting", function () {
+    it("Should have a default minting price", async function () {
+      const price = await patentNFT.getMintingPrice();
+      expect(price).to.equal(ethers.parseEther("0.05")); // 0.05 ETH default
+    });
+
+    it("Should allow owner to update minting price", async function () {
+      const newPrice = ethers.parseEther("0.1");
+      await patentNFT.setMintingPrice(newPrice);
+      expect(await patentNFT.getMintingPrice()).to.equal(newPrice);
+    });
+
+    it("Should not allow non-owner to update minting price", async function () {
+      const newPrice = ethers.parseEther("0.1");
+      await expect(
+        patentNFT.connect(user1).setMintingPrice(newPrice)
+      ).to.be.revertedWithCustomError(patentNFT, "OwnableUnauthorizedAccount");
+    });
+
+    it("Should allow users to mint patent NFT with payment", async function () {
+      const mintingPrice = await patentNFT.getMintingPrice();
+      
+      const tx = await patentNFT.connect(user1).mintPatentNFT(
+        user1.address, 
+        TEST_PATENT_1,
+        { value: mintingPrice }
+      );
+
+      await expect(tx)
+        .to.emit(patentNFT, "PatentMinted")
+        .withArgs(user1.address, 1, TEST_PATENT_1, expect.any(String));
+
+      expect(await patentNFT.ownerOf(1)).to.equal(user1.address);
+      expect(await patentNFT.totalSupply()).to.equal(1);
+      expect(await patentNFT.patentExists(TEST_PATENT_1)).to.be.true;
+    });
+
+    it("Should reject minting with insufficient payment", async function () {
+      const mintingPrice = await patentNFT.getMintingPrice();
+      const insufficientPayment = mintingPrice - BigInt(1);
+      
+      await expect(
+        patentNFT.connect(user1).mintPatentNFT(
+          user1.address, 
+          TEST_PATENT_1,
+          { value: insufficientPayment }
+        )
+      ).to.be.revertedWith("Insufficient payment for minting");
+    });
+
+    it("Should prevent duplicate minting via payable function", async function () {
+      const mintingPrice = await patentNFT.getMintingPrice();
+      
+      // First mint
+      await patentNFT.connect(user1).mintPatentNFT(
+        user1.address, 
+        TEST_PATENT_1,
+        { value: mintingPrice }
+      );
+      
+      // Second mint should fail
+      await expect(
+        patentNFT.connect(user2).mintPatentNFT(
+          user2.address, 
+          TEST_PATENT_1,
+          { value: mintingPrice }
+        )
+      ).to.be.revertedWith("Patent already minted");
+    });
+
+    it("Should collect payment in contract balance", async function () {
+      const mintingPrice = await patentNFT.getMintingPrice();
+      const contractAddress = await patentNFT.getAddress();
+      const initialBalance = await ethers.provider.getBalance(contractAddress);
+      
+      await patentNFT.connect(user1).mintPatentNFT(
+        user1.address, 
+        TEST_PATENT_1,
+        { value: mintingPrice }
+      );
+      
+      const finalBalance = await ethers.provider.getBalance(contractAddress);
+      expect(finalBalance - initialBalance).to.equal(mintingPrice);
+    });
+  });
+
   describe("Patent Existence Checking", function () {
     beforeEach(async function () {
       await patentNFT.mintPatent(user1.address, TEST_PATENT_1, TEST_URI_1);
