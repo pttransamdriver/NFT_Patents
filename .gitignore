@@ -1,6 +1,9 @@
 # Node modules
 /node_modules
 /backend/node_modules
+/ignition/node_modules
+/ignition
+
 
 # Compilation output
 /dist

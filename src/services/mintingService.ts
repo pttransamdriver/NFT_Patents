@@ -1,4 +1,4 @@
-import { ethers, ContractTransactionResponse } from 'ethers';
+import { ethers, ContractTransactionResponse, JsonRpcProvider } from 'ethers';
 import { getPatentNFTContract } from '../utils/contracts';
 import { patentPdfService } from './patentPdfService';
 import { web3Utils } from '../utils/web3Utils';
@@ -29,6 +29,15 @@ export class MintingService extends BaseSingleton {
         return {
           success: false,
           error: connectionError || 'Please connect MetaMask to mint NFTs.'
+        };
+      }
+
+      // Ensure we're on the correct network
+      const networkResult = await web3Utils.switchToCorrectNetwork();
+      if (!networkResult.success) {
+        return {
+          success: false,
+          error: `Please switch to the correct network: ${networkResult.error || 'Network switch required'}`
         };
       }
 
@@ -72,8 +81,14 @@ export class MintingService extends BaseSingleton {
       // Get contract instance
       const contract = getPatentNFTContract(signer);
       
+      // Debug: Log signer network
+      const signerNetwork = await signer.provider.getNetwork();
+      console.log('Signer network:', signerNetwork);
+      
       // Get current minting price from contract
+      console.log('About to call getMintingPrice...');
       const mintingPrice = await contract.getMintingPrice();
+      console.log('Got minting price from contract:', mintingPrice.toString());
       
       // Call mint function on contract (payable)
       const tx = await contract.mintPatentNFT(
@@ -125,15 +140,46 @@ export class MintingService extends BaseSingleton {
 
   async getMintingPrice(): Promise<number> {
     try {
-      const provider = await web3Utils.createProvider();
-      if (!provider) return 0.1; // Default price
+      // Try MetaMask provider first
+      let provider = await web3Utils.createProvider();
+      
+      // If MetaMask provider fails, try direct JSON-RPC provider
+      if (!provider) {
+        console.log('MetaMask provider not available, using direct RPC...');
+        provider = new JsonRpcProvider(import.meta.env.VITE_RPC_URL);
+      }
+      
+      if (!provider) {
+        console.error('No provider available');
+        return 0.05; // Default price from contract
+      }
+      
+      // Debug: Check network
+      const network = await provider.getNetwork();
+      console.log('Provider network:', network);
+      
       const contract = getPatentNFTContract(provider);
       
+      // Debug: Check contract address
+      const contractAddress = import.meta.env.VITE_PATENT_NFT_ADDRESS;
+      console.log('Contract address:', contractAddress);
+      
+      // Debug: Check if contract exists
+      const code = await provider.getCode(contractAddress);
+      console.log('Contract code exists:', code !== '0x');
+      
       const priceInWei = await contract.getMintingPrice();
+      console.log('Got minting price:', priceInWei.toString());
       return parseFloat(ethers.formatEther(priceInWei));
       
-    } catch (error) {
-      return 0.1; // Default fallback price
+    } catch (error: any) {
+      console.error('getMintingPrice error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        data: error.data
+      });
+      return 0.05; // Default fallback price matching contract
     }
   }
 

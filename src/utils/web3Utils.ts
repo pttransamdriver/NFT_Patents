@@ -93,6 +93,60 @@ export class Web3Utils {
   }
 
   /**
+   * Switch MetaMask to the correct network
+   */
+  async switchToCorrectNetwork(): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!window.ethereum) {
+        return { success: false, error: 'MetaMask not detected' };
+      }
+
+      const targetChainId = import.meta.env.VITE_CHAIN_ID;
+      const chainIdHex = '0x' + parseInt(targetChainId).toString(16);
+      
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: chainIdHex }],
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      if (error.code === 4902) {
+        // Network not added, try to add it
+        return await this.addLocalNetwork();
+      } else {
+        return { success: false, error: error.message };
+      }
+    }
+  }
+
+  /**
+   * Add local Hardhat network to MetaMask
+   */
+  async addLocalNetwork(): Promise<{ success: boolean; error?: string }> {
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0x7A69', // 31337 in hex
+          chainName: 'Hardhat Local',
+          nativeCurrency: {
+            name: 'ETH',
+            symbol: 'ETH',
+            decimals: 18
+          },
+          rpcUrls: ['http://127.0.0.1:8545'],
+          blockExplorerUrls: null
+        }]
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Handle common transaction errors
    */
   handleTransactionError(error: any): string {
