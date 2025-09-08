@@ -282,10 +282,20 @@ NFT_Patents/
 * Add new token support in SearchPayment contract
 * Extend PaymentService in frontend
 
-### Debugging
+### Debugging & Troubleshooting
 
-* Common issues: CORS errors, insufficient funds, API timeouts
-* Use Hardhat scripts + backend logs for troubleshooting
+#### Common Issues & Solutions
+
+**NFT Minting Errors:**
+* **"could not decode result data"** - The app will automatically switch MetaMask to the correct network (Hardhat Local, Chain ID: 31337)
+* **Network switching** - If prompted, allow MetaMask to add/switch to the Hardhat network
+* **Contract connection issues** - Check browser console for detailed network and contract logs
+
+**General Issues:**
+* CORS errors - Ensure backend is running on port 3001
+* Insufficient funds - Use Hardhat test accounts with pre-funded ETH
+* API timeouts - Check SerpApi key configuration and network connectivity
+* Use Hardhat scripts + backend logs for detailed troubleshooting
 
 ---
 
