@@ -5,27 +5,32 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// The name of the contract is NFTMarketplace and "is" ReentrancyGuard and Ownable which come from OpenZeppelin
 contract NFTMarketplace is ReentrancyGuard, Ownable {
+    // Counter for listing IDs
     uint256 private _listingIds;
 
     struct Listing {
-        uint256 listingId;
-        address nftContract;
-        uint256 tokenId;
-        address seller;
-        uint256 price;
-        bool active;
+        uint256 listingId; // Unique ID for each listing
+        address nftContract; // Address of the NFT contract
+        uint256 tokenId; // Token ID of the NFT
+        address seller; // Seller's address
+        uint256 price; // Price in wei
+        bool active; // Listing status
     }
 
+    // Mapping from listing ID to listing details, public so it can be read from frontend
     mapping(uint256 => Listing) public listings;
+    // Mapping from NFT contract and token ID to listing ID. So it takes the contract address and token ID and returns the listing ID
     mapping(address => mapping(uint256 => uint256)) public tokenToListing;
     
-    // Pull payments pattern
+    // Mapping from user address to pending withdrawal amount so it can pull funds from the contract
     mapping(address => uint256) public pendingWithdrawals;
     
     uint256 public platformFeePercent = 250; // 2.5% (250 basis points)
-    address public feeRecipient;
+    address public feeRecipient; // Address to receive platform fees. This is the address of the person who deployed the contract
 
+    // These events are emitted when an NFT is listed. These return the listing ID, the NFT contract address, the token ID, the seller's address, and the price of the NFT
     event NFTListed(
         uint256 indexed listingId,
         address indexed nftContract,
@@ -33,7 +38,8 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
         address seller,
         uint256 price
     );
-
+    
+    // This event is emitted when an NFT is sold. It returns the listing ID, the NFT contract address, the token ID, the seller's address, the buyer's address, and the price of the NFT
     event NFTSold(
         uint256 indexed listingId,
         address indexed nftContract,
@@ -42,21 +48,23 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
         address buyer,
         uint256 price
     );
-
+    // This event is emitted when a listing is cancelled. It returns the listing ID
     event ListingCancelled(uint256 indexed listingId);
-    
+    // This event is emitted when funds are credited to an account. It returns the recipient's address and the amount credited
     event FundsDeposited(address indexed recipient, uint256 amount);
+    // This event is emitted when funds are withdrawn from the contract account. It returns the recipient's address and the amount withdrawn
     event FundsWithdrawn(address indexed recipient, uint256 amount);
-
+    // This event is emitted when the platform fee is updated. It returns the old fee and the new fee
     constructor(address _feeRecipient) Ownable(msg.sender) {
         require(_feeRecipient != address(0), "Fee recipient cannot be zero address");
         feeRecipient = _feeRecipient;
     }
-
+    // This function lists the NFT from the user to the marketplace
     function listNFT(
         address nftContract,
         uint256 tokenId,
         uint256 price
+        // "external" means that this function can only be called from outside the contract. It keeps the function from being called from within the contract which is needed for se
     ) external nonReentrant {
         require(price > 0, "Price must be greater than 0");
         require(IERC721(nftContract).ownerOf(tokenId) == msg.sender, "Not the owner");
