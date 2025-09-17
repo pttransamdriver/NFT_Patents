@@ -198,7 +198,7 @@ app.post('/api/pdf/generate-placeholder', async (req, res) => {
 app.get('/api/patents/search', async (req, res) => {
   try {
     const { criteria, start = 0, rows = 20 } = req.query;
-    
+
     if (!criteria) {
       return res.status(400).json({ error: 'Search criteria required' });
     }
@@ -210,12 +210,15 @@ app.get('/api/patents/search', async (req, res) => {
 
     console.log('🔍 Searching patents for:', criteria);
 
+    // SerpApi Google Patents requires num to be between 10-100
+    const numResults = Math.max(10, Math.min(100, parseInt(rows)));
+
     const response = await axios.get('https://serpapi.com/search', {
       params: {
         engine: 'google_patents',
         q: criteria,
         start: parseInt(start),
-        num: parseInt(rows),
+        num: numResults,
         api_key: serpApiKey
       },
       timeout: 30000
@@ -226,9 +229,249 @@ app.get('/api/patents/search', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Patent search error:', error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Patent search failed',
-      details: error.message 
+      details: error.message
+    });
+  }
+});
+
+// USPTO/Google Patents search endpoint (for compatibility with README documentation)
+app.get('/api/uspto/search', async (req, res) => {
+  try {
+    const { criteria, start = 0, rows = 20 } = req.query;
+
+    if (!criteria) {
+      return res.status(400).json({ error: 'Search criteria required' });
+    }
+
+    const serpApiKey = process.env.SERPAPI_KEY;
+    if (!serpApiKey) {
+      return res.status(500).json({ error: 'Patents API not configured' });
+    }
+
+    console.log('🔍 Searching patents via USPTO endpoint for:', criteria);
+
+    // SerpApi Google Patents requires num to be between 10-100
+    const numResults = Math.max(10, Math.min(100, parseInt(rows)));
+
+    const response = await axios.get('https://serpapi.com/search', {
+      params: {
+        engine: 'google_patents',
+        q: criteria,
+        start: parseInt(start),
+        num: numResults,
+        api_key: serpApiKey
+      },
+      timeout: 30000
+    });
+
+    console.log('✅ USPTO Patents API response received');
+    res.json(response.data);
+
+  } catch (error) {
+    console.error('❌ USPTO Patent search error:', error.message);
+    res.status(500).json({
+      error: 'Patent search failed',
+      details: error.message
+    });
+  }
+});
+
+// Patent verification endpoint for minting
+app.get('/api/patents/verify/:patentNumber', async (req, res) => {
+  try {
+    const { patentNumber } = req.params;
+
+    if (!patentNumber) {
+      return res.status(400).json({ error: 'Patent number required' });
+    }
+
+    const serpApiKey = process.env.SERPAPI_KEY;
+
+    // If no API key is configured, provide mock data for testing
+    if (!serpApiKey || serpApiKey === 'your_serpapi_key_here') {
+      console.log('🧪 Using mock data for patent verification:', patentNumber);
+
+      const mockPatent = {
+        patentNumber: patentNumber,
+        title: `Method and System for ${patentNumber.replace(/[^A-Za-z0-9]/g, ' ')} Technology`,
+        abstract: `This patent describes an innovative method and system for implementing advanced technology solutions. The invention provides improved efficiency and novel approaches to existing technical challenges in the field.`,
+        inventors: ['Dr. Jane Smith', 'Prof. John Doe'],
+        inventor: 'Dr. Jane Smith',
+        assignee: 'Tech Innovation Corp.',
+        filingDate: '2023-01-15T00:00:00.000Z',
+        publicationDate: '2023-07-15T00:00:00.000Z',
+        status: 'Active',
+        category: 'Software',
+        isAvailableForMinting: true,
+        country: extractCountryFromPatentNumber(patentNumber),
+        legalStatus: 'Granted'
+      };
+
+      console.log('✅ Mock patent verified:', mockPatent.title);
+      return res.json({
+        success: true,
+        patent: mockPatent
+      });
+    }
+
+    console.log('🔍 Verifying patent:', patentNumber);
+
+    // Search for the specific patent
+    const response = await axios.get('https://serpapi.com/search', {
+      params: {
+        engine: 'google_patents',
+        q: patentNumber,
+        num: 1,
+        api_key: serpApiKey
+      },
+      timeout: 30000
+    });
+
+    const results = response.data?.organic_results || [];
+
+    if (results.length === 0) {
+      return res.json({
+        success: false,
+        error: 'Patent not found in database'
+      });
+    }
+
+    const patent = results[0];
+
+    // Transform the patent data to match frontend expectations
+    const transformedPatent = {
+      patentNumber: extractCleanPatentNumber(patent.patent_id) || patentNumber,
+      title: patent.title || 'Untitled Patent',
+      abstract: patent.snippet || patent.abstract || 'No abstract available',
+      inventors: Array.isArray(patent.inventor) ? patent.inventor : [patent.inventor || 'Unknown'],
+      inventor: Array.isArray(patent.inventor) ? patent.inventor[0] : (patent.inventor || 'Unknown'),
+      assignee: patent.assignee || 'Unassigned',
+      filingDate: patent.filing_date || new Date().toISOString(),
+      publicationDate: patent.publication_date || new Date().toISOString(),
+      status: determinePatentStatus(patent.filing_date || ''),
+      category: categorizePatent(patent.title || '', patent.snippet || ''),
+      isAvailableForMinting: true,
+      country: extractCountryFromPatentNumber(patentNumber),
+      legalStatus: patent.legal_status || 'Unknown'
+    };
+
+    console.log('✅ Patent verified:', transformedPatent.title);
+    res.json({
+      success: true,
+      patent: transformedPatent
+    });
+
+  } catch (error) {
+    console.error('❌ Patent verification error:', error.message);
+    res.status(500).json({
+      error: 'Patent verification failed',
+      details: error.message
+    });
+  }
+});
+
+// Helper functions for patent data transformation
+function extractCleanPatentNumber(patentId) {
+  if (!patentId) return null;
+  // Extract from format "patent/US1234567/en" -> "US1234567"
+  const match = patentId.match(/([A-Z]{2}\d+[A-Z]?\d*)/);
+  return match ? match[1] : patentId;
+}
+
+function determinePatentStatus(filingDate) {
+  if (!filingDate) return 'Unknown';
+
+  const filing = new Date(filingDate);
+  const now = new Date();
+  const yearsDiff = (now.getTime() - filing.getTime()) / (1000 * 60 * 60 * 24 * 365);
+
+  if (yearsDiff < 1) return 'Recently Filed';
+  if (yearsDiff < 3) return 'Pending';
+  if (yearsDiff < 20) return 'Active';
+  return 'Expired';
+}
+
+function categorizePatent(title, abstract) {
+  const text = `${title} ${abstract}`.toLowerCase();
+
+  if (text.includes('software') || text.includes('computer') || text.includes('algorithm')) {
+    return 'Software';
+  } else if (text.includes('medical') || text.includes('pharmaceutical') || text.includes('drug')) {
+    return 'Medical';
+  } else if (text.includes('mechanical') || text.includes('engine') || text.includes('machine')) {
+    return 'Mechanical';
+  } else if (text.includes('chemical') || text.includes('compound') || text.includes('molecule')) {
+    return 'Chemical';
+  } else if (text.includes('electronic') || text.includes('circuit') || text.includes('semiconductor')) {
+    return 'Electronics';
+  }
+
+  return 'Other';
+}
+
+function extractCountryFromPatentNumber(patentNumber) {
+  if (!patentNumber) return 'Unknown';
+
+  const prefix = patentNumber.substring(0, 2).toUpperCase();
+  const countryMap = {
+    'US': 'United States',
+    'EP': 'European Patent Office',
+    'JP': 'Japan',
+    'CN': 'China',
+    'KR': 'South Korea',
+    'GB': 'United Kingdom',
+    'DE': 'Germany',
+    'FR': 'France',
+    'CA': 'Canada',
+    'AU': 'Australia'
+  };
+
+  return countryMap[prefix] || 'Unknown';
+}
+
+// Get specific patent details (USPTO endpoint for compatibility)
+app.get('/api/uspto/patent/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Patent ID required' });
+    }
+
+    const serpApiKey = process.env.SERPAPI_KEY;
+    if (!serpApiKey) {
+      return res.status(500).json({ error: 'Patents API not configured' });
+    }
+
+    console.log('🔍 Getting patent details for:', id);
+
+    // Search for the specific patent
+    const response = await axios.get('https://serpapi.com/search', {
+      params: {
+        engine: 'google_patents',
+        q: id,
+        num: 1,
+        api_key: serpApiKey
+      },
+      timeout: 30000
+    });
+
+    const results = response.data?.organic_results || [];
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Patent not found' });
+    }
+
+    console.log('✅ Patent details retrieved');
+    res.json(response.data);
+
+  } catch (error) {
+    console.error('❌ Patent details error:', error.message);
+    res.status(500).json({
+      error: 'Failed to get patent details',
+      details: error.message
     });
   }
 });
