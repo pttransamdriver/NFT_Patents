@@ -54,12 +54,37 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
         try {
           const tokenId = await contract.tokenOfOwnerByIndex(account, BigInt(i));
           
-          // Get patent details from contract
+          // Get token URI first
+          let tokenURI = '';
+          try {
+            tokenURI = await contract.tokenURI(tokenId);
+          } catch (error) {
+            console.log(`Could not get tokenURI for token ${tokenId}`);
+          }
+
+          // Get patent details from metadata
           let patentData;
           try {
-            patentData = await contract.getPatent(tokenId);
+            if (tokenURI) {
+              const response = await fetch(tokenURI);
+              const metadata = await response.json();
+
+              // Extract patent data from metadata attributes
+              const getAttribute = (traitType: string) =>
+                metadata.attributes?.find((attr: any) => attr.trait_type === traitType)?.value;
+
+              patentData = {
+                title: metadata.name || `Patent NFT #${tokenId}`,
+                inventor: getAttribute('Inventor') || 'Unknown',
+                filingDate: BigInt(Math.floor(Date.now() / 1000)),
+                patentNumber: getAttribute('Patent Number') || `PATENT-${tokenId}`,
+                isVerified: true
+              };
+            } else {
+              throw new Error('No tokenURI available');
+            }
           } catch (error) {
-            console.log(`Could not get patent details for token ${tokenId}, using defaults`);
+            console.log(`Could not get metadata for token ${tokenId}, using defaults`);
             patentData = {
               title: `Patent NFT #${tokenId}`,
               inventor: 'Unknown',
@@ -67,14 +92,6 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
               patentNumber: `PATENT-${tokenId}`,
               isVerified: false
             };
-          }
-
-          // Get token URI
-          let tokenURI = '';
-          try {
-            tokenURI = await contract.tokenURI(tokenId);
-          } catch (error) {
-            console.log(`Could not get tokenURI for token ${tokenId}`);
           }
 
           // Check if this NFT is listed on the marketplace

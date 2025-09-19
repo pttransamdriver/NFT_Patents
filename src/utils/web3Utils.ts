@@ -102,7 +102,18 @@ export class Web3Utils {
       }
 
       const targetChainId = import.meta.env.VITE_CHAIN_ID;
-      const chainIdHex = '0x' + parseInt(targetChainId).toString(16);
+
+      // Validate chain ID
+      if (!targetChainId) {
+        return { success: false, error: 'VITE_CHAIN_ID not configured in environment' };
+      }
+
+      const chainIdNumber = parseInt(targetChainId);
+      if (isNaN(chainIdNumber)) {
+        return { success: false, error: `Invalid VITE_CHAIN_ID: ${targetChainId}` };
+      }
+
+      const chainIdHex = '0x' + chainIdNumber.toString(16);
       
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
