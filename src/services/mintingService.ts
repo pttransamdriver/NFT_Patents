@@ -52,21 +52,118 @@ export class MintingService extends BaseSingleton {
         imageHash = pdfData.imageHash;
         imageUrl = pdfData.imageUrl;
 
-        // Store IPFS metadata in backend with patent data
+        // Create proper NFT metadata format for backend storage
+        const nftMetadata = {
+          name: params.patentData?.title || `Patent NFT - ${params.patentNumber}`,
+          description: params.patentData?.abstract || `NFT representing patent ${params.patentNumber}`,
+          image: imageUrl,
+          external_url: `https://patents.google.com/patent/${params.patentNumber}`,
+          attributes: [
+            {
+              trait_type: "Patent Number",
+              value: params.patentNumber
+            },
+            {
+              trait_type: "Title",
+              value: params.patentData?.title || "Unknown"
+            },
+            {
+              trait_type: "Inventor",
+              value: params.patentData?.inventor || "Unknown"
+            },
+            {
+              trait_type: "Assignee",
+              value: params.patentData?.assignee || "Unknown"
+            },
+            {
+              trait_type: "Filing Date",
+              value: params.patentData?.filingDate || new Date().toISOString()
+            },
+            {
+              trait_type: "Country",
+              value: params.patentData?.country || "Unknown"
+            },
+            {
+              trait_type: "Status",
+              value: params.patentData?.status || "Active"
+            },
+            {
+              trait_type: "Storage",
+              value: "IPFS"
+            },
+            {
+              trait_type: "Minted",
+              value: new Date().toISOString()
+            }
+          ]
+        };
+
+        // Store complete NFT metadata in backend
         await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            pdfHash, 
-            imageHash, 
-            imageUrl,
-            patentData: params.patentData
-          })
+          body: JSON.stringify(nftMetadata)
         });
 
       } catch (pdfError) {
         // Continue with minting even if PDF processing fails
         imageUrl = `https://via.placeholder.com/400x600.png?text=Patent+${params.patentNumber}`;
+
+        // Still create metadata even if PDF processing failed
+        const fallbackMetadata = {
+          name: params.patentData?.title || `Patent NFT - ${params.patentNumber}`,
+          description: params.patentData?.abstract || `NFT representing patent ${params.patentNumber}`,
+          image: imageUrl,
+          external_url: `https://patents.google.com/patent/${params.patentNumber}`,
+          attributes: [
+            {
+              trait_type: "Patent Number",
+              value: params.patentNumber
+            },
+            {
+              trait_type: "Title",
+              value: params.patentData?.title || "Unknown"
+            },
+            {
+              trait_type: "Inventor",
+              value: params.patentData?.inventor || "Unknown"
+            },
+            {
+              trait_type: "Assignee",
+              value: params.patentData?.assignee || "Unknown"
+            },
+            {
+              trait_type: "Filing Date",
+              value: params.patentData?.filingDate || new Date().toISOString()
+            },
+            {
+              trait_type: "Country",
+              value: params.patentData?.country || "Unknown"
+            },
+            {
+              trait_type: "Status",
+              value: params.patentData?.status || "Active"
+            },
+            {
+              trait_type: "Storage",
+              value: "Placeholder"
+            },
+            {
+              trait_type: "Minted",
+              value: new Date().toISOString()
+            }
+          ]
+        };
+
+        try {
+          await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fallbackMetadata)
+          });
+        } catch (metadataError) {
+          console.warn('Failed to store fallback metadata:', metadataError);
+        }
       }
 
       // Get signer using web3Utils

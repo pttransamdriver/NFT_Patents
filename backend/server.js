@@ -506,26 +506,32 @@ app.get('/api/metadata/:patentNumber', (req, res) => {
       return res.status(404).json({ error: 'Metadata not found' });
     }
     
-    // Extract patent data if available
-    const patentData = metadata.patentData || {};
-    
-    res.json({
-      name: patentData.title || `Patent NFT - ${patentNumber}`,
-      description: patentData.abstract || patentData.description || `Tokenized patent ${patentNumber}`,
-      image: metadata.imageUrl || `https://via.placeholder.com/400x600?text=Patent+${patentNumber}`,
-      external_url: `https://patents.google.com/patent/${patentNumber}`,
-      attributes: [
-        { trait_type: "Patent Number", value: patentNumber },
-        { trait_type: "Title", value: patentData.title || "Unknown" },
-        { trait_type: "Inventor", value: patentData.inventor || patentData.inventors?.[0] || "Unknown" },
-        { trait_type: "Assignee", value: patentData.assignee || "Unknown" },
-        { trait_type: "Filing Date", value: patentData.filingDate || "Unknown" },
-        { trait_type: "Country", value: patentData.country || "Unknown" },
-        { trait_type: "Status", value: patentData.status || patentData.legalStatus || "Unknown" },
-        { trait_type: "Storage", value: "IPFS" },
-        { trait_type: "Minted", value: metadata.timestamp }
-      ]
-    });
+    // Check if metadata is already in NFT format (has attributes) or legacy format (has patentData)
+    if (metadata.attributes) {
+      // Already in NFT format, return as-is
+      res.json(metadata);
+    } else {
+      // Legacy format - extract patent data if available
+      const patentData = metadata.patentData || {};
+
+      res.json({
+        name: patentData.title || `Patent NFT - ${patentNumber}`,
+        description: patentData.abstract || patentData.description || `Tokenized patent ${patentNumber}`,
+        image: metadata.imageUrl || `https://via.placeholder.com/400x600?text=Patent+${patentNumber}`,
+        external_url: `https://patents.google.com/patent/${patentNumber}`,
+        attributes: [
+          { trait_type: "Patent Number", value: patentNumber },
+          { trait_type: "Title", value: patentData.title || "Unknown" },
+          { trait_type: "Inventor", value: patentData.inventor || patentData.inventors?.[0] || "Unknown" },
+          { trait_type: "Assignee", value: patentData.assignee || "Unknown" },
+          { trait_type: "Filing Date", value: patentData.filingDate || "Unknown" },
+          { trait_type: "Country", value: patentData.country || "Unknown" },
+          { trait_type: "Status", value: patentData.status || patentData.legalStatus || "Unknown" },
+          { trait_type: "Storage", value: "IPFS" },
+          { trait_type: "Minted", value: metadata.timestamp }
+        ]
+      });
+    }
     
   } catch (error) {
     console.error('❌ Metadata retrieval error:', error);

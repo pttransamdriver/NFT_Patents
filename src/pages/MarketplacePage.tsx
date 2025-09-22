@@ -106,16 +106,17 @@ const MarketplacePage: React.FC = () => {
               let patentData;
               try {
                 const tokenURI = await contract.tokenURI(tokenId);
+
                 // Parse tokenURI to get metadata (this points to backend API)
                 const response = await fetch(tokenURI);
                 const metadata = await response.json();
-                
+
                 // Extract patent data from attributes
-                const getAttribute = (traitType: string) => 
+                const getAttribute = (traitType: string) =>
                   metadata.attributes?.find((attr: any) => attr.trait_type === traitType)?.value;
-                
+
                 patentData = {
-                  title: metadata.name || `Patent NFT #${tokenId}`,
+                  title: getAttribute('Title') || metadata.name || `Patent NFT #${tokenId}`,
                   inventor: getAttribute('Inventor') || 'Unknown',
                   filingDate: BigInt(Math.floor(Date.now() / 1000)),
                   patentNumber: getAttribute('Patent Number') || `PATENT-${tokenId}`,
@@ -641,18 +642,13 @@ const MarketplacePage: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 mb-8 border-2 border-green-200 dark:border-green-700"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  🎉 Your Patent NFTs ({realNFTs.length})
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Ready to earn! List your NFTs and earn 95% of each sale (5% platform fee)
-                </p>
-              </div>
-              <button className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg">
-                💰 List All NFTs
-              </button>
+            <div className="mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                🎉 Your Patent NFTs ({realNFTs.length})
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Ready to earn! List your NFTs and earn 95% of each sale (5% platform fee)
+              </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
