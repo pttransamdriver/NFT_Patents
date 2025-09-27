@@ -197,11 +197,10 @@ Access locally:
 
 * **Listings**: Real-time NFT sales, pagination (20 per page)
 * **Buy Now**: Purchase directly with ETH/USDC/PSP
-* **Offers**: Make and receive offers on NFTs
 * **Rich Patent Metadata**: Real patent titles, numbers, inventors, assignees, filing dates, and descriptions
 * **IPFS Storage**: PDF front pages stored on decentralized IPFS
 * **Enhanced Display**: Marketplace shows actual patent information instead of generic "Untitled Patent" labels
-* **Flows Supported**: Search → Mint with Rich Data → List → Buy/Offer → Secondary Trade
+* **Flows Supported**: Search → Mint with Rich Data → List → Buy → Secondary Trade
 
 ---
 
@@ -211,9 +210,8 @@ Access locally:
 3. **Enhanced Metadata**: NFTs now include rich metadata with actual patent titles and information instead of generic placeholders.
 4. **List NFT for Sale**: After minting, list your Patent NFT on the marketplace with a set price - now displaying proper patent titles.
 5. **Buy NFT**: Browse the marketplace and see real patent information - titles, inventors, patent numbers, etc.
-6. **Make Offers**: If you find a patent NFT you like but it's not listed for sale, you can make an offer to the owner.
-7. **View Owned NFTs**: Check your wallet to see all the Patent NFTs you own with full patent details.
-8. **View Marketplace**: Browse the marketplace to see all Patent NFTs with their actual patent titles and information. 
+6. **View Owned NFTs**: Check your wallet to see all the Patent NFTs you own with full patent details.
+7. **View Marketplace**: Browse the marketplace to see all Patent NFTs with their actual patent titles and information. 
 
 ---
 
@@ -305,6 +303,23 @@ NFT_Patents/
 * Deploy contracts individually for best results
 * Update frontend `.env` with deployed contract addresses
 * Verify contracts with Hardhat + Etherscan
+
+---
+
+## 🚧 Future Features
+
+### Make Offer System
+A comprehensive offer system is planned for future development:
+
+* **Smart Contract Integration**: Extend NFTMarketplace.sol with offer functionality
+* **Offer Storage**: Store offers on-chain with escrow functionality
+* **Offer Management**: UI for viewing, accepting, declining, and tracking offers
+* **Offer Notifications**: Alert system for new offers and status updates
+* **Bid History**: Track all offers made on each NFT
+* **Auto-expiring Offers**: Time-limited offers with automatic expiration
+* **Counter-offers**: Allow sellers to propose alternative prices
+
+This would enable more flexible price discovery and negotiation between buyers and sellers, similar to traditional auction platforms but with blockchain transparency and security.
 
 ---
 

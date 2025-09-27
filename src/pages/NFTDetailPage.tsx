@@ -17,9 +17,7 @@ const NFTDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { isConnected, connectWallet, account } = useWeb3();
   const [isLiked, setIsLiked] = useState(false);
-  const [showOfferModal, setShowOfferModal] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
-  const [offerAmount, setOfferAmount] = useState('');
   const [nft, setNft] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -164,19 +162,6 @@ const NFTDetailPage: React.FC = () => {
     }
   };
 
-  const handleMakeOffer = async () => {
-    if (!isConnected) {
-      await connectWallet();
-      return;
-    }
-    if (!offerAmount || parseFloat(offerAmount) <= 0) {
-      toast.error('Please enter a valid offer amount');
-      return;
-    }
-    toast.success(`Offer of ${offerAmount} ETH submitted!`);
-    setShowOfferModal(false);
-    setOfferAmount('');
-  };
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -319,13 +304,6 @@ const NFTDetailPage: React.FC = () => {
                     <ShoppingCart className="w-5 h-5 mr-2" />
                     Buy Now for {nft.price} ETH
                   </button>
-                  <button
-                    onClick={() => setShowOfferModal(true)}
-                    className="w-full py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <Tag className="w-5 h-5 mr-2" />
-                    Make Offer
-                  </button>
                 </div>
               )}
 
@@ -439,51 +417,6 @@ const NFTDetailPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Make Offer Modal */}
-        {showOfferModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
-            >
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Make an Offer
-              </h3>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Offer Amount (ETH)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={offerAmount}
-                  onChange={(e) => setOfferAmount(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                Current price: {nft.price} ETH
-              </p>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setShowOfferModal(false)}
-                  className="flex-1 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleMakeOffer}
-                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-                >
-                  Submit Offer
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
       </div>
 
       {/* List NFT Modal */}
