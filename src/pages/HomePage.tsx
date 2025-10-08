@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Shield, Zap, TrendingUp, ArrowRight, FileText } from 'lucide-react';
+import { Search, Shield, Zap, TrendingUp, ArrowRight } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
 
 const HomePage: React.FC = () => {
@@ -206,18 +206,18 @@ const HomePage: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                to="/mint"
+                to="/search"
                 className="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-100 text-blue-600 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105"
               >
-                <FileText className="w-5 h-5 mr-2" />
-                Mint Your First NFT
+                <Search className="w-5 h-5 mr-2" />
+                Search & Mint Patents
               </Link>
               <Link
-                to="/search"
+                to="/marketplace"
                 className="inline-flex items-center px-8 py-4 border-2 border-white hover:bg-white hover:text-blue-600 text-white rounded-xl font-semibold transition-all duration-200 transform hover:scale-105"
               >
-                <Search className="w-5 h-5 mr-2" />
-                Explore Patents
+                <TrendingUp className="w-5 h-5 mr-2" />
+                Browse Marketplace
               </Link>
             </div>
           </motion.div>

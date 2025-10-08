@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Copy, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
 import MyNFTsModal from '../components/modals/MyNFTsModal';
 import ListNFTModal from '../components/modals/ListNFTModal';
@@ -12,7 +11,6 @@ import { marketplaceService, type MarketplaceListing, type PaginatedListings } f
 import type { SearchFilters } from '../types';
 
 const MarketplacePage: React.FC = () => {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -30,9 +28,6 @@ const MarketplacePage: React.FC = () => {
   const [showListingModal, setShowListingModal] = useState(false);
   const [selectedNFT, setSelectedNFT] = useState<any>(null);
   const [listingPrice, setListingPrice] = useState('');
-  const [showExternalListingModal, setShowExternalListingModal] = useState(false);
-  const [externalNFTAddress, setExternalNFTAddress] = useState('');
-  const [externalTokenId, setExternalTokenId] = useState('');
   const [showMyNFTsModal, setShowMyNFTsModal] = useState(false);
   const [nftRefreshTrigger, setNftRefreshTrigger] = useState(0);
   const { signer, account, isConnected, connectWallet } = useWeb3();
@@ -209,7 +204,7 @@ const MarketplacePage: React.FC = () => {
           }
           
           // For each contract, verify current ownership and get metadata
-          for (const [contractAddress, tokenIds] of contractTokens.entries()) {
+          for (const [contractAddress, tokenIds] of Array.from(contractTokens.entries())) {
             try {
               // Create a generic ERC721 contract instance
               const genericNFTContract = new ethers.Contract(contractAddress, [
@@ -723,20 +718,15 @@ const MarketplacePage: React.FC = () => {
                 Connect Wallet to Start
               </button>
             ) : (
-              <div className="flex gap-3 justify-center">
-                <button 
-                  onClick={() => navigate('/mint')}
-                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-blue-700 transition-all duration-200"
-                >
-                  🎨 Mint Your First NFT
-                </button>
-                <button 
-                  onClick={() => setShowExternalListingModal(true)}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-200"
-                >
-                  📋 List Your NFT Here
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setNftRefreshTrigger(prev => prev + 1);
+                  setShowMyNFTsModal(true);
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-200"
+              >
+                📋 List Your NFT Here
+              </button>
             )}
           </motion.div>
         )}
@@ -937,102 +927,6 @@ const MarketplacePage: React.FC = () => {
           />
         )}
 
-        {/* External NFT Listing Modal */}
-        {showExternalListingModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6"
-            >
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                📋 List Your External NFT
-              </h3>
-              
-              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <h4 className="font-medium text-blue-900 dark:text-blue-200 mb-2">Instructions:</h4>
-                <ol className="text-sm text-blue-800 dark:text-blue-300 space-y-1 list-decimal list-inside">
-                  <li>Transfer your NFT to our marketplace contract</li>
-                  <li>Enter the NFT contract address and token ID below</li>
-                  <li>Your NFT will appear in the marketplace once verified</li>
-                </ol>
-              </div>
-
-              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Marketplace Contract:</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 font-mono break-all flex-1">
-                    {import.meta.env.VITE_MARKETPLACE_ADDRESS || 'Contract not deployed'}
-                  </p>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(import.meta.env.VITE_MARKETPLACE_ADDRESS || '');
-                      alert('Contract address copied!');
-                    }}
-                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                    title="Copy address"
-                  >
-                    <Copy className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  NFT Contract Address
-                </label>
-                <input
-                  type="text"
-                  placeholder="0x..."
-                  value={externalNFTAddress}
-                  onChange={(e) => setExternalNFTAddress(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Token ID
-                </label>
-                <input
-                  type="text"
-                  placeholder="1"
-                  value={externalTokenId}
-                  onChange={(e) => setExternalTokenId(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => {
-                    setShowExternalListingModal(false);
-                    setExternalNFTAddress('');
-                    setExternalTokenId('');
-                  }}
-                  className="flex-1 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (!externalNFTAddress || !externalTokenId) {
-                      alert('Please enter both contract address and token ID');
-                      return;
-                    }
-                    alert('NFT listing submitted! It will appear once the transfer is verified.');
-                    setShowExternalListingModal(false);
-                    setExternalNFTAddress('');
-                    setExternalTokenId('');
-                  }}
-                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-                >
-                  Submit Listing
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
 
         {/* My NFTs Modal */}
         <MyNFTsModal

@@ -9,7 +9,6 @@ import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
 import MarketplacePage from './pages/MarketplacePage';
 import PatentSearchPage from './pages/PatentSearchPage';
-import MintNFTPage from './pages/MintNFTPage';
 import NFTDetailPage from './pages/NFTDetailPage';
 import UserProfilePage from './pages/UserProfilePage';
 import CreateListingPage from './pages/CreateListingPage';
@@ -27,7 +26,6 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/marketplace" element={<MarketplacePage />} />
                   <Route path="/search" element={<PatentSearchPage />} />
-                  <Route path="/mint" element={<MintNFTPage />} />
                   <Route path="/nft/:id" element={<NFTDetailPage />} />
                   <Route path="/profile/:address" element={<UserProfilePage />} />
                   <Route path="/create-listing/:id" element={<CreateListingPage />} />

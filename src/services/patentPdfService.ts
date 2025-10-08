@@ -101,32 +101,23 @@ export class PatentPdfService {
    * Store file on IPFS or fallback to Pinata
    * @param file - File to store
    * @param filename - Optional filename
-   * @returns IPFS hash
+   * @returns IPFS hash or placeholder for local testing
    */
   async storeOnIPFS(file: Blob, filename?: string): Promise<string> {
-    // For development, skip Helia/IPFS and use Pinata directly
-    const skipDirectIPFS = import.meta.env.VITE_SKIP_DIRECT_IPFS === 'true';
-    
-    if (skipDirectIPFS || !this.fs) {
-      console.log('📌 Using Pinata for IPFS storage (skipping direct IPFS)');
-      return this.storeOnPinata(file, filename);
-    }
-    
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      // Temporarily disabled - use Pinata instead
-      throw new Error('Direct IPFS temporarily disabled');
+    // Check if Pinata credentials are configured
+    const pinataApiKey = import.meta.env.VITE_PINATA_API_KEY;
+    const pinataSecretKey = import.meta.env.VITE_PINATA_SECRET_KEY;
 
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('❌ Error storing on IPFS:', errorMessage);
-      
-      // Fallback to Pinata if direct IPFS fails
-      console.log('📌 Falling back to Pinata...');
+    // If Pinata is configured, use it
+    if (pinataApiKey && pinataSecretKey && pinataApiKey !== 'your_pinata_api_key_here') {
+      console.log('📌 Using Pinata for IPFS storage');
       return this.storeOnPinata(file, filename);
     }
+
+    // For local testing without IPFS, return a placeholder hash
+    console.log('📌 Local testing mode - using placeholder IPFS hash');
+    const placeholderHash = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    return placeholderHash;
   }
 
   /**

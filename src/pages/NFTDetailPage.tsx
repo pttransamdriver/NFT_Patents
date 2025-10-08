@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ethers } from 'ethers';
-import { 
-  FileText, User, Building, Calendar, TrendingUp, Heart, 
-  Share2, ShoppingCart, Tag, Clock, ExternalLink, Download,
-  Eye, Activity, DollarSign
+import {
+  FileText, User, Building, Calendar, Heart,
+  Share2, ShoppingCart, Tag, ExternalLink,
+  Activity, DollarSign
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useWeb3 } from '../contexts/Web3Context';
@@ -31,18 +31,18 @@ const NFTDetailPage: React.FC = () => {
       id: listing.listingId,
       patentNumber: listing.patentNumber || `Unknown-${listing.tokenId}`,
       title: listing.title || `Patent NFT #${listing.tokenId}`,
-      description: `Patent NFT available for purchase at ${listing.priceInEth} ETH`,
-      inventor: listing.inventor || 'Unknown',
-      assignee: 'Unknown',
-      filingDate: new Date().toISOString(),
-      category: 'Technology', // Default category
-      status: 'active' as const,
+      description: listing.description || `Patent NFT for ${listing.patentNumber || listing.tokenId}`,
+      inventor: listing.inventor || 'Information not available',
+      assignee: listing.assignee || 'Information not available',
+      filingDate: listing.filingDate || null,
+      category: listing.category || 'Patent',
+      status: listing.active ? 'active' : 'sold' as const,
       price: parseFloat(listing.priceInEth),
       priceChange: 0,
       owner: listing.seller,
       creator: listing.seller,
-      mintDate: new Date().toISOString(),
-      isListed: true,
+      mintDate: listing.mintDate || null,
+      isListed: listing.active,
       views: 0,
       likes: 0,
       imageUrl: listing.imageUrl,
@@ -101,13 +101,8 @@ const NFTDetailPage: React.FC = () => {
   }
 
   const isOwner = account === nft.seller;
-  const priceHistory = [
-    { date: '2024-01-15', price: 10.2 },
-    { date: '2024-01-10', price: 8.7 },
-    { date: '2024-01-05', price: 12.5 },
-    { date: '2023-12-20', price: 11.3 },
-    { date: '2023-12-15', price: 9.8 },
-  ];
+  // Price history would come from blockchain events - currently not implemented
+  const priceHistory: Array<{ date: string; price: number }> = [];
 
   const handleBuyNow = async () => {
     if (!isConnected) {
@@ -206,7 +201,7 @@ const NFTDetailPage: React.FC = () => {
                     <button
                       onClick={handleLike}
                       className={`p-2 rounded-lg transition-colors duration-200 ${
-                        isLiked 
+                        isLiked
                           ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
@@ -219,13 +214,6 @@ const NFTDetailPage: React.FC = () => {
                     >
                       <Share2 className="w-5 h-5" />
                     </button>
-                    <button className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
-                      <Download className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                    <Eye className="w-4 h-4" />
-                    <span>{nft.views.toLocaleString()} views</span>
                   </div>
                 </div>
               </div>
@@ -265,32 +253,16 @@ const NFTDetailPage: React.FC = () => {
 
             {/* Price and Stats */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <div className="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Price</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {nft.price} ETH
-                  </p>
-                  <div className="flex items-center text-sm mt-1">
-                    <TrendingUp className={`w-4 h-4 mr-1 ${nft.priceChange >= 0 ? 'text-green-500' : 'text-red-500'}`} />
-                    <span className={nft.priceChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                      {nft.priceChange >= 0 ? '+' : ''}{nft.priceChange}%
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400 ml-1">24h</span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Engagement</p>
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm">
-                      <Eye className="w-4 h-4 mr-2 text-gray-400" />
-                      <span className="text-gray-900 dark:text-white">{nft.views.toLocaleString()} views</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Heart className="w-4 h-4 mr-2 text-gray-400" />
-                      <span className="text-gray-900 dark:text-white">{nft.likes} likes</span>
-                    </div>
-                  </div>
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Price</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {nft.price} ETH
+                </p>
+                <div className="flex items-center text-sm mt-2">
+                  <Tag className="w-4 h-4 mr-1 text-blue-500" />
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Listed on marketplace
+                  </span>
                 </div>
               </div>
 
@@ -352,7 +324,7 @@ const NFTDetailPage: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Filing Date</p>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {format(new Date(nft.filingDate), 'MMMM dd, yyyy')}
+                      {nft.filingDate ? format(new Date(nft.filingDate), 'MMMM dd, yyyy') : 'Not available'}
                     </p>
                   </div>
                 </div>
@@ -395,24 +367,36 @@ const NFTDetailPage: React.FC = () => {
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Price History
               </h4>
-              <div className="space-y-3">
-                {priceHistory.map((entry, index) => (
-                  <div key={index} className="flex items-center justify-between py-2 px-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="flex items-center">
-                      <Activity className="w-4 h-4 text-gray-400 mr-3" />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {format(new Date(entry.date), 'MMM dd, yyyy')}
-                      </span>
+              {priceHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {priceHistory.map((entry, index) => (
+                    <div key={index} className="flex items-center justify-between py-2 px-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <div className="flex items-center">
+                        <Activity className="w-4 h-4 text-gray-400 mr-3" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {format(new Date(entry.date), 'MMM dd, yyyy')}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1" />
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {entry.price} ETH
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center">
-                      <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1" />
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {entry.price} ETH
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Activity className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No price history available yet
+                  </p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                    Price history will be recorded as this NFT is traded
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>

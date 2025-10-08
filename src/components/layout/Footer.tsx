@@ -64,11 +64,6 @@ const Footer: React.FC = () => {
                   Search Patents
                 </Link>
               </li>
-              <li>
-                <Link to="/mint" className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
-                  Mint NFT
-                </Link>
-              </li>
             </ul>
           </div>
 

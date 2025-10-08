@@ -126,15 +126,56 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
     setShowMetaMaskGuide(true);
   };
 
-  const addAllNFTsToMetaMask = async () => {
+  const cancelAllListings = async () => {
     if (!account) return;
+
+    // Get only the listed NFTs
+    const listedNFTs = nfts.filter(nft => nft.isListed);
+
+    if (listedNFTs.length === 0) {
+      toast.error('No active listings to cancel');
+      return;
+    }
 
     setIsAddingToMetaMask(true);
     try {
-      await mintingService.addAllUserNFTsToMetaMask(account);
-      toast.success('All NFTs added to MetaMask!');
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const nft of listedNFTs) {
+        try {
+          // Get the listing ID for this NFT
+          const result = await marketplaceService.getMarketplaceListings(1, 1000);
+          const listing = result.listings.find(
+            l => l.tokenId === nft.tokenId && l.active
+          );
+
+          if (listing) {
+            const cancelResult = await marketplaceService.cancelListing(listing.listingId);
+            if (cancelResult.success) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to cancel listing for NFT ${nft.tokenId}:`, error);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully cancelled ${successCount} listing${successCount > 1 ? 's' : ''}!`);
+        // Refresh NFT list
+        await loadUserNFTs();
+      }
+
+      if (failCount > 0) {
+        toast.error(`Failed to cancel ${failCount} listing${failCount > 1 ? 's' : ''}`);
+      }
     } catch (error) {
-      toast.error('Failed to add NFTs to MetaMask');
+      console.error('Error cancelling listings:', error);
+      toast.error('Failed to cancel listings');
     } finally {
       setIsAddingToMetaMask(false);
     }
@@ -216,21 +257,21 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
                     <span>Refresh</span>
                   </button>
                 </div>
-                {nfts.length > 0 && (
+                {nfts.filter(nft => nft.isListed).length > 0 && (
                   <button
-                    onClick={addAllNFTsToMetaMask}
+                    onClick={cancelAllListings}
                     disabled={isAddingToMetaMask}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm rounded-lg font-medium transition-colors flex items-center space-x-2"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white text-sm rounded-lg font-medium transition-colors flex items-center space-x-2"
                   >
                     {isAddingToMetaMask ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Adding to MetaMask...</span>
+                        <span>Cancelling Listings...</span>
                       </>
                     ) : (
                       <>
-                        <Download className="w-4 h-4" />
-                        <span>Add All to MetaMask</span>
+                        <X className="w-4 h-4" />
+                        <span>Cancel All Listings ({nfts.filter(nft => nft.isListed).length})</span>
                       </>
                     )}
                   </button>

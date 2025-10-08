@@ -15,7 +15,6 @@ const Header: React.FC = () => {
     { name: 'Home', href: '/' },
     { name: 'Marketplace', href: '/marketplace' },
     { name: 'Search Patents', href: '/search' },
-    { name: 'Mint NFT', href: '/mint' },
   ];
 
   const isActiveRoute = (href: string) => {

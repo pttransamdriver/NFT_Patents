@@ -11,12 +11,32 @@ This project integrates the **Google Patents database** with blockchain smart co
 
 ⚠️ **Disclaimer:** These NFTs are **representations of publicly available patents** and **do not grant legal ownership** of the underlying intellectual property. This marketplace is a **technical proof-of-concept** showcasing how patents *could* be managed on-chain in the future.
 
+## 🎓 Proof-of-Concept Status
+
+This project is a **demonstration/portfolio project** built to showcase Web3 development skills. It includes:
+
+✅ **Fully Functional**:
+- Smart contract deployment (Hardhat local & Sepolia testnet)
+- NFT minting with patent metadata
+- IPFS integration (Pinata)
+- Marketplace listing and buying
+- Multi-token payment support (ETH, USDC, PSP)
+- Rich metadata display from Google Patents API
+
+🚧 **Proof-of-Concept / Optional Features**:
+- **AI Search**: Currently uses enhanced rule-based keyword expansion. Can be upgraded to real AI (OpenAI/Gemini) by adding API keys - see [AI Search Configuration](#-optional-ai-powered-search)
+- **Make Offer System**: UI ready, smart contract implementation pending
+- **Price History**: Framework in place, blockchain event tracking not yet implemented
+
+This architecture demonstrates **graceful degradation** - the app works great with basic features and can be enhanced with optional paid services (AI APIs) based on user preference.
+
 👉 For a detailed architectural and code-level walkthrough, see [TEACHME.md](./TEACHME.md).
 
 ---
 
 ## 📋 Table of Contents
 
+* [🎓 Proof-of-Concept Status](#-proof-of-concept-status)
 * [🏗️ Architecture Overview](#-architecture-overview)
 * [🚀 Quick Start](#-quick-start)
 * [💾 Smart Contracts](#-smart-contracts)
@@ -24,6 +44,7 @@ This project integrates the **Google Patents database** with blockchain smart co
 * [⚛️ Frontend Application](#-frontend-application)
 * [🏪 Marketplace & IPFS Integration](#-marketplace--ipfs-integration)
 * [🔧 Configuration](#-configuration)
+  * [🤖 Optional: AI-Powered Search](#-optional-ai-powered-search)
 * [🧪 Testing](#-testing)
 * [📡 API Integration](#-api-integration)
 * [🔒 Security Features](#-security-features)
@@ -220,6 +241,36 @@ Access locally:
 * **Frontend**: `.env` stores contract addresses, API endpoints, SerpApi key
 * **Backend**: `.env` stores server port, SerpApi key, optional DB config
 * **Hardhat**: Configurable for localhost + Sepolia testnet
+
+### 🤖 Optional: AI-Powered Search
+
+The project includes advanced AI search capabilities with automatic fallback:
+
+**Current Behavior (Default)**:
+- Uses enhanced rule-based keyword expansion
+- Free, fast, no external dependencies
+- Works well for patent searches
+
+**To Enable Real AI Search**:
+
+1. **Option A: Google Gemini (Free)**
+   - Get free API key: https://makersuite.google.com/app/apikey
+   - Add to `.env`:
+     ```bash
+     VITE_GEMINI_API_KEY=your_key_here
+     ```
+
+2. **Option B: OpenAI GPT-3.5 (Paid)**
+   - Get API key: https://platform.openai.com/api-keys
+   - Costs ~$0.002 per search
+   - Add to `.env`:
+     ```bash
+     VITE_OPENAI_API_KEY=sk-proj-your_key_here
+     ```
+
+3. **Restart frontend**: `npm run dev`
+
+The system automatically detects API keys and switches from rule-based to AI-powered search. This demonstrates **graceful degradation** - users can choose between free basic search or enhanced AI search based on their needs.
 
 ---
 
