@@ -11,16 +11,13 @@ import "@openzeppelin/contracts/token/common/ERC2981.sol";
 /// @notice ERC721 NFT collection where each patent number can only be minted once.
 ///         Metadata URIs are stored on-chain. Royalties supported via ERC2981.
 contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
-    uint256 private _nextTokenId;
+    // Bit-packed state variables - all fit in one 32-byte storage slot
+    uint96 private _nextTokenId;                // 12 bytes - supports 79+ octillion tokens
+    uint96 public mintingPrice = 0.05 ether;    // 12 bytes - supports up to 79 billion ETH
+    uint64 public platformFeePercentage = 250;  // 8 bytes - (250 = 2.5%)
 
     // mapping from normalized patent hash → tokenId
     mapping(bytes32 => uint256) private _patentHashToTokenId;
-    
-    // Minting price in wei (0.05 ETH default)
-    uint256 public mintingPrice = 0.05 ether;
-    
-    // Platform fee percentage (250 = 2.5%)
-    uint256 public platformFeePercentage = 250;
 
     event PatentMinted(address indexed to, uint256 indexed tokenId, string patentNumber, string tokenURI);
     event MintingPriceUpdated(uint256 oldPrice, uint256 newPrice);
@@ -102,8 +99,8 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
     }
     
     /// @notice Update minting price (owner only)
-    function setMintingPrice(uint256 newPrice) external onlyOwner {
-        uint256 oldPrice = mintingPrice;
+    function setMintingPrice(uint96 newPrice) external onlyOwner {
+        uint96 oldPrice = mintingPrice;
         mintingPrice = newPrice;
         emit MintingPriceUpdated(oldPrice, newPrice);
     }

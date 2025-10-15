@@ -31,10 +31,11 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
     IERC20 public pspToken; // PSP token contract
     IERC20 public usdcToken; // USDC token contract
 
-    // Search prices for different payment methods (all equivalent to $5 USD)
-    uint256 public searchPriceInETH; // Price in ETH (wei) for 1 search
-    uint256 public searchPriceInUSDC; // Price in USDC (6 decimals) for 1 search
-    uint256 public searchPriceInPSP; // Price in PSP tokens for 1 search (500 PSP = $5)
+    // Bit-packed search prices - all fit in one 32-byte storage slot
+    // All equivalent to $5 USD
+    uint88 public searchPriceInETH;   // 11 bytes - Price in ETH (wei) for 1 search
+    uint88 public searchPriceInUSDC;  // 11 bytes - Price in USDC (6 decimals) for 1 search
+    uint80 public searchPriceInPSP;   // 10 bytes - Price in PSP tokens for 1 search (500 PSP = $5)
 
     uint256 public constant SEARCHES_PER_PAYMENT = 1;
 
@@ -53,9 +54,9 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
     constructor(
         address _pspToken,
         address _usdcToken,
-        uint256 _initialPriceInETH,
-        uint256 _initialPriceInUSDC,
-        uint256 _initialPriceInPSP
+        uint88 _initialPriceInETH,
+        uint88 _initialPriceInUSDC,
+        uint80 _initialPriceInPSP
     ) Ownable(msg.sender) {
         require(_pspToken != address(0), "PSP token address cannot be zero");
         require(_usdcToken != address(0), "USDC token address cannot be zero");
@@ -234,13 +235,13 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
 
         if (token == PaymentToken.ETH) {
             oldPrice = searchPriceInETH;
-            searchPriceInETH = _newPrice;
+            searchPriceInETH = uint88(_newPrice);
         } else if (token == PaymentToken.USDC) {
             oldPrice = searchPriceInUSDC;
-            searchPriceInUSDC = _newPrice;
+            searchPriceInUSDC = uint88(_newPrice);
         } else if (token == PaymentToken.PSP) {
             oldPrice = searchPriceInPSP;
-            searchPriceInPSP = _newPrice;
+            searchPriceInPSP = uint80(_newPrice);
         } else {
             revert("Invalid payment token");
         }
@@ -252,7 +253,7 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
      * @dev Legacy function - update PSP price for backward compatibility
      * @param _newPrice New price in PSP tokens
      */
-    function updateSearchPriceLegacy(uint256 _newPrice) external onlyOwner {
+    function updateSearchPriceLegacy(uint80 _newPrice) external onlyOwner {
         require(_newPrice > 0, "Price must be greater than 0");
 
         uint256 oldPrice = searchPriceInPSP;

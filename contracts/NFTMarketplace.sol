@@ -7,27 +7,28 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 // The name of the contract is NFTMarketplace and "is" ReentrancyGuard and Ownable which come from OpenZeppelin
 contract NFTMarketplace is ReentrancyGuard, Ownable {
-    // Counter for listing IDs
-    uint256 private _listingIds;
+    // Bit-packed state variables - fit in one 32-byte storage slot
+    uint128 private _listingIds;            // 16 bytes - supports 340 undecillion listings
+    uint128 public platformFeePercent = 250; // 16 bytes - 2.5% (250 basis points)
 
+    // Bit-packed struct - optimized from 5 slots to 3 slots (40% reduction)
     struct Listing {
-        uint256 listingId; // Unique ID for each listing
-        address nftContract; // Address of the NFT contract
-        uint256 tokenId; // Token ID of the NFT
-        address seller; // Seller's address
-        uint256 price; // Price in wei
-        bool active; // Listing status
+        uint96 listingId;       // 12 bytes - supports 79+ octillion listings
+        address nftContract;    // 20 bytes - NFT contract address
+        uint96 tokenId;         // 12 bytes - supports 79+ octillion token IDs
+        address seller;         // 20 bytes - seller's address
+        uint128 price;          // 16 bytes - supports up to 340 undecillion wei
+        bool active;            // 1 byte - listing status
     }
 
     // Mapping from listing ID to listing details, public so it can be read from frontend
     mapping(uint256 => Listing) public listings;
     // Mapping from NFT contract and token ID to listing ID. So it takes the contract address and token ID and returns the listing ID
     mapping(address => mapping(uint256 => uint256)) public tokenToListing;
-    
+
     // Mapping from user address to pending withdrawal amount so it can pull funds from the contract
     mapping(address => uint256) public pendingWithdrawals;
-    
-    uint256 public platformFeePercent = 250; // 2.5% (250 basis points)
+
     address public feeRecipient; // Address to receive platform fees. This is the address of the person who deployed the contract
 
     // These events are emitted when an NFT is listed. These return the listing ID, the NFT contract address, the token ID, the seller's address, and the price of the NFT
@@ -73,14 +74,14 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
                 "Contract not approved");
 
         _listingIds++;
-        uint256 listingId = _listingIds;
+        uint128 listingId = _listingIds;
 
         listings[listingId] = Listing({
-            listingId: listingId,
+            listingId: uint96(listingId),
             nftContract: nftContract,
-            tokenId: tokenId,
+            tokenId: uint96(tokenId),
             seller: msg.sender,
-            price: price,
+            price: uint128(price),
             active: true
         });
 
@@ -150,7 +151,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
         require(listing.active, "Listing not active");
         require(newPrice > 0, "Price must be greater than 0");
 
-        listing.price = newPrice;
+        listing.price = uint128(newPrice);
     }
 
     function getActiveListing(address nftContract, uint256 tokenId) 
@@ -189,7 +190,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
         return activeListings;
     }
 
-    function setPlatformFee(uint256 _platformFeePercent) external onlyOwner {
+    function setPlatformFee(uint128 _platformFeePercent) external onlyOwner {
         require(_platformFeePercent <= 1000, "Fee cannot exceed 10%");
         platformFeePercent = _platformFeePercent;
     }
