@@ -2,10 +2,38 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const { PDFDocument } = require('pdf-lib');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Rate limiting configuration
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Stricter rate limiting for expensive operations
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limit each IP to 30 requests per windowMs
+  message: 'Too many requests for this operation, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Very strict rate limiting for patent searches (API calls)
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // Limit each IP to 10 searches per minute
+  message: 'Too many search requests, please try again in a minute.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Middleware
 app.use(cors({
@@ -21,6 +49,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Apply general rate limiting to all API routes
+app.use('/api/', generalLimiter);
 
 // In-memory storage for temporary data
 const tempStorage = new Map();
@@ -51,7 +82,7 @@ app.get('/api/health', async (_req, res) => {
 });
 
 // Process patent PDF - extract first page and compress
-app.post('/api/pdf/process-patent', async (req, res) => {
+app.post('/api/pdf/process-patent', strictLimiter, async (req, res) => {
   try {
     const { patentNumber, pdfUrl } = req.body;
     
@@ -197,7 +228,7 @@ app.post('/api/pdf/generate-placeholder', async (req, res) => {
 });
 
 // Patent search via Google Patents API
-app.get('/api/patents/search', async (req, res) => {
+app.get('/api/patents/search', searchLimiter, async (req, res) => {
   try {
     const { criteria, start = 0, rows = 20 } = req.query;
 
@@ -239,7 +270,7 @@ app.get('/api/patents/search', async (req, res) => {
 });
 
 // USPTO/Google Patents search endpoint (for compatibility with README documentation)
-app.get('/api/uspto/search', async (req, res) => {
+app.get('/api/uspto/search', searchLimiter, async (req, res) => {
   try {
     const { criteria, start = 0, rows = 20 } = req.query;
 
@@ -281,7 +312,7 @@ app.get('/api/uspto/search', async (req, res) => {
 });
 
 // Patent verification endpoint for minting
-app.get('/api/patents/verify/:patentNumber', async (req, res) => {
+app.get('/api/patents/verify/:patentNumber', searchLimiter, async (req, res) => {
   try {
     const { patentNumber } = req.params;
 

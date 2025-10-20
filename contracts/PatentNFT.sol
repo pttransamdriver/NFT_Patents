@@ -16,19 +16,26 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
     uint96 public mintingPrice = 0.05 ether;    // 12 bytes - supports up to 79 billion ETH
     uint64 public platformFeePercentage = 250;  // 8 bytes - (250 = 2.5%)
 
+    // Base URI for metadata - configurable for production deployment
+    string public baseMetadataURI;
+
     // mapping from normalized patent hash → tokenId
     mapping(bytes32 => uint256) private _patentHashToTokenId;
 
     event PatentMinted(address indexed to, uint256 indexed tokenId, string patentNumber, string tokenURI);
     event MintingPriceUpdated(uint256 oldPrice, uint256 newPrice);
     event FeeWithdrawn(address indexed to, uint256 amount);
+    event BaseMetadataURIUpdated(string oldURI, string newURI);
 
-    constructor(address royaltyReceiver, uint96 royaltyFeeNumerator)
+    constructor(address royaltyReceiver, uint96 royaltyFeeNumerator, string memory _baseMetadataURI)
         ERC721("PatentNFT", "PAT")
         Ownable(msg.sender)
     {
         // Set default royalty (e.g. 500 = 5%)
         _setDefaultRoyalty(royaltyReceiver, royaltyFeeNumerator);
+
+        // Set base metadata URI (e.g., "https://your-backend.vercel.app/api/metadata/")
+        baseMetadataURI = _baseMetadataURI;
     }
 
     // ------------------------
@@ -40,16 +47,16 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
     /// @param patentNumber Raw patent number string.
     function mintPatentNFT(address to, string memory patentNumber) external payable nonReentrant returns (uint256) {
         require(msg.value >= mintingPrice, "Insufficient payment for minting");
-        
+
         bytes32 key = _normalizePatentId(patentNumber);
         require(_patentHashToTokenId[key] == 0, "Patent already minted");
 
         uint256 tokenId = ++_nextTokenId;
         _safeMint(to, tokenId);
-        
-        // Generate metadata URI pointing to backend API
+
+        // Generate metadata URI using configurable base URI
         string memory uri = string(abi.encodePacked(
-            "http://localhost:3001/api/metadata/", 
+            baseMetadataURI,
             patentNumber
         ));
         _setTokenURI(tokenId, uri);
@@ -103,6 +110,14 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
         uint96 oldPrice = mintingPrice;
         mintingPrice = newPrice;
         emit MintingPriceUpdated(oldPrice, newPrice);
+    }
+
+    /// @notice Update base metadata URI (owner only)
+    /// @param newBaseURI New base URI for metadata (e.g., "https://your-backend.vercel.app/api/metadata/")
+    function setBaseMetadataURI(string memory newBaseURI) external onlyOwner {
+        string memory oldURI = baseMetadataURI;
+        baseMetadataURI = newBaseURI;
+        emit BaseMetadataURIUpdated(oldURI, newBaseURI);
     }
 
     /// @notice Withdraw contract ETH balance to owner.

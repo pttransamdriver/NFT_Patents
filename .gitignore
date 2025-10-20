@@ -1,9 +1,6 @@
 # Node modules
 /node_modules
-/backend/node_modules
-/ignition/node_modules
-/ignition
-
+backend/node_modules
 
 # Compilation output
 /dist
@@ -23,30 +20,18 @@
 # Hardhat coverage reports
 /coverage
 
-# Environment variables
+# Environment variables - NEVER commit these!
 .env
 .env.local
 .env.*.local
+backend/.env
+backend/.env.local
 
-# Logs
-*.log
-dev-server.log
-hardhat-node.log
+# ONLY .env.example should be committed
+# .env.production and .env.sepolia should NOT be committed if they contain real keys
 
-# Build outputs  
-docs/
-dist/
-
-# Cache directories
-cache/
-
-# IDE files
-.vscode/
-.idea/
-
-# Development artifacts
-deployments/*undefined*
-
-# Security reports (optional)
-slither-report.json
-slither-report.sarif
+# MacOS files
+.DS_Store
+._*
+**/.DS_Store
+**/._*
