@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
@@ -11,6 +12,7 @@ import { marketplaceService, type MarketplaceListing, type PaginatedListings } f
 import type { SearchFilters } from '../types';
 
 const MarketplacePage: React.FC = () => {
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -31,6 +33,17 @@ const MarketplacePage: React.FC = () => {
   const [showMyNFTsModal, setShowMyNFTsModal] = useState(false);
   const [nftRefreshTrigger, setNftRefreshTrigger] = useState(0);
   const { signer, account, isConnected, connectWallet } = useWeb3();
+
+  // Check if we should open My NFTs modal from navigation state
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.openMyNFTs) {
+      setNftRefreshTrigger(prev => prev + 1);
+      setShowMyNFTsModal(true);
+      // Clear the state so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   // Temporary cleanup function for development
   React.useEffect(() => {

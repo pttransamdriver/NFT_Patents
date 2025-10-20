@@ -35,15 +35,21 @@ export async function deployPatentNFT(networkName = "localhost", options = {}) {
     );
     
     console.log("📄 Deploying ERC721 Patent NFT contract...");
-    
+
     // Constructor arguments for PatentNFT
     const royaltyReceiver = wallet.address; // Deploy with deployer as royalty receiver
     const royaltyFeeNumerator = 500; // 5% royalty fee (500 basis points)
-    
+
+    // Base metadata URI - use environment variable or default to localhost
+    const baseMetadataURI = process.env.VITE_API_BASE_URL
+      ? `${process.env.VITE_API_BASE_URL}/api/metadata/`
+      : "http://localhost:3001/api/metadata/";
+
     console.log(`   👑 Royalty Receiver: ${royaltyReceiver}`);
     console.log(`   💎 Royalty Fee: ${royaltyFeeNumerator / 100}%`);
-    
-    const patentNFT = await PatentNFTFactory.deploy(royaltyReceiver, royaltyFeeNumerator);
+    console.log(`   🔗 Base Metadata URI: ${baseMetadataURI}`);
+
+    const patentNFT = await PatentNFTFactory.deploy(royaltyReceiver, royaltyFeeNumerator, baseMetadataURI);
     await patentNFT.waitForDeployment();
     
     const address = await patentNFT.getAddress();
@@ -69,14 +75,15 @@ export async function deployPatentNFT(networkName = "localhost", options = {}) {
     const deploymentData = {
       address,
       deployer: wallet.address,
-      constructorArgs: [royaltyReceiver, royaltyFeeNumerator],
+      constructorArgs: [royaltyReceiver, royaltyFeeNumerator, baseMetadataURI],
       deploymentTransaction: deploymentTx,
       contractInfo: {
         name,
         symbol,
         owner,
         royaltyReceiver,
-        royaltyFeeNumerator
+        royaltyFeeNumerator,
+        baseMetadataURI
       }
     };
     

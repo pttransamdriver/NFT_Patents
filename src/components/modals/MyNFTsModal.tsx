@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Award, Download, DollarSign, Eye, Calendar, FileText, Sparkles, ExternalLink, HelpCircle, RefreshCw } from 'lucide-react';
+import { X, Award, DollarSign, Eye, Calendar, FileText, Sparkles, ExternalLink, HelpCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { useWeb3 } from '../../contexts/Web3Context';
 import { getPatentNFTContract } from '../../utils/contracts';
-import { mintingService } from '../../services/mintingService';
 import { marketplaceService } from '../../services/marketplaceService';
 import MetaMaskNFTGuide from './MetaMaskNFTGuide';
 import ListNFTModal from './ListNFTModal';
@@ -38,6 +38,7 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
   const [showMetaMaskGuide, setShowMetaMaskGuide] = useState(false);
   const [selectedNFTForGuide, setSelectedNFTForGuide] = useState<UserNFT | null>(null);
   const { isConnected, account, provider } = useWeb3();
+  const navigate = useNavigate();
 
   const loadUserNFTs = async () => {
     if (!isConnected || !account || !provider) return;
@@ -390,7 +391,10 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
                     You haven't minted any Patent NFTs yet
                   </p>
                   <button
-                    onClick={onClose}
+                    onClick={() => {
+                      onClose();
+                      navigate('/search');
+                    }}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                   >
                     Go Search & Mint Patents

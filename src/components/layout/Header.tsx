@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Moon, Sun, Menu, X, Wallet, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -10,6 +10,7 @@ const Header: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const { isConnected, account, connectWallet, disconnectWallet, isConnecting } = useWeb3();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -67,13 +68,13 @@ const Header: React.FC = () => {
 
             {isConnected ? (
               <div className="flex items-center space-x-2">
-                <Link
-                  to={`/profile/${account}`}
+                <button
+                  onClick={() => navigate('/marketplace', { state: { openMyNFTs: true } })}
                   className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 text-gray-900 dark:text-white"
                 >
                   <User className="w-4 h-4" />
                   <span className="text-sm font-medium">{formatAddress(account!)}</span>
-                </Link>
+                </button>
                 <button
                   onClick={disconnectWallet}
                   className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -147,14 +148,16 @@ const Header: React.FC = () => {
 
                 {isConnected ? (
                   <div className="flex items-center space-x-2">
-                    <Link
-                      to={`/profile/${account}`}
-                      onClick={() => setIsMobileMenuOpen(false)}
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        navigate('/marketplace', { state: { openMyNFTs: true } });
+                      }}
                       className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
                     >
                       <User className="w-4 h-4" />
                       <span className="text-sm font-medium">{formatAddress(account!)}</span>
-                    </Link>
+                    </button>
                     <button
                       onClick={disconnectWallet}
                       className="text-sm font-medium text-red-600 dark:text-red-400"
