@@ -1,8 +1,8 @@
 {
   "contractName": "NFTMarketplace",
-  "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-  "transactionHash": "0xd23770c541c052368d9d9d6198b51db080c6757ab41c9f557b96e632ea4297d7",
-  "deploymentTime": "2025-10-20T16:11:47.001Z",
+  "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  "transactionHash": "0x5a39503bedd0f86959b07766d87a99b7e0d6c8c6f8d7b9d9306d02dcb84013c6",
+  "deploymentTime": "2025-10-21T16:21:50.802Z",
   "network": "localhost",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "constructorArgs": [
@@ -19,17 +19,17 @@
     "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "gasLimit": "2915811",
     "gasPrice": null,
-    "hash": "0xd23770c541c052368d9d9d6198b51db080c6757ab41c9f557b96e632ea4297d7",
-    "maxFeePerGas": "2566865126",
+    "hash": "0x5a39503bedd0f86959b07766d87a99b7e0d6c8c6f8d7b9d9306d02dcb84013c6",
+    "maxFeePerGas": "2420057672",
     "maxPriorityFeePerGas": "1000000000",
     "maxFeePerBlobGas": null,
-    "nonce": 2,
+    "nonce": 3,
     "signature": {
       "_type": "signature",
       "networkV": null,
-      "r": "0x395e760f680ab18b9c648053706964861fabe704ac7028fd3cbdfe89c91b57ba",
-      "s": "0x142569db6c16de15825b2fc7da6b029df42d72d8cf121b7bac73ca90e475c661",
-      "v": 27
+      "r": "0x738504fee94e19d224d62053ce1e72ee59ab66dfb09c12a24edd09ca7ba00b2d",
+      "s": "0x2819b40bffdbbe61809d15754901353873d5192dd36fdb848028d0a501c21cb7",
+      "v": 28
     },
     "to": null,
     "type": 2,

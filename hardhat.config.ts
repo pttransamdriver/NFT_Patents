@@ -2,6 +2,7 @@ import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { configVariable } from "hardhat/config";
+import "@nomicfoundation/hardhat-verify";
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxMochaEthersPlugin],
@@ -36,7 +37,13 @@ const config: HardhatUserConfig = {
       url: configVariable("SEPOLIA_RPC_URL"),
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
+    
   },
-};
+  etherscan: {
+    apiKey: {
+      sepolia: configVariable("ETHERSCAN_API_KEY"),
+    },
+  },
+} as HardhatUserConfig; // Type assertion to allow etherscan config added by hardhat-verify plugin
 
 export default config;

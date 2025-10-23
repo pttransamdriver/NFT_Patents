@@ -2,7 +2,7 @@
   "contractName": "PatentNFT",
   "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
   "transactionHash": "0x276460f57aa5262d5ad2c7071372ec68ed9b1a52c57cf8c2ead2eef38aa979e8",
-  "deploymentTime": "2025-10-20T16:16:07.692Z",
+  "deploymentTime": "2025-10-21T16:21:50.573Z",
   "network": "localhost",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "constructorArgs": [

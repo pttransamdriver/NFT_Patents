@@ -22,6 +22,10 @@ backend/node_modules
 
 # Environment variables - NEVER commit these!
 .env
+.env.production
+.env.sepolia
+.env.production.backup
+.env.sepolia.backup
 .env.local
 .env.*.local
 backend/.env

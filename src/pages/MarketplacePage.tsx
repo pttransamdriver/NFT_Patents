@@ -146,6 +146,7 @@ const MarketplacePage: React.FC = () => {
               
               formattedNFTs.push({
                 id: tokenId.toString(),
+                tokenId: tokenId.toString(), // Add explicit tokenId property
                 contractAddress: import.meta.env.VITE_PATENT_NFT_ADDRESS,
                 title: patentData.title || `Patent NFT #${tokenId}`,
                 description: patentData.title ? `${patentData.title} - Ready to list for sale!` : 'Minted from your deployed contract',
@@ -259,6 +260,7 @@ const MarketplacePage: React.FC = () => {
                   
                   formattedNFTs.push({
                     id: `${contractAddress}-${tokenId}`,
+                    tokenId: tokenId, // Add explicit tokenId property for external NFTs
                     contractAddress,
                     title: metadata?.name || `${contractName} #${tokenId}`,
                     description: metadata?.description || `NFT from external contract`,
