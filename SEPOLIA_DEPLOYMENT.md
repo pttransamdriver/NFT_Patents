@@ -472,7 +472,7 @@ Your backend needs to be deployed too:
 5. **Variables** → Add:
    ```
    PORT=3001
-   SERPAPI_KEY=f2255d1d67e2df3c50bb4f99172e99c1f35ad0ccecbb19cd58dc8a68f43cda05
+   SERPAPI_KEY=your_serpapi_key_here
    CORS_ORIGIN=https://your-vercel-app.vercel.app
    ```
 
