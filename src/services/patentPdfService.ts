@@ -166,7 +166,7 @@ export class PatentPdfService {
     pdfUrl: string;
   }> {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents.vercel.app';
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
       
       // 1. Try to fetch and process patent PDF via backend
       let pdfBlob: Blob;

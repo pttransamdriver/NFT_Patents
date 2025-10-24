@@ -92,7 +92,7 @@ export class PatentApiService extends BaseSingleton {
    */
   async getPatentByNumber(patentNumber: string): Promise<Patent | null> {
     try {
-      const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const backendUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
       
       const response = await axios.get(`${backendUrl}/api/patents/patent/${patentNumber}`, {
         timeout: 15000
