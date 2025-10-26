@@ -445,15 +445,20 @@ Browser → Our backend → Google Patents API ✅ WORKS (no CORS on server)
 ### Backend Structure
 
 ```javascript
-// server.js - Main entry point
+// server.js - Main entry point (Deployed on Vercel)
 ├── CORS Proxy Routes
-│   ├── /api/uspto/search    # Proxy to Google Patents API (real data only)
+│   ├── /api/patents/search   # Primary: Google Patents via SerpAPI
+│   ├── /api/uspto/search     # Legacy: Compatibility endpoint
+│   ├── /api/patents/verify/:patentNumber # Verify and get full patent details
 │   └── /api/uspto/patent/:id # Get specific patent details
-├── Metadata Routes  
-│   ├── /metadata/:patent    # Serve NFT metadata JSON
-│   └── /metadata/:patent/ipfs # Store IPFS hashes
+├── Metadata Routes
+│   ├── /api/metadata/:patent    # Serve NFT metadata JSON
+│   └── POST /api/metadata/:patent # Store metadata with patent data
+├── PDF Processing Routes
+│   ├── /api/pdf/process-patent  # Extract and compress patent PDFs
+│   └── /api/pdf/generate-placeholder # Generate placeholder PDFs
 └── Utility Routes
-    ├── /api/health         # Health check with SerpApi validation
+    ├── /api/health         # Health check with SerpAPI validation
     └── /debug/metadata     # Debug metadata store
 ```
 
@@ -465,32 +470,36 @@ Browser → Our backend → Google Patents API ✅ WORKS (no CORS on server)
 
 ```javascript
 // Real API implementation with validation:
-app.get('/api/uspto/search', async (req, res) => {
+app.get('/api/patents/search', async (req, res) => {
   const serpApiKey = process.env.SERPAPI_KEY;
-  
+
   // Enforce real API usage - no mock data fallback
-  if (!serpApiKey || serpApiKey === 'demo' || serpApiKey === 'your_serpapi_key_here') {
-    return res.status(400).json({ 
-      error: 'SerpApi key required for real patent data access' 
+  if (!serpApiKey) {
+    return res.status(500).json({
+      error: 'Patents API not configured'
     });
   }
-  
-  // Call Google Patents via SerpApi
+
+  // Call Google Patents via SerpAPI
   const response = await axios.get('https://serpapi.com/search', {
     params: {
       api_key: serpApiKey,
       engine: 'google_patents',
       q: req.query.criteria,
-      num: Math.max(10, Math.min(req.query.rows || 20, 100))
+      num: Math.max(10, Math.min(req.query.rows || 20, 100)),
+      start: parseInt(req.query.start || 0)
     },
-    timeout: 45000 // Increased timeout for reliability
+    timeout: 30000
   });
-  
-  // Transform Google Patents data to consistent format
-  const patents = response.data?.organic_results || [];
-  const transformedData = transformGooglePatentsData(patents);
-  
-  res.json(transformedData);
+
+  // Return Google Patents data
+  res.json(response.data);
+});
+
+// Legacy compatibility endpoint
+app.get('/api/uspto/search', async (req, res) => {
+  // Same implementation as /api/patents/search
+  // Maintained for backward compatibility
 });
 ```
 
@@ -604,24 +613,34 @@ User wants to make an offer (UI ready, contract pending):
 ```typescript
 // Frontend (PatentSearchPage.tsx)
 const searchPatents = async (criteria) => {
-  const response = await fetch(`${API_BASE_URL}/api/uspto/search?criteria=${criteria}`);
+  const response = await fetch(`${API_BASE_URL}/api/patents/search?criteria=${criteria}`);
   const patents = await response.json();
   setSearchResults(patents);
 };
 
-// Backend (server.js)
-app.get('/api/uspto/search', async (req, res) => {
-  const { criteria } = req.query;
-  
-  // Call external API (bypasses CORS)
-  const response = await axios.get(GOOGLE_PATENTS_URL, {
-    params: { q: criteria }
+// Backend (server.js) - Deployed on Vercel
+app.get('/api/patents/search', async (req, res) => {
+  const { criteria, start = 0, rows = 20 } = req.query;
+
+  const serpApiKey = process.env.SERPAPI_KEY;
+  if (!serpApiKey) {
+    return res.status(500).json({ error: 'Patents API not configured' });
+  }
+
+  // Call Google Patents via SerpAPI (bypasses CORS)
+  const response = await axios.get('https://serpapi.com/search', {
+    params: {
+      engine: 'google_patents',
+      q: criteria,
+      start: parseInt(start),
+      num: Math.max(10, Math.min(parseInt(rows), 100)),
+      api_key: serpApiKey
+    },
+    timeout: 30000
   });
-  
-  // Transform to consistent format
-  const standardizedPatents = transformUSPTOData(response.data);
-  
-  res.json(standardizedPatents);
+
+  // Return Google Patents data
+  res.json(response.data);
 });
 ```
 
@@ -806,11 +825,20 @@ const contract = new ethers.Contract(
 VITE_PATENT_NFT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
 VITE_CHAIN_ID=31337
 VITE_RPC_URL=http://127.0.0.1:8545
+VITE_API_BASE_URL=http://localhost:3001
+SERPAPI_KEY=your_serpapi_key_here
 
-# .env.sepolia (Production - Sepolia testnet)  
+# .env (Production - Sepolia testnet with Vercel)
 VITE_PATENT_NFT_ADDRESS=0xDeployedSepoliaAddress...
 VITE_CHAIN_ID=11155111
 VITE_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+VITE_API_BASE_URL=https://nft-patents-backend.vercel.app
+
+# backend/.env (Backend - Required for Vercel)
+SERPAPI_KEY=your_serpapi_key_here
+CORS_ORIGIN=https://nft-patents.vercel.app
+PORT=3001
+NODE_ENV=production
 ```
 
 ---
@@ -854,7 +882,9 @@ ETHERSCAN_API_KEY=[your_etherscan_api_key]
 
 ### Deployment Pipeline
 
-#### Recommended: Sequential Individual Deployment
+#### Smart Contract Deployment (Blockchain)
+
+**Recommended: Sequential Individual Deployment**
 
 **Why individual deployment is better:**
 - Clear dependency management
@@ -866,7 +896,7 @@ ETHERSCAN_API_KEY=[your_etherscan_api_key]
 1. Development (localhost)
    ├── npx hardhat node          # Local blockchain
    ├── npm run deploy:psp localhost      # PSP Token
-   ├── npm run deploy:search localhost   # Search Payment  
+   ├── npm run deploy:search localhost   # Search Payment
    ├── npm run deploy:nft localhost      # Patent NFT
    ├── npm run deploy:marketplace localhost # Marketplace
    └── npm run dev               # Frontend connects
@@ -885,6 +915,56 @@ ETHERSCAN_API_KEY=[your_etherscan_api_key]
    ├── Deploy with individual scripts for safer deployment
    └── Monitor with analytics and error tracking
 ```
+
+#### Vercel Deployment (Frontend & Backend)
+
+**Backend Deployment to Vercel:**
+
+```bash
+1. Backend Setup
+   ├── Navigate to backend directory
+   ├── Ensure vercel.json is configured:
+   │   {
+   │     "version": 2,
+   │     "builds": [{ "src": "server.js", "use": "@vercel/node" }],
+   │     "routes": [{ "src": "/(.*)", "dest": "server.js" }]
+   │   }
+   └── Configure environment variables in Vercel dashboard:
+       ├── SERPAPI_KEY=your_serpapi_key_here
+       ├── CORS_ORIGIN=https://nft-patents.vercel.app
+       └── NODE_ENV=production
+
+2. Deploy Backend
+   ├── vercel --prod (or push to GitHub for auto-deploy)
+   └── Note the deployment URL: https://nft-patents-backend.vercel.app
+```
+
+**Frontend Deployment to Vercel:**
+
+```bash
+1. Frontend Setup
+   ├── Update .env with Vercel backend URL:
+   │   VITE_API_BASE_URL=https://nft-patents-backend.vercel.app
+   ├── Configure contract addresses from blockchain deployment
+   └── Ensure vercel.json is configured for React/Vite
+
+2. Deploy Frontend
+   ├── vercel --prod (or push to GitHub for auto-deploy)
+   ├── Configure all VITE_* environment variables in Vercel dashboard
+   └── Access at: https://nft-patents.vercel.app
+```
+
+**Environment Variables Checklist for Vercel:**
+
+**Backend Project:**
+- `SERPAPI_KEY` - Required for patent search
+- `CORS_ORIGIN` - Frontend URL for CORS
+- `NODE_ENV` - Set to "production"
+
+**Frontend Project:**
+- All `VITE_*` variables from your `.env`
+- `VITE_API_BASE_URL` - Backend URL
+- Contract addresses from blockchain deployment
 
 #### Alternative: Legacy All-at-Once Deployment
 

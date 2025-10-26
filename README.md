@@ -186,14 +186,21 @@ Access locally:
 
 ## 🌐 Backend API
 
-* **Patent Search**: `/api/uspto/search?criteria=<query>` → returns Google Patents results
-* **Patent Details**: `/api/uspto/patent/:id` → returns patent data
+The backend is deployed on **Vercel** at: `https://nft-patents-backend.vercel.app`
+
+### API Endpoints
+
+* **Patent Search**: `/api/patents/search?criteria=<query>` → returns Google Patents results via SerpAPI
+* **Patent Search (Legacy)**: `/api/uspto/search?criteria=<query>` → compatibility endpoint, same functionality
+* **Patent Verification**: `/api/patents/verify/:patentNumber` → verify and get full patent details
+* **Patent Details**: `/api/uspto/patent/:id` → get specific patent information
 * **NFT Metadata**: `/api/metadata/:patentNumber` → stores and serves rich NFT metadata with patent information
 * **PDF Processing**: `/api/pdf/process-patent` → handles patent PDF processing for IPFS
-* **Health Check**: `/api/health` → backend + API status
+* **Health Check**: `/api/health` → backend + SerpAPI status
 
 **CORS Proxy**: Handles frontend → Google Patents API requests server-side.
 **Enhanced Metadata**: Stores full patent information (title, inventor, assignee, etc.) for proper marketplace display.
+**Production URL**: Backend is deployed and accessible at `https://nft-patents-backend.vercel.app`
 
 ---
 
@@ -238,9 +245,10 @@ Access locally:
 
 ## 🔧 Configuration
 
-* **Frontend**: `.env` stores contract addresses, API endpoints, SerpApi key
-* **Backend**: `.env` stores server port, SerpApi key, optional DB config
+* **Frontend**: `.env` stores contract addresses, API endpoints, SerpAPI key
+* **Backend**: `backend/.env` stores server port, SerpAPI key, CORS origin for Vercel
 * **Hardhat**: Configurable for localhost + Sepolia testnet
+* **Deployment**: Vercel configuration files for frontend and backend deployment
 
 ### 🤖 Optional: AI-Powered Search
 
@@ -292,9 +300,13 @@ npm run test:integration
 
 ## 📡 API Integration
 
-* **Current Source**: Google Patents (via SerpApi)
-* **Alternative APIs**: USPTO possible, but redundant
-* **Data Flow**: Frontend → Backend → SerpApi → Google Patents → NFT minting
+* **Current Source**: Google Patents (via SerpAPI)
+* **API Provider**: SerpAPI - provides structured Google Patents data
+* **Data Flow**: Frontend → Backend (Vercel) → SerpAPI → Google Patents → NFT minting
+* **Rate Limiting**: Backend enforces rate limits (10 searches/minute) to protect API usage
+* **Environment Variables**:
+  - `SERPAPI_KEY` - Required for patent search functionality
+  - `CORS_ORIGIN` - Required for Vercel backend CORS configuration
 
 ---
 
@@ -350,10 +362,35 @@ NFT_Patents/
 
 ## 🚀 Deployment Guide
 
-* Supports **Sepolia Testnet** out of the box
-* Deploy contracts individually for best results
+### Smart Contract Deployment
+
+* Supports **Sepolia Testnet** and **Mainnet**
+* Deploy contracts individually for best results using modular scripts
 * Update frontend `.env` with deployed contract addresses
 * Verify contracts with Hardhat + Etherscan
+
+### Vercel Deployment (Frontend & Backend)
+
+**Frontend Deployment:**
+1. Push to GitHub repository
+2. Import project in Vercel dashboard
+3. Configure environment variables in Vercel:
+   - All `VITE_*` variables from `.env`
+   - Contract addresses from deployment
+4. Deploy automatically on push to main branch
+
+**Backend Deployment:**
+1. Deploy backend separately to Vercel
+2. Configure critical environment variables:
+   - `SERPAPI_KEY` - Your SerpAPI key for patent search
+   - `CORS_ORIGIN` - Your frontend URL (e.g., `https://nft-patents.vercel.app`)
+   - `NODE_ENV=production`
+3. Update frontend `.env` with backend URL:
+   - `VITE_API_BASE_URL=https://nft-patents-backend.vercel.app`
+
+**Deployment URLs:**
+- Frontend: `https://nft-patents.vercel.app`
+- Backend: `https://nft-patents-backend.vercel.app`
 
 ---
 
@@ -394,7 +431,8 @@ MIT License. See [LICENSE](LICENSE).
 
 * OpenZeppelin for contract libraries
 * Hardhat team for development framework
-* Google Patents + SerpApi for data
+* Google Patents + SerpAPI for patent data
+* Vercel for deployment and hosting
 * React + Vite + Tailwind ecosystem
 
 ---

@@ -69,9 +69,10 @@ const MintNFTPage: React.FC = () => {
 
       // Call backend API for patent verification
       const cleanPatentNumber = patentNumber.replace(/\s/g, '').toUpperCase();
-      
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
+
       try {
-        const response = await fetch(`http://localhost:3001/api/patents/verify/${cleanPatentNumber}`);
+        const response = await fetch(`${apiBaseUrl}/api/patents/verify/${cleanPatentNumber}`);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);

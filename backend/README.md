@@ -67,33 +67,6 @@ The backend uses PostgreSQL with the following tables:
 ### System Endpoints
 - `GET /api/health` - Health check with database status
 
-## 🔧 Configuration
-
-### Environment Variables
-
-```env
-# Server Configuration
-PORT=3001
-NODE_ENV=development
-
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=patent_nft_db
-DB_USER=postgres
-DB_PASSWORD=your_password_here
-
-# Blockchain Configuration
-ETHEREUM_RPC_URL=http://localhost:8545
-ETHEREUM_NETWORK=localhost
-
-# API Keys
-GEMINI_API_KEY=your_gemini_api_key_here
-USPTO_API_KEY=your_uspto_api_key_here
-
-# Security
-CORS_ORIGIN=http://localhost:5173
-```
 
 ## 🔒 Security Features
 

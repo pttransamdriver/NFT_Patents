@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Filter, Grid, List, TrendingUp, Clock, DollarSign, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Search, Filter, TrendingUp, Clock, DollarSign, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
 import MyNFTsModal from '../components/modals/MyNFTsModal';
 import ListNFTModal from '../components/modals/ListNFTModal';
@@ -14,7 +14,6 @@ import type { SearchFilters } from '../types';
 const MarketplacePage: React.FC = () => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     sortBy: 'popularity',
@@ -536,30 +535,6 @@ const MarketplacePage: React.FC = () => {
               Filters
             </button>
 
-            {/* View Mode Toggle */}
-            <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-3 transition-colors duration-200 ${
-                  viewMode === 'grid'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
-                }`}
-              >
-                <Grid className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-3 transition-colors duration-200 ${
-                  viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
-                }`}
-              >
-                <List className="w-5 h-5" />
-              </button>
-            </div>
-
             {/* My NFTs Button */}
             {isConnected && (
               <button
@@ -825,11 +800,7 @@ const MarketplacePage: React.FC = () => {
               <p className="mt-4 text-gray-600 dark:text-gray-400">Loading marketplace listings...</p>
             </div>
           ) : filteredNFTs.length > 0 ? (
-            <div className={
-              viewMode === 'grid' 
-                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-                : 'space-y-4'
-            }>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredNFTs.map((listing, index) => (
                 <motion.div
                   key={listing.listingId}
@@ -837,9 +808,8 @@ const MarketplacePage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                 >
-                  <NFTCard 
-                    nft={convertListingToNFT(listing)} 
-                    className={viewMode === 'list' ? 'flex' : ''}
+                  <NFTCard
+                    nft={convertListingToNFT(listing)}
                   />
                 </motion.div>
               ))}
