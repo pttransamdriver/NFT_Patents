@@ -187,10 +187,10 @@ const PatentSearchPage: React.FC = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
             AI-Powered Patent Search
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto px-4">
             Search through millions of patents using natural language queries or advanced filters
           </p>
         </motion.div>
@@ -207,25 +207,25 @@ const PatentSearchPage: React.FC = () => {
             <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
               <button
                 onClick={() => setIsAiMode(false)}
-                className={`px-6 py-3 flex items-center space-x-2 transition-colors duration-200 ${
+                className={`px-3 py-2 sm:px-6 sm:py-3 flex items-center space-x-2 transition-colors duration-200 ${
                   !isAiMode
                     ? 'bg-blue-600 text-white'
                     : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
               >
                 <Search className="w-5 h-5" />
-                <span>Standard Search</span>
+                <span className="text-sm sm:text-base">Standard Search</span>
               </button>
               <button
                 onClick={() => setIsAiMode(true)}
-                className={`px-6 py-3 flex items-center space-x-2 transition-colors duration-200 ${
+                className={`px-3 py-2 sm:px-6 sm:py-3 flex items-center space-x-2 transition-colors duration-200 ${
                   isAiMode
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
                     : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
               >
                 <Bot className="w-5 h-5" />
-                <span>AI Assistant</span>
+                <span className="text-sm sm:text-base">AI Assistant</span>
                 <Sparkles className="w-4 h-4" />
               </button>
             </div>
@@ -235,24 +235,24 @@ const PatentSearchPage: React.FC = () => {
           {isAiMode ? (
             <div>
               <div className="relative mb-6">
-                <Bot className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-500 w-6 h-6" />
+                <Bot className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-500 w-5 h-5 sm:w-6 sm:h-6" />
                 <input
                   type="text"
-                  placeholder="Ask me anything about patents... (e.g., 'Find renewable energy patents from 2022')"
+                  placeholder="Ask me anything about patents..."
                   value={aiQuery}
                   onChange={(e) => setAiQuery(e.target.value)}
-                  className="w-full pl-14 pr-24 py-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg"
+                  className="w-full pl-12 sm:pl-14 pr-16 sm:pr-24 py-3 sm:py-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base sm:text-lg"
                   onKeyPress={(e) => e.key === 'Enter' && handleAiSearch(aiQuery)}
                 />
                 <button
                   onClick={() => handleAiSearch(aiQuery)}
                   disabled={!aiQuery.trim() || isLoading}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 sm:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-medium transition-all duration-200 text-sm sm:text-base"
                 >
                   {isLoading ? (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Analyzing...</span>
+                      <span className="hidden sm:inline">Analyzing...</span>
                     </div>
                   ) : (
                     <span>Ask AI</span>
@@ -263,12 +263,12 @@ const PatentSearchPage: React.FC = () => {
               {/* AI Suggestions */}
               <div className="mb-6">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Try these example queries:</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {aiSuggestions.map((suggestion, index) => (
                     <button
                       key={index}
                       onClick={() => handleAiSearch(suggestion)}
-                      className="px-3 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors duration-200"
+                      className="px-3 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg text-xs sm:text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors duration-200 text-left"
                     >
                       {suggestion}
                     </button>
@@ -280,24 +280,24 @@ const PatentSearchPage: React.FC = () => {
             /* Standard Search Mode */
             <div>
               <div className="relative mb-6">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-6 h-6" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5 sm:w-6 sm:h-6" />
                 <input
                   type="text"
-                  placeholder="Search by patent number, title, inventor, or keywords..."
+                  placeholder="Search by patent number, title, or keywords..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-14 pr-24 py-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg"
+                  className="w-full pl-12 sm:pl-14 pr-16 sm:pr-24 py-3 sm:py-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base sm:text-lg"
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 />
                 <button
                   onClick={handleSearch}
                   disabled={isLoading}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 sm:px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200 text-sm sm:text-base"
                 >
                   {isLoading ? (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 sm:space-x-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Searching...</span>
+                      <span className="hidden sm:inline">Searching...</span>
                     </div>
                   ) : (
                     <span>Search</span>
@@ -423,14 +423,14 @@ const PatentSearchPage: React.FC = () => {
                   transition={{ duration: 0.4, delay: index * 0.1 }}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-all duration-200"
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 space-y-3 sm:space-y-0">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
+                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                           {patent.title}
                         </h3>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          patent.status === 'active' 
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium self-start ${
+                          patent.status === 'active'
                             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                             : patent.status === 'expired'
                             ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
@@ -439,37 +439,38 @@ const PatentSearchPage: React.FC = () => {
                           {patent.status}
                         </span>
                       </div>
-                      <p className="text-gray-600 dark:text-gray-400 mb-3">
+                      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3">
                         {patent.abstract}
                       </p>
                     </div>
                     {patent.isAvailableForMinting && (
-                      <div className="ml-4">
-                        <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium">
-                          <Zap className="w-4 h-4 mr-1" />
-                          Available for Minting
+                      <div className="sm:ml-4">
+                        <span className="inline-flex items-center px-2.5 sm:px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs sm:text-sm font-medium">
+                          <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          <span className="hidden sm:inline">Available for Minting</span>
+                          <span className="sm:hidden">Mintable</span>
                         </span>
                       </div>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <FileText className="w-4 h-4 mr-2" />
-                      <span>Patent #{patent.patentNumber}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+                    <div className="flex items-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <FileText className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">Patent #{patent.patentNumber}</span>
                     </div>
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <User className="w-4 h-4 mr-2" />
-                      <span>{patent.inventors.join(', ')}</span>
+                    <div className="flex items-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <User className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{patent.inventors.join(', ')}</span>
                     </div>
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <Building className="w-4 h-4 mr-2" />
-                      <span>{patent.assignee}</span>
+                    <div className="flex items-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <Building className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{patent.assignee}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                    <div className="flex items-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                       <Calendar className="w-4 h-4 mr-2" />
                       <span>Filed: {new Date(patent.filingDate).toLocaleDateString()}</span>
                     </div>
@@ -478,7 +479,7 @@ const PatentSearchPage: React.FC = () => {
                       <button
                         onClick={() => handleMintNFT(patent)}
                         disabled={mintingPatent === patent.patentNumber || !isConnected}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                        className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 text-sm sm:text-base"
                       >
                         {mintingPatent === patent.patentNumber ? (
                           <>
@@ -488,13 +489,15 @@ const PatentSearchPage: React.FC = () => {
                         ) : (
                           <>
                             <Zap className="w-4 h-4" />
-                            <span>Mint NFT (0.1 ETH)</span>
+                            <span className="hidden sm:inline">Mint NFT (0.1 ETH)</span>
+                            <span className="sm:hidden">Mint (0.1Ξ)</span>
                           </>
                         )}
                       </button>
                     ) : (
-                      <span className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg font-medium">
-                        Already Minted
+                      <span className="px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg font-medium text-sm sm:text-base">
+                        <span className="hidden sm:inline">Already Minted</span>
+                        <span className="sm:hidden">Minted</span>
                       </span>
                     )}
                   </div>
