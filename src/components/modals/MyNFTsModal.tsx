@@ -89,7 +89,7 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
             patentData = {
               title: `Patent NFT #${tokenId}`,
               inventor: 'Unknown',
-              filingDate: BigInt(Date.now() / 1000),
+              filingDate: BigInt(Math.floor(Date.now() / 1000)),
               patentNumber: `PATENT-${tokenId}`,
               isVerified: false
             };
