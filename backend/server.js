@@ -5,6 +5,14 @@ const { PDFDocument } = require('pdf-lib');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// Import Vercel KV for persistent storage (optional - falls back to memory)
+let kv;
+try {
+  kv = require('@vercel/kv');
+} catch (error) {
+  console.warn('⚠️ @vercel/kv not installed, using in-memory storage');
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -53,10 +61,58 @@ app.use(express.json());
 // Apply general rate limiting to all API routes
 app.use('/api/', generalLimiter);
 
-// In-memory storage for temporary data
+// In-memory storage for temporary data (fallback when KV not available)
 const tempStorage = new Map();
 
-// Health check - no database needed
+// Check if Vercel KV is available and configured
+const USE_KV = kv && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+
+// Helper functions for persistent storage
+async function storeMetadata(patentNumber, metadata) {
+  try {
+    if (USE_KV) {
+      // Use Vercel KV (persistent - survives cold starts)
+      await kv.set(`metadata:${patentNumber}`, metadata);
+      console.log(`📝 Metadata stored in KV (persistent) for: ${patentNumber}`);
+    } else {
+      // Fallback to in-memory (development only - lost on restart)
+      tempStorage.set(patentNumber, metadata);
+      console.log(`📝 Metadata stored in memory (temporary) for: ${patentNumber}`);
+    }
+  } catch (error) {
+    console.error('Storage error:', error);
+    // Fallback to in-memory on error
+    tempStorage.set(patentNumber, metadata);
+  }
+}
+
+async function getMetadata(patentNumber) {
+  try {
+    if (USE_KV) {
+      // Try Vercel KV first
+      const metadata = await kv.get(`metadata:${patentNumber}`);
+      if (metadata) {
+        console.log(`✅ Metadata retrieved from KV for: ${patentNumber}`);
+        return metadata;
+      }
+    }
+
+    // Fallback to in-memory
+    const memoryData = tempStorage.get(patentNumber);
+    if (memoryData) {
+      console.log(`✅ Metadata retrieved from memory for: ${patentNumber}`);
+      return memoryData;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Retrieval error:', error);
+    // Fallback to in-memory on error
+    return tempStorage.get(patentNumber);
+  }
+}
+
+// Health check - shows storage type
 app.get('/api/health', async (_req, res) => {
   try {
     let patentsApiStatus = 'not configured';
@@ -70,7 +126,9 @@ app.get('/api/health', async (_req, res) => {
       timestamp: new Date().toISOString(),
       patentsApi: patentsApiStatus,
       blockchain: 'decentralized',
-      storage: 'IPFS + blockchain'
+      storage: USE_KV ? 'Vercel KV (persistent)' : 'In-memory (temporary - will be lost on restart)',
+      kvEnabled: USE_KV,
+      warning: USE_KV ? null : 'Using in-memory storage - metadata will be lost on server restart. Set up Vercel KV for production.'
     });
   } catch (error) {
     res.status(500).json({
@@ -509,34 +567,41 @@ app.get('/api/uspto/patent/:id', async (req, res) => {
   }
 });
 
-// Store temporary IPFS metadata
-app.post('/api/metadata/:patentNumber', (req, res) => {
+// Store IPFS metadata (persistent with KV)
+app.post('/api/metadata/:patentNumber', async (req, res) => {
   try {
     const { patentNumber } = req.params;
     const metadata = req.body;
-    
-    tempStorage.set(patentNumber, {
+
+    await storeMetadata(patentNumber, {
       ...metadata,
       timestamp: new Date().toISOString()
     });
-    
-    console.log('📝 Temporary metadata stored for:', patentNumber);
-    res.json({ success: true });
-    
+
+    res.json({
+      success: true,
+      storage: USE_KV ? 'persistent' : 'temporary',
+      warning: USE_KV ? null : 'Using temporary storage - data will be lost on server restart'
+    });
+
   } catch (error) {
     console.error('❌ Metadata storage error:', error);
     res.status(500).json({ error: 'Failed to store metadata' });
   }
 });
 
-// Serve NFT metadata for tokenURI calls
-app.get('/api/metadata/:patentNumber', (req, res) => {
+// Serve NFT metadata for tokenURI calls (with persistent storage)
+app.get('/api/metadata/:patentNumber', async (req, res) => {
   try {
     const { patentNumber } = req.params;
-    const metadata = tempStorage.get(patentNumber);
+    const metadata = await getMetadata(patentNumber);
 
     if (!metadata) {
-      return res.status(404).json({ error: 'Metadata not found' });
+      console.warn(`⚠️ Metadata not found for: ${patentNumber}`);
+      return res.status(404).json({
+        error: 'Metadata not found',
+        message: `No metadata stored for patent ${patentNumber}. Please re-mint this NFT or check if it was stored before KV was enabled.`
+      });
     }
 
     // If metadata has an IPFS hash, redirect to IPFS
@@ -589,5 +654,10 @@ app.listen(PORT, () => {
   console.log(`🚀 Patent NFT Backend Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔗 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
-  console.log(`⛓️  Fully decentralized - no database required!`);
+  console.log(`💾 Storage: ${USE_KV ? 'Vercel KV (persistent) ✅' : 'In-memory (temporary) ⚠️'}`);
+  if (!USE_KV) {
+    console.log(`⚠️  WARNING: Using in-memory storage - metadata will be lost on restart!`);
+    console.log(`   Set up Vercel KV for production: https://vercel.com/docs/storage/vercel-kv`);
+  }
+  console.log(`⛓️  Fully decentralized - ${USE_KV ? 'with persistent metadata!' : 'no database required!'}`);
 });

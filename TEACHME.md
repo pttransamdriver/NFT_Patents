@@ -918,26 +918,58 @@ ETHERSCAN_API_KEY=[your_etherscan_api_key]
 
 #### Vercel Deployment (Frontend & Backend)
 
-**Backend Deployment to Vercel:**
+**Backend Deployment to Vercel (with KV Storage):**
 
 ```bash
 1. Backend Setup
    ├── Navigate to backend directory
+   ├── Install dependencies (including @vercel/kv):
+   │   cd backend
+   │   npm install
+   │
    ├── Ensure vercel.json is configured:
    │   {
    │     "version": 2,
    │     "builds": [{ "src": "server.js", "use": "@vercel/node" }],
    │     "routes": [{ "src": "/(.*)", "dest": "server.js" }]
    │   }
-   └── Configure environment variables in Vercel dashboard:
-       ├── SERPAPI_KEY=your_serpapi_key_here
-       ├── CORS_ORIGIN=https://nft-patents.vercel.app
-       └── NODE_ENV=production
+   │
+   └── Set up Vercel KV Storage (CRITICAL for production):
+       ├── Go to https://vercel.com/dashboard
+       ├── Select your backend project
+       ├── Navigate to: Storage → Create Database → KV
+       ├── Create a new KV database (e.g., "patent-nft-metadata")
+       ├── Vercel will automatically add these environment variables:
+       │   ├── KV_REST_API_URL
+       │   ├── KV_REST_API_TOKEN
+       │   └── KV_REST_API_READ_ONLY_TOKEN
+       │
+       └── Configure additional environment variables in Vercel dashboard:
+           ├── SERPAPI_KEY=your_serpapi_key_here
+           ├── CORS_ORIGIN=https://nft-patents.vercel.app
+           └── NODE_ENV=production
 
 2. Deploy Backend
    ├── vercel --prod (or push to GitHub for auto-deploy)
-   └── Note the deployment URL: https://nft-patents-backend.vercel.app
+   ├── Deployment URL: https://nft-patents-backend.vercel.app
+   └── Verify KV is working:
+       curl https://nft-patents-backend.vercel.app/api/health
+       (Should show: "storage": "Vercel KV (persistent)", "kvEnabled": true)
 ```
+
+**Why Vercel KV is Required:**
+
+Vercel is a **serverless platform**, meaning your backend server can restart frequently (cold starts). Without persistent storage:
+- ❌ In-memory Map gets wiped on every restart
+- ❌ NFT metadata is lost
+- ❌ "My NFTs" modal shows no data
+- ❌ Marketplace shows "Untitled Patent NFT #X"
+
+With Vercel KV:
+- ✅ Metadata persists across restarts
+- ✅ NFTs show real patent titles
+- ✅ Fast key-value lookups
+- ✅ Free tier: 256 MB storage, 30,000 commands/month
 
 **Frontend Deployment to Vercel:**
 

@@ -371,26 +371,65 @@ NFT_Patents/
 
 ### Vercel Deployment (Frontend & Backend)
 
+**Backend Deployment (Critical: Set up Vercel KV first!):**
+
+1. **Install backend dependencies:**
+   ```bash
+   cd backend
+   npm install  # Installs @vercel/kv and other dependencies
+   ```
+
+2. **Set up Vercel KV Storage (REQUIRED for production):**
+   - Go to https://vercel.com/dashboard
+   - Select your backend project (or create it first)
+   - Navigate to: **Storage** → **Create Database** → **KV**
+   - Create a new KV database (name it: `patent-nft-metadata`)
+   - Vercel automatically adds these environment variables to your project:
+     - `KV_REST_API_URL`
+     - `KV_REST_API_TOKEN`
+     - `KV_REST_API_READ_ONLY_TOKEN`
+
+3. **Configure additional environment variables in Vercel:**
+   - `SERPAPI_KEY` - Your SerpAPI key for patent search
+   - `CORS_ORIGIN` - Your frontend URL (e.g., `https://nft-patents.vercel.app`)
+   - `NODE_ENV=production`
+
+4. **Deploy backend:**
+   ```bash
+   vercel --prod
+   ```
+
+5. **Verify KV is working:**
+   ```bash
+   curl https://nft-patents-backend.vercel.app/api/health
+   ```
+   Should return:
+   ```json
+   {
+     "status": "OK",
+     "storage": "Vercel KV (persistent)",
+     "kvEnabled": true
+   }
+   ```
+
 **Frontend Deployment:**
 1. Push to GitHub repository
 2. Import project in Vercel dashboard
 3. Configure environment variables in Vercel:
    - All `VITE_*` variables from `.env`
    - Contract addresses from deployment
-4. Deploy automatically on push to main branch
-
-**Backend Deployment:**
-1. Deploy backend separately to Vercel
-2. Configure critical environment variables:
-   - `SERPAPI_KEY` - Your SerpAPI key for patent search
-   - `CORS_ORIGIN` - Your frontend URL (e.g., `https://nft-patents.vercel.app`)
-   - `NODE_ENV=production`
-3. Update frontend `.env` with backend URL:
    - `VITE_API_BASE_URL=https://nft-patents-backend.vercel.app`
+4. Deploy automatically on push to main branch
 
 **Deployment URLs:**
 - Frontend: `https://nft-patents.vercel.app`
 - Backend: `https://nft-patents-backend.vercel.app`
+
+**⚠️ Important Notes:**
+- **Vercel KV is FREE** for the starter tier (256 MB storage, 30,000 commands/month)
+- Without KV, metadata is stored in-memory and **lost on server restarts**
+- This causes "My NFTs" modal and marketplace to show generic names instead of real patent titles
+- After enabling KV, **re-mint any existing NFTs** to store their metadata persistently
 
 ---
 
