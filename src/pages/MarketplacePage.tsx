@@ -200,13 +200,19 @@ const MarketplacePage: React.FC = () => {
           for (const log of logs) {
             try {
               const contractAddress = log.address.toLowerCase();
+
+              // Ensure topics[3] exists before converting to BigInt
+              if (!log.topics || !log.topics[3]) {
+                continue;
+              }
+
               const tokenId = BigInt(log.topics[3]).toString();
-              
+
               // Skip if this is our PatentNFT contract (already processed above)
               if (contractAddress.toLowerCase() === import.meta.env.VITE_PATENT_NFT_ADDRESS?.toLowerCase()) {
                 continue;
               }
-              
+
               if (!contractTokens.has(contractAddress)) {
                 contractTokens.set(contractAddress, new Set());
               }
