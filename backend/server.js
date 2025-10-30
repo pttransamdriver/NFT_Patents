@@ -65,7 +65,7 @@ app.use('/api/', generalLimiter);
 const tempStorage = new Map();
 
 // Check if Vercel KV is available and configured
-const USE_KV = kv && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+const USE_KV = !!(kv && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
 // Helper functions for persistent storage
 async function storeMetadata(patentNumber, metadata) {
