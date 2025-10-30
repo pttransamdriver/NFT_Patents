@@ -1,10 +1,13 @@
-const { ethers } = require('hardhat');
+import hre from 'hardhat';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 async function main() {
   console.log('🔧 Updating PatentNFT Base Metadata URI...\n');
 
   // Get deployer
-  const [deployer] = await ethers.getSigners();
+  const [deployer] = await hre.ethers.getSigners();
   console.log('👤 Deployer:', deployer.address);
 
   // Get contract address
@@ -20,7 +23,7 @@ async function main() {
   console.log('🔗 New Base URI:', newBaseURI);
 
   // Get contract instance
-  const PatentNFT = await ethers.getContractFactory('PatentNFT');
+  const PatentNFT = await hre.ethers.getContractFactory('PatentNFT');
   const contract = PatentNFT.attach(patentNFTAddress);
 
   // Check current base URI
