@@ -41,18 +41,15 @@ export class MintingService extends BaseSingleton {
         };
       }
 
-      // Process patent PDF and create IPFS metadata
-      let pdfHash = '';
-      let imageHash = '';
+      // Process patent PDF and upload metadata to IPFS
+      let metadataIpfsHash = '';
       let imageUrl = '';
-      
+
       try {
         const pdfData = await patentPdfService.processPatentForNFT(params.patentNumber);
-        pdfHash = pdfData.pdfHash;
-        imageHash = pdfData.imageHash;
         imageUrl = pdfData.imageUrl;
 
-        // Create proper NFT metadata format for backend storage
+        // Create proper NFT metadata format
         const nftMetadata = {
           name: params.patentData?.title || `Patent NFT - ${params.patentNumber}`,
           description: params.patentData?.abstract || `NFT representing patent ${params.patentNumber}`,
@@ -98,14 +95,28 @@ export class MintingService extends BaseSingleton {
           ]
         };
 
-        // Store complete NFT metadata in backend
-        await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(nftMetadata)
-        });
+        // Upload metadata JSON to IPFS
+        console.log('📤 Uploading metadata to IPFS...');
+        metadataIpfsHash = await patentPdfService.storeMetadataOnIPFS(nftMetadata, `${params.patentNumber}-metadata.json`);
+        console.log('✅ Metadata uploaded to IPFS:', metadataIpfsHash);
+
+        // Store IPFS hash in backend for redirection
+        try {
+          await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...nftMetadata,
+              ipfsHash: metadataIpfsHash  // Store IPFS hash for backend to redirect
+            })
+          });
+        } catch (backendError) {
+          console.warn('Failed to store metadata in backend (non-critical):', backendError);
+        }
 
       } catch (pdfError) {
+        console.error('PDF processing failed, using fallback:', pdfError);
+
         // Continue with minting even if PDF processing fails
         imageUrl = `https://via.placeholder.com/400x600.png?text=Patent+${params.patentNumber}`;
 
@@ -156,13 +167,26 @@ export class MintingService extends BaseSingleton {
         };
 
         try {
-          await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(fallbackMetadata)
-          });
+          console.log('📤 Uploading fallback metadata to IPFS...');
+          metadataIpfsHash = await patentPdfService.storeMetadataOnIPFS(fallbackMetadata, `${params.patentNumber}-metadata.json`);
+          console.log('✅ Fallback metadata uploaded to IPFS:', metadataIpfsHash);
+
+          // Store IPFS hash in backend for redirection
+          try {
+            await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...fallbackMetadata,
+                ipfsHash: metadataIpfsHash
+              })
+            });
+          } catch (backendError) {
+            console.warn('Failed to store fallback metadata in backend (non-critical):', backendError);
+          }
         } catch (metadataError) {
-          console.warn('Failed to store fallback metadata:', metadataError);
+          console.error('Failed to upload metadata to IPFS:', metadataError);
+          throw new Error('Failed to create NFT metadata. Please try again.');
         }
       }
 

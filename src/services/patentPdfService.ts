@@ -121,6 +121,49 @@ export class PatentPdfService {
   }
 
   /**
+   * Store JSON metadata on IPFS
+   * @param metadata - Metadata object to store
+   * @param filename - Optional filename
+   * @returns IPFS hash
+   */
+  async storeMetadataOnIPFS(metadata: any, filename?: string): Promise<string> {
+    const pinataApiKey = import.meta.env.VITE_PINATA_API_KEY;
+    const pinataSecretKey = import.meta.env.VITE_PINATA_SECRET_KEY;
+
+    // If Pinata is configured, use it
+    if (pinataApiKey && pinataSecretKey && pinataApiKey !== 'your_pinata_api_key_here') {
+      console.log('📌 Uploading metadata JSON to Pinata');
+
+      const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'pinata_api_key': pinataApiKey,
+          'pinata_secret_api_key': pinataSecretKey,
+        },
+        body: JSON.stringify({
+          pinataContent: metadata,
+          pinataMetadata: {
+            name: filename || 'nft-metadata.json',
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to store metadata on Pinata');
+      }
+
+      const result = await response.json();
+      return result.IpfsHash;
+    }
+
+    // For local testing without IPFS, return a placeholder hash
+    console.log('📌 Local testing mode - using placeholder metadata hash');
+    const placeholderHash = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    return placeholderHash;
+  }
+
+  /**
    * Store file on Pinata (IPFS service) as fallback
    */
   private async storeOnPinata(file: Blob, filename?: string): Promise<string> {
@@ -163,7 +206,10 @@ export class PatentPdfService {
   async processPatentForNFT(patentNumber: string): Promise<{
     originalPdfHash: string;
     singlePagePdfHash: string;
+    pdfHash: string;
     pdfUrl: string;
+    imageUrl: string;
+    imageHash: string;
   }> {
     try {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
@@ -236,7 +282,10 @@ export class PatentPdfService {
       return {
         originalPdfHash: singlePagePdfHash, // We only have the single-page version
         singlePagePdfHash,                   // Compressed first page for NFT display
-        pdfUrl                              // URL to single-page PDF (used as NFT image)
+        pdfHash: singlePagePdfHash,         // Alias for consistency
+        pdfUrl,                             // URL to single-page PDF (used as NFT image)
+        imageUrl: pdfUrl,                   // URL to use as NFT image
+        imageHash: singlePagePdfHash        // Hash of the image
       };
 
     } catch (error) {

@@ -534,11 +534,17 @@ app.get('/api/metadata/:patentNumber', (req, res) => {
   try {
     const { patentNumber } = req.params;
     const metadata = tempStorage.get(patentNumber);
-    
+
     if (!metadata) {
       return res.status(404).json({ error: 'Metadata not found' });
     }
-    
+
+    // If metadata has an IPFS hash, redirect to IPFS
+    if (metadata.ipfsHash) {
+      const ipfsGateway = process.env.VITE_IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+      return res.redirect(`${ipfsGateway}${metadata.ipfsHash}`);
+    }
+
     // Check if metadata is already in NFT format (has attributes) or legacy format (has patentData)
     if (metadata.attributes) {
       // Already in NFT format, return as-is
@@ -565,7 +571,7 @@ app.get('/api/metadata/:patentNumber', (req, res) => {
         ]
       });
     }
-    
+
   } catch (error) {
     console.error('❌ Metadata retrieval error:', error);
     res.status(500).json({ error: 'Failed to retrieve metadata' });
