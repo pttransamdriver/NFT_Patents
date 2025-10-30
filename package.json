@@ -30,6 +30,7 @@
     "deploy:marketplace": "node scripts/deploy/004_deploy_marketplace.js",
     "verify": "node scripts/verify-deployment.js",
     "verify:sepolia": "node scripts/verify-deployment.js sepolia",
+    "update-base-uri": "hardhat run scripts/update-base-uri.js --network sepolia",
     "node": "hardhat node",
     "deploy-pages": "npm run build && gh-pages -d docs"
   },
