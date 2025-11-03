@@ -3,11 +3,10 @@
  */
 export async function testPinataConnection(): Promise<boolean> {
   try {
-    const pinataApiKey = import.meta.env.VITE_PINATA_API_KEY;
-    const pinataSecretKey = import.meta.env.VITE_PINATA_SECRET_KEY;
+    const pinataJWT = import.meta.env.VITE_PINATA_JWT;
 
-    if (!pinataApiKey || !pinataSecretKey) {
-      console.error('❌ Pinata credentials not configured');
+    if (!pinataJWT) {
+      console.error('❌ Pinata JWT not configured');
       return false;
     }
 
@@ -15,8 +14,7 @@ export async function testPinataConnection(): Promise<boolean> {
     const response = await fetch('https://api.pinata.cloud/data/testAuthentication', {
       method: 'GET',
       headers: {
-        'pinata_api_key': pinataApiKey,
-        'pinata_secret_api_key': pinataSecretKey,
+        'Authorization': `Bearer ${pinataJWT}`,
       },
     });
 
@@ -25,7 +23,8 @@ export async function testPinataConnection(): Promise<boolean> {
       console.log('✅ Pinata connection successful:', data.message);
       return true;
     } else {
-      console.error('❌ Pinata authentication failed:', response.status);
+      const errorText = await response.text();
+      console.error('❌ Pinata authentication failed:', response.status, errorText);
       return false;
     }
   } catch (error) {

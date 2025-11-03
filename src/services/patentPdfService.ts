@@ -104,12 +104,11 @@ export class PatentPdfService {
    * @returns IPFS hash or placeholder for local testing
    */
   async storeOnIPFS(file: Blob, filename?: string): Promise<string> {
-    // Check if Pinata credentials are configured
-    const pinataApiKey = import.meta.env.VITE_PINATA_API_KEY;
-    const pinataSecretKey = import.meta.env.VITE_PINATA_SECRET_KEY;
+    // Check if Pinata JWT is configured
+    const pinataJWT = import.meta.env.VITE_PINATA_JWT;
 
     // If Pinata is configured, use it
-    if (pinataApiKey && pinataSecretKey && pinataApiKey !== 'your_pinata_api_key_here') {
+    if (pinataJWT && pinataJWT !== 'your_pinata_jwt_here') {
       console.log('📌 Using Pinata for IPFS storage');
       return this.storeOnPinata(file, filename);
     }
@@ -127,19 +126,17 @@ export class PatentPdfService {
    * @returns IPFS hash
    */
   async storeMetadataOnIPFS(metadata: any, filename?: string): Promise<string> {
-    const pinataApiKey = import.meta.env.VITE_PINATA_API_KEY;
-    const pinataSecretKey = import.meta.env.VITE_PINATA_SECRET_KEY;
+    const pinataJWT = import.meta.env.VITE_PINATA_JWT;
 
     // If Pinata is configured, use it
-    if (pinataApiKey && pinataSecretKey && pinataApiKey !== 'your_pinata_api_key_here') {
+    if (pinataJWT && pinataJWT !== 'your_pinata_jwt_here') {
       console.log('📌 Uploading metadata JSON to Pinata');
 
       const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'pinata_api_key': pinataApiKey,
-          'pinata_secret_api_key': pinataSecretKey,
+          'Authorization': `Bearer ${pinataJWT}`,
         },
         body: JSON.stringify({
           pinataContent: metadata,
@@ -150,7 +147,9 @@ export class PatentPdfService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to store metadata on Pinata');
+        const errorText = await response.text();
+        console.error('Pinata API error:', response.status, errorText);
+        throw new Error(`Failed to store metadata on Pinata: ${response.status}`);
       }
 
       const result = await response.json();
@@ -167,11 +166,10 @@ export class PatentPdfService {
    * Store file on Pinata (IPFS service) as fallback
    */
   private async storeOnPinata(file: Blob, filename?: string): Promise<string> {
-    const pinataApiKey = import.meta.env.VITE_PINATA_API_KEY;
-    const pinataSecretKey = import.meta.env.VITE_PINATA_SECRET_KEY;
+    const pinataJWT = import.meta.env.VITE_PINATA_JWT;
 
-    if (!pinataApiKey || !pinataSecretKey) {
-      throw new Error('Pinata credentials not configured');
+    if (!pinataJWT) {
+      throw new Error('Pinata JWT not configured');
     }
 
     const formData = new FormData();
@@ -184,14 +182,15 @@ export class PatentPdfService {
     const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
       headers: {
-        'pinata_api_key': pinataApiKey,
-        'pinata_secret_api_key': pinataSecretKey,
+        'Authorization': `Bearer ${pinataJWT}`,
       },
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error('Failed to store on Pinata');
+      const errorText = await response.text();
+      console.error('Pinata file upload error:', response.status, errorText);
+      throw new Error(`Failed to store on Pinata: ${response.status}`);
     }
 
     const result = await response.json();
