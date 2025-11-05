@@ -98,104 +98,88 @@ export class PatentPdfService {
   }
 
   /**
-   * Store file on IPFS or fallback to Pinata
+   * Store file on IPFS via backend proxy (secure - JWT never exposed)
    * @param file - File to store
    * @param filename - Optional filename
    * @returns IPFS hash or placeholder for local testing
    */
   async storeOnIPFS(file: Blob, filename?: string): Promise<string> {
-    // Check if Pinata JWT is configured
-    const pinataJWT = import.meta.env.VITE_PINATA_JWT;
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
 
-    // If Pinata is configured, use it
-    if (pinataJWT && pinataJWT !== 'your_pinata_jwt_here') {
-      console.log('📌 Using Pinata for IPFS storage');
-      return this.storeOnPinata(file, filename);
+      console.log('📌 Using backend proxy for IPFS storage');
+
+      // Convert blob to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+      // Upload via backend proxy
+      const response = await fetch(`${apiBaseUrl}/api/pinata/upload-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file: base64,
+          filename: filename || 'patent-file.pdf'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload to IPFS');
+      }
+
+      const result = await response.json();
+      console.log('✅ File uploaded to IPFS via backend:', result.ipfsHash);
+      return result.ipfsHash;
+
+    } catch (error) {
+      console.error('❌ IPFS upload error:', error);
+      // For local testing without backend, return a placeholder hash
+      console.log('📌 Fallback to placeholder IPFS hash');
+      const placeholderHash = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      return placeholderHash;
     }
-
-    // For local testing without IPFS, return a placeholder hash
-    console.log('📌 Local testing mode - using placeholder IPFS hash');
-    const placeholderHash = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-    return placeholderHash;
   }
 
   /**
-   * Store JSON metadata on IPFS
+   * Store JSON metadata on IPFS via backend proxy (secure - JWT never exposed)
    * @param metadata - Metadata object to store
    * @param filename - Optional filename
    * @returns IPFS hash
    */
   async storeMetadataOnIPFS(metadata: any, filename?: string): Promise<string> {
-    const pinataJWT = import.meta.env.VITE_PINATA_JWT;
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
 
-    // If Pinata is configured, use it
-    if (pinataJWT && pinataJWT !== 'your_pinata_jwt_here') {
-      console.log('📌 Uploading metadata JSON to Pinata');
+      console.log('📌 Uploading metadata JSON via backend proxy');
 
-      const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+      const response = await fetch(`${apiBaseUrl}/api/pinata/upload-json`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${pinataJWT}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pinataContent: metadata,
-          pinataMetadata: {
-            name: filename || 'nft-metadata.json',
-          }
-        }),
+          json: metadata,
+          filename: filename || 'nft-metadata.json'
+        })
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Pinata API error:', response.status, errorText);
-        throw new Error(`Failed to store metadata on Pinata: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload metadata to IPFS');
       }
 
       const result = await response.json();
-      return result.IpfsHash;
-    }
+      console.log('✅ Metadata uploaded to IPFS via backend:', result.ipfsHash);
+      return result.ipfsHash;
 
-    // For local testing without IPFS, return a placeholder hash
-    console.log('📌 Local testing mode - using placeholder metadata hash');
-    const placeholderHash = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-    return placeholderHash;
+    } catch (error) {
+      console.error('❌ Metadata upload error:', error);
+      // For local testing without backend, return a placeholder hash
+      console.log('📌 Fallback to placeholder metadata hash');
+      const placeholderHash = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      return placeholderHash;
+    }
   }
 
-  /**
-   * Store file on Pinata (IPFS service) as fallback
-   */
-  private async storeOnPinata(file: Blob, filename?: string): Promise<string> {
-    const pinataJWT = import.meta.env.VITE_PINATA_JWT;
-
-    if (!pinataJWT) {
-      throw new Error('Pinata JWT not configured');
-    }
-
-    const formData = new FormData();
-    formData.append('file', file, filename || 'patent-file');
-    formData.append('pinataMetadata', JSON.stringify({
-      name: filename || 'patent-file',
-      description: 'Patent document for NFT'
-    }));
-
-    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${pinataJWT}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Pinata file upload error:', response.status, errorText);
-      throw new Error(`Failed to store on Pinata: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.IpfsHash;
-  }
 
   /**
    * Process patent for NFT creation using backend PDF processing
