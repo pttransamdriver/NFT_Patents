@@ -63,7 +63,20 @@ async function main() {
   // 3. Deploy PatentNFT contract
   console.log("\n📦 Deploying PatentNFT contract...");
   const PatentNFT = await hre.ethers.getContractFactory("PatentNFT");
-  const patentNFT = await PatentNFT.deploy();
+
+  // Constructor arguments for PatentNFT
+  const royaltyReceiver = deployer.address; // Deployer receives royalties
+  const royaltyFeeNumerator = 500; // 5% royalty fee (500 basis points)
+  // Use production backend URL from environment or default to Vercel backend
+  const baseMetadataURI = process.env.VITE_API_BASE_URL
+    ? `${process.env.VITE_API_BASE_URL}/api/metadata/`
+    : "https://nft-patents-backend.vercel.app/api/metadata/";
+
+  console.log(`   👑 Royalty Receiver: ${royaltyReceiver}`);
+  console.log(`   💎 Royalty Fee: ${royaltyFeeNumerator / 100}%`);
+  console.log(`   🔗 Base Metadata URI: ${baseMetadataURI}`);
+
+  const patentNFT = await PatentNFT.deploy(royaltyReceiver, royaltyFeeNumerator, baseMetadataURI);
   await patentNFT.waitForDeployment();
   const patentNFTAddress = await patentNFT.getAddress();
   deployedContracts.PatentNFT = patentNFTAddress;
@@ -81,15 +94,13 @@ async function main() {
 
   // 5. Configure contracts
   console.log("\n⚙️  Configuring contracts...");
-  
+
   // Set PSP token as authorized spender in SearchPayment
   await searchPayment.setPSPToken(pspTokenAddress);
   console.log("✅ PSP token authorized in SearchPayment");
-  
-  // Set production metadata URI for PatentNFT
-  const productionMetadataURI = "https://your-backend-domain.com/metadata/";
-  await patentNFT.setBaseTokenURI(productionMetadataURI);
-  console.log("✅ PatentNFT metadata URI configured");
+
+  // Note: PatentNFT metadata URI is set via constructor
+  console.log("✅ PatentNFT metadata URI configured via constructor");
 
   // 6. Save deployment information
   const deploymentInfo = {
@@ -101,8 +112,10 @@ async function main() {
     contracts: {
       PatentNFT: {
         address: patentNFTAddress,
-        mintingPrice: "0.1 ETH",
-        baseTokenURI: productionMetadataURI
+        mintingPrice: "0.05 ETH",
+        royaltyReceiver: royaltyReceiver,
+        royaltyFeeNumerator: royaltyFeeNumerator,
+        baseMetadataURI: baseMetadataURI
       },
       PSPToken: {
         address: pspTokenAddress,
@@ -136,7 +149,7 @@ async function main() {
       VITE_NETWORK_NAME: "sepolia"
     },
     verificationCommands: {
-      PatentNFT: `npx hardhat verify --network sepolia ${patentNFTAddress}`,
+      PatentNFT: `npx hardhat verify --network sepolia ${patentNFTAddress} "${royaltyReceiver}" ${royaltyFeeNumerator} "${baseMetadataURI}"`,
       PSPToken: `npx hardhat verify --network sepolia ${pspTokenAddress} ${initialTokenPrice}`,
       SearchPayment: `npx hardhat verify --network sepolia ${searchPaymentAddress} ${pspTokenAddress} ${usdcTokenAddress} ${initialPriceInETH} ${initialPriceInUSDC} ${initialPriceInPSP}`,
       NFTMarketplace: `npx hardhat verify --network sepolia ${marketplaceAddress} ${feeRecipient}`

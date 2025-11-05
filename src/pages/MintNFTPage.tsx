@@ -27,6 +27,7 @@ const MintNFTPage: React.FC = () => {
     { id: 2, title: 'Preview NFT', description: 'Review NFT metadata and appearance', completed: false, active: false },
     { id: 3, title: 'Mint NFT', description: 'Create and mint your patent NFT', completed: false, active: false },
   ]);
+  const [mintingError, setMintingError] = useState<string | null>(null);
   const { provider, signer, account, connectWallet, isConnected } = useWeb3();
 
 
@@ -166,13 +167,18 @@ const MintNFTPage: React.FC = () => {
 
       if (result.success) {
         updateStep(3, true);
+        setMintingError(null);
         toast.success(`Patent NFT minted successfully! Token ID: ${result.tokenId}`);
       } else {
-        toast.error(`Minting failed: ${result.error}`);
+        const errorMsg = result.error || 'Minting failed';
+        setMintingError(errorMsg);
+        toast.error(`Minting failed: ${errorMsg}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error minting NFT:", error);
-      toast.error('Failed to mint NFT. Please try again.');
+      const errorMsg = error?.message || 'Failed to mint NFT. Please try again.';
+      setMintingError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -456,7 +462,7 @@ const MintNFTPage: React.FC = () => {
                   onClick={handlePreviewApproval}
                   className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
                 >
-                  Looks Good - Proceed to Mint
+                  Proceed to Mint NFT →
                 </button>
               </div>
             </div>
@@ -508,22 +514,55 @@ const MintNFTPage: React.FC = () => {
                 </div>
               </div>
 
-              {!isConnected ? (
+              <div className="flex gap-4">
                 <button
-                  onClick={connectWallet}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
+                  onClick={() => {
+                    setCurrentStep(2);
+                    updateStep(2, false, true);
+                    updateStep(3, false, false);
+                    setMintingError(null);
+                  }}
+                  className="flex-1 px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <Wallet className="w-5 h-5 mr-2" />
-                  Connect Wallet to Mint
+                  ← Back to Preview
                 </button>
-              ) : (
-                <button
-                  onClick={handleMintNFT}
-                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center transform hover:scale-105"
-                >
-                  <Upload className="w-5 h-5 mr-2" />
-                  Mint Patent NFT
-                </button>
+
+                {!isConnected ? (
+                  <button
+                    onClick={connectWallet}
+                    className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
+                  >
+                    <Wallet className="w-5 h-5 mr-2" />
+                    Connect Wallet
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleMintNFT}
+                    className="flex-1 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center transform hover:scale-105"
+                  >
+                    <Upload className="w-5 h-5 mr-2" />
+                    Mint Patent NFT
+                  </button>
+                )}
+              </div>
+
+              {/* Error Display */}
+              {mintingError && (
+                <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-red-800 dark:text-red-200">Minting Error</h4>
+                      <p className="text-sm text-red-700 dark:text-red-300 mt-1">{mintingError}</p>
+                      <button
+                        onClick={() => setMintingError(null)}
+                        className="text-xs text-red-600 dark:text-red-400 hover:underline mt-2"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4">

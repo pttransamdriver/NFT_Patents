@@ -211,10 +211,16 @@ export class MintingService extends BaseSingleton {
       const mintingPrice = await contract.getMintingPrice();
       console.log('Got minting price from contract:', mintingPrice.toString());
       
-      // Call mint function on contract (payable)
+      // Validate that we have IPFS hash before minting
+      if (!metadataIpfsHash) {
+        throw new Error('Failed to upload metadata to IPFS. Cannot mint NFT without metadata.');
+      }
+
+      // Call mint function on contract (payable) with IPFS hash
       const tx = await contract.mintPatentNFT(
         params.userAddress,
         params.patentNumber,
+        metadataIpfsHash,  // Pass IPFS hash for decentralized storage
         { value: mintingPrice }
       );
       

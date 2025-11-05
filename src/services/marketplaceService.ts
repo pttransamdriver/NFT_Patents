@@ -118,8 +118,17 @@ export class MarketplaceService extends BaseSingleton {
           
           try {
             metadataUri = await patentNFTContract.tokenURI(listing.tokenId);
+
+            // Convert IPFS URI to HTTP gateway URL if needed
+            let resolvedUri = metadataUri;
+            if (metadataUri.startsWith('ipfs://')) {
+              const ipfsHash = metadataUri.replace('ipfs://', '');
+              const gateway = import.meta.env.VITE_IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+              resolvedUri = `${gateway}${ipfsHash}`;
+            }
+
             // Fetch metadata to get all information
-            const metadataResponse = await fetch(metadataUri);
+            const metadataResponse = await fetch(resolvedUri);
             if (metadataResponse.ok) {
               const metadata = await metadataResponse.json();
               imageUrl = metadata.image || '';

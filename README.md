@@ -24,8 +24,8 @@ This project is a **demonstration/portfolio project** built to showcase Web3 dev
 - Rich metadata display from Google Patents API
 
 🚧 **Proof-of-Concept / Optional Features**:
-- **AI Search**: Currently uses enhanced rule-based keyword expansion. Can be upgraded to real AI (OpenAI/Gemini) by adding API keys - see [AI Search Configuration](#-optional-ai-powered-search)
-- **Make Offer System**: UI ready, smart contract implementation pending
+- **AI Search**: Basic keyword processing with optional AI enhancement. Can be upgraded to real AI (OpenAI/Gemini) by adding API keys - see [AI Search Configuration](#-optional-ai-powered-search)
+- **Make Offer System**: Basic UI framework in place, smart contract implementation planned for future release
 - **Price History**: Framework in place, blockchain event tracking not yet implemented
 
 This architecture demonstrates **graceful degradation** - the app works great with basic features and can be enhanced with optional paid services (AI APIs) based on user preference.

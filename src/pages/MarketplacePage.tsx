@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Filter, TrendingUp, Clock, DollarSign, Wallet, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Filter, TrendingUp, Clock, DollarSign, Wallet, ChevronLeft, ChevronRight, RefreshCw, Search, FileText } from 'lucide-react';
 import NFTCard from '../components/marketplace/NFTCard';
 import MyNFTsModal from '../components/modals/MyNFTsModal';
 import ListNFTModal from '../components/modals/ListNFTModal';
@@ -13,7 +13,6 @@ import type { SearchFilters } from '../types';
 
 const MarketplacePage: React.FC = () => {
   const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     sortBy: 'popularity',
@@ -114,8 +113,16 @@ const MarketplacePage: React.FC = () => {
               try {
                 const tokenURI = await contract.tokenURI(tokenId);
 
-                // Parse tokenURI to get metadata (this points to backend API)
-                const response = await fetch(tokenURI);
+                // Convert IPFS URI to HTTP gateway URL if needed
+                let resolvedUri = tokenURI;
+                if (tokenURI.startsWith('ipfs://')) {
+                  const ipfsHash = tokenURI.replace('ipfs://', '');
+                  const gateway = import.meta.env.VITE_IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+                  resolvedUri = `${gateway}${ipfsHash}`;
+                }
+
+                // Parse tokenURI to get metadata
+                const response = await fetch(resolvedUri);
                 const metadata = await response.json();
 
                 // Extract patent data from attributes
@@ -456,15 +463,13 @@ const MarketplacePage: React.FC = () => {
   const filteredNFTs = useMemo(() => {
     // Use marketplace listings instead of user's personal NFTs
     let filtered = marketplaceListings.filter(listing => {
-      const matchesSearch = searchQuery === '' || 
-        (listing.title && listing.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (listing.inventor && listing.inventor.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (listing.patentNumber && listing.patentNumber.toLowerCase().includes(searchQuery.toLowerCase()));
-      
+      // Search UI not implemented yet, so include all listings for now
+      const matchesSearch = true;
+
       // Since we don't have category/status on marketplace listings yet, skip those filters for now
       // const matchesCategory = !filters.category || filters.category === 'All' || listing.category === filters.category;
       // const matchesStatus = !filters.status || filters.status === 'All' || listing.status === filters.status;
-      
+
       return matchesSearch;
     });
 
@@ -492,7 +497,7 @@ const MarketplacePage: React.FC = () => {
     }
 
     return filtered;
-  }, [searchQuery, filters, marketplaceListings]);
+  }, [filters, marketplaceListings]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -512,30 +517,18 @@ const MarketplacePage: React.FC = () => {
           </p>
         </motion.div>
 
-        {/* Search and Filters */}
+        {/* Filters and Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8"
         >
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search Bar */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search patents, inventors, or patent numbers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              />
-            </div>
-
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
             {/* Filter Button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-gray-900 dark:text-white"
+              className="flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 text-gray-900 dark:text-white"
             >
               <Filter className="w-5 h-5 mr-2" />
               Filters
@@ -548,7 +541,7 @@ const MarketplacePage: React.FC = () => {
                   setNftRefreshTrigger(prev => prev + 1); // Trigger refresh
                   setShowMyNFTsModal(true);
                 }}
-                className="flex items-center px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg"
+                className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg"
               >
                 <Wallet className="w-5 h-5 mr-2" />
                 My NFTs
@@ -681,7 +674,13 @@ const MarketplacePage: React.FC = () => {
             
             {realNFTs.length > 3 && (
               <div className="mt-4 text-center">
-                <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+                <button
+                  onClick={() => {
+                    setNftRefreshTrigger(prev => prev + 1); // Trigger refresh
+                    setShowMyNFTsModal(true);
+                  }}
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200"
+                >
                   View all {realNFTs.length} NFTs →
                 </button>
               </div>

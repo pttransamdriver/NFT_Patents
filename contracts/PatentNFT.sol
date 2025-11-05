@@ -9,14 +9,16 @@ import "@openzeppelin/contracts/token/common/ERC2981.sol";
 
 /// @title PatentNFT
 /// @notice ERC721 NFT collection where each patent number can only be minted once.
-///         Metadata URIs are stored on-chain. Royalties supported via ERC2981.
+///         Metadata is stored on IPFS for full decentralization. IPFS URIs (ipfs://) are stored on-chain.
+///         Royalties supported via ERC2981.
 contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     // Bit-packed state variables - all fit in one 32-byte storage slot
     uint96 private _nextTokenId;                // 12 bytes - supports 79+ octillion tokens
     uint96 public mintingPrice = 0.05 ether;    // 12 bytes - supports up to 79 billion ETH
     uint64 public platformFeePercentage = 250;  // 8 bytes - (250 = 2.5%)
 
-    // Base URI for metadata - configurable for production deployment
+    // Base URI for metadata - kept for backward compatibility and admin minting
+    // Note: Public minting now uses IPFS URIs directly for full decentralization
     string public baseMetadataURI;
 
     // mapping from normalized patent hash → tokenId
@@ -34,7 +36,8 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
         // Set default royalty (e.g. 500 = 5%)
         _setDefaultRoyalty(royaltyReceiver, royaltyFeeNumerator);
 
-        // Set base metadata URI (e.g., "https://your-backend.vercel.app/api/metadata/")
+        // Set base metadata URI (optional, kept for backward compatibility)
+        // Public minting now uses IPFS URIs directly
         baseMetadataURI = _baseMetadataURI;
     }
 
@@ -45,8 +48,10 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
     /// @notice Mint a new Patent NFT with payment (public function)
     /// @param to Receiver of the NFT.
     /// @param patentNumber Raw patent number string.
-    function mintPatentNFT(address to, string memory patentNumber) external payable nonReentrant returns (uint256) {
+    /// @param ipfsHash IPFS hash of the metadata JSON (without "ipfs://" prefix).
+    function mintPatentNFT(address to, string memory patentNumber, string memory ipfsHash) external payable nonReentrant returns (uint256) {
         require(msg.value >= mintingPrice, "Insufficient payment for minting");
+        require(bytes(ipfsHash).length > 0, "IPFS hash cannot be empty");
 
         bytes32 key = _normalizePatentId(patentNumber);
         require(_patentHashToTokenId[key] == 0, "Patent already minted");
@@ -54,11 +59,8 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
         uint256 tokenId = ++_nextTokenId;
         _safeMint(to, tokenId);
 
-        // Generate metadata URI using configurable base URI
-        string memory uri = string(abi.encodePacked(
-            baseMetadataURI,
-            patentNumber
-        ));
+        // Generate decentralized IPFS URI
+        string memory uri = string(abi.encodePacked("ipfs://", ipfsHash));
         _setTokenURI(tokenId, uri);
 
         _patentHashToTokenId[key] = tokenId;

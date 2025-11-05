@@ -67,7 +67,15 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
           let patentData;
           try {
             if (tokenURI) {
-              const response = await fetch(tokenURI);
+              // Convert IPFS URI to HTTP gateway URL if needed
+              let resolvedUri = tokenURI;
+              if (tokenURI.startsWith('ipfs://')) {
+                const ipfsHash = tokenURI.replace('ipfs://', '');
+                const gateway = import.meta.env.VITE_IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+                resolvedUri = `${gateway}${ipfsHash}`;
+              }
+
+              const response = await fetch(resolvedUri);
               const metadata = await response.json();
 
               // Extract patent data from metadata attributes

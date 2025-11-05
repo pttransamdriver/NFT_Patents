@@ -63,7 +63,17 @@ async function main() {
   console.log("\n📦 Deploying PatentNFT contract...");
   const PatentNFTArtifact = await hre.artifacts.readArtifact("PatentNFT");
   const PatentNFTFactory = new ethers.ContractFactory(PatentNFTArtifact.abi, PatentNFTArtifact.bytecode, wallet);
-  const patentNFT = await PatentNFTFactory.deploy({ nonce: nonce++ });
+
+  // Constructor arguments for PatentNFT
+  const royaltyReceiver = wallet.address; // Deployer receives royalties
+  const royaltyFeeNumerator = 500; // 5% royalty fee (500 basis points)
+  const baseMetadataURI = "http://localhost:3001/api/metadata/"; // Local development URI
+
+  console.log(`   👑 Royalty Receiver: ${royaltyReceiver}`);
+  console.log(`   💎 Royalty Fee: ${royaltyFeeNumerator / 100}%`);
+  console.log(`   🔗 Base Metadata URI: ${baseMetadataURI}`);
+
+  const patentNFT = await PatentNFTFactory.deploy(royaltyReceiver, royaltyFeeNumerator, baseMetadataURI, { nonce: nonce++ });
   await patentNFT.waitForDeployment();
   const patentNFTAddress = await patentNFT.getAddress();
   deployedContracts.PatentNFT = patentNFTAddress;
