@@ -3,7 +3,7 @@
   "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
   "transactionHash": "0x777bee236e1901e9d75410062c6f946bbbedf74ff9c62057b71f2a9a3bbefff1",
   "deploymentTime": "2025-11-05T01:28:10.153Z",
-  "network": "localhost",
+  "network": "sepolia",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "constructorArgs": [
     "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",

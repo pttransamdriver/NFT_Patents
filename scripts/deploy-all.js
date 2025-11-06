@@ -9,10 +9,31 @@ const __dirname = dirname(__filename);
 
 async function main() {
   console.log("🚀 Starting complete deployment...");
-  
-  // For localhost deployment, use Hardhat's default provider
-  const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
-  const privateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+  // Get deployment configuration from environment
+  const network = process.env.HARDHAT_NETWORK || 'localhost';
+  const rpcUrl = network === 'localhost'
+    ? "http://127.0.0.1:8545"
+    : process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
+
+  // ⚠️ SECURITY: Never hardcode private keys!
+  // For localhost, use environment variable with Hardhat's test account as fallback
+  // Hardhat's test account #0 (publicly known, safe for local testing ONLY):
+  const defaultTestKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+  const privateKey = network === 'localhost'
+    ? process.env.LOCALHOST_PRIVATE_KEY || defaultTestKey
+    : process.env.SEPOLIA_PRIVATE_KEY;
+
+  if (!privateKey) {
+    throw new Error(`Private key not found for network: ${network}. Set SEPOLIA_PRIVATE_KEY in .env`);
+  }
+
+  if (network !== 'localhost' && privateKey === defaultTestKey) {
+    throw new Error('⚠️ SECURITY ERROR: Cannot use Hardhat test key for non-localhost networks!');
+  }
+
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
   const wallet = new ethers.Wallet(privateKey, provider);
   
   // Get current nonce
@@ -67,7 +88,7 @@ async function main() {
   // Constructor arguments for PatentNFT
   const royaltyReceiver = wallet.address; // Deployer receives royalties
   const royaltyFeeNumerator = 500; // 5% royalty fee (500 basis points)
-  const baseMetadataURI = "http://localhost:3001/api/metadata/"; // Local development URI
+  const baseMetadataURI = "https://nft-patents-backend.vercel.app/api/metadata/"; // Local development URI
 
   console.log(`   👑 Royalty Receiver: ${royaltyReceiver}`);
   console.log(`   💎 Royalty Fee: ${royaltyFeeNumerator / 100}%`);

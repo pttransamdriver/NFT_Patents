@@ -46,13 +46,9 @@ const searchLimiter = rateLimit({
 // Middleware
 app.use(cors({
   origin: [
-    process.env.CORS_ORIGIN || 'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5173',
-    'http://127.0.0.1:5174',
-    'http://localhost:5174',
+    process.env.CORS_ORIGIN || 
     /\.vercel\.app$/, // Allow all Vercel deployments
-    'https://nft-patents.vercel.app' // Your production Vercel URL
+    'https://nft-patents-backend.vercel.app' // Your production Vercel URL
   ],
   credentials: true
 }));
@@ -710,7 +706,8 @@ app.get('/api/metadata/:patentNumber', async (req, res) => {
 
     // If metadata has an IPFS hash, redirect to IPFS
     if (metadata.ipfsHash) {
-      const ipfsGateway = process.env.VITE_IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+      // Backend uses IPFS_GATEWAY (not VITE_IPFS_GATEWAY which is for frontend only)
+      const ipfsGateway = process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
       return res.redirect(`${ipfsGateway}${metadata.ipfsHash}`);
     }
 
@@ -756,8 +753,7 @@ app.use((error, _req, res, _next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Patent NFT Backend Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🔗 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
+  console.log(`🔗 CORS enabled for: ${process.env.CORS_ORIGIN}`);
   console.log(`💾 Storage: ${USE_KV ? 'Vercel KV (persistent) ✅' : 'In-memory (temporary) ⚠️'}`);
   if (!USE_KV) {
     console.log(`⚠️  WARNING: Using in-memory storage - metadata will be lost on restart!`);

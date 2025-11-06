@@ -5,6 +5,30 @@ import { web3Utils } from '../utils/web3Utils';
 import { BaseSingleton } from '../utils/baseSingleton';
 import type { Patent } from '../types';
 
+/**
+ * Validates IPFS CID (Content Identifier) format
+ * Supports both CIDv0 (Qm...) and CIDv1 (ba...) formats
+ */
+function validateIPFSHash(hash: string): boolean {
+  if (!hash || typeof hash !== 'string') {
+    return false;
+  }
+
+  // CIDv0: Starts with 'Qm', 46 characters, base58
+  const cidv0Regex = /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/;
+
+  // CIDv1: Starts with 'b' (base32) or 'z' (base58), variable length
+  const cidv1Regex = /^(ba|zb)[a-z2-7]{58,}$/i;
+
+  const isValid = cidv0Regex.test(hash) || cidv1Regex.test(hash);
+
+  if (!isValid) {
+    console.warn('❌ Invalid IPFS CID format:', hash);
+  }
+
+  return isValid;
+}
+
 export interface MintingParams {
   patentNumber: string;
   price: number;
@@ -211,10 +235,17 @@ export class MintingService extends BaseSingleton {
       const mintingPrice = await contract.getMintingPrice();
       console.log('Got minting price from contract:', mintingPrice.toString());
       
-      // Validate that we have IPFS hash before minting
+      // Validate that we have IPFS hash and it's in valid CID format
       if (!metadataIpfsHash) {
         throw new Error('Failed to upload metadata to IPFS. Cannot mint NFT without metadata.');
       }
+
+      if (!validateIPFSHash(metadataIpfsHash)) {
+        console.error('Invalid IPFS hash received:', metadataIpfsHash);
+        throw new Error('Invalid IPFS hash format. Please try minting again or contact support.');
+      }
+
+      console.log('✅ IPFS hash validation passed:', metadataIpfsHash);
 
       // Call mint function on contract (payable) with IPFS hash
       const tx = await contract.mintPatentNFT(

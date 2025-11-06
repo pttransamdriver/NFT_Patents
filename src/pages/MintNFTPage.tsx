@@ -338,8 +338,8 @@ const MintNFTPage: React.FC = () => {
                                 <p className="text-gray-600 dark:text-gray-400">{verificationResult.patent.inventors.join(', ')}</p>
                               </div>
                               <div>
-                                <span className="font-medium text-gray-700 dark:text-gray-300">Estimated Value:</span>
-                                <p className="text-gray-600 dark:text-gray-400">{verificationResult.patent.estimatedValue}</p>
+                                <span className="font-medium text-gray-700 dark:text-gray-300">Minting Cost:</span>
+                                <p className="text-gray-600 dark:text-gray-400">0.05 ETH + gas fees</p>
                               </div>
                             </div>
                           </div>

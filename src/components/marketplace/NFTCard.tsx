@@ -1,22 +1,30 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, User, FileText, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import type { NFT } from '../../types';
+import NFTDetailModal from '../modals/NFTDetailModal';
 
 interface NFTCardProps {
   nft: NFT;
   className?: string;
+  onUpdate?: () => void;
 }
 
-const NFTCard: React.FC<NFTCardProps> = ({ nft, className = '' }) => {
+const NFTCard: React.FC<NFTCardProps> = ({ nft, className = '', onUpdate }) => {
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
+  const handleClick = () => {
+    setShowDetailModal(true);
+  };
+
   return (
-    <motion.div
-      whileHover={{ y: -4 }}
-      className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden ${className}`}
-    >
-      <Link to={`/nft/${nft.id}`}>
+    <>
+      <motion.div
+        whileHover={{ y: -4 }}
+        onClick={handleClick}
+        className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden cursor-pointer ${className}`}
+      >
         {/* Patent Category Badge */}
         <div className="relative p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600">
           <div className="absolute top-4 right-4">
@@ -86,8 +94,19 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft, className = '' }) => {
             )}
           </div>
         </div>
-      </Link>
-    </motion.div>
+      </motion.div>
+
+      {/* NFT Detail Modal */}
+      <NFTDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        nft={nft}
+        onSuccess={() => {
+          setShowDetailModal(false);
+          if (onUpdate) onUpdate();
+        }}
+      />
+    </>
   );
 };
 

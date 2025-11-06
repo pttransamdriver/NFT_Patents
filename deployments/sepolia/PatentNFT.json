@@ -8,7 +8,7 @@
   "constructorArgs": [
     "0x9817253D86c09496A886bedBc4DDDC5bAe6ea215",
     500,
-    "http://localhost:3001/api/metadata/"
+    "https://nft-patents-backend.vercel.app/api/metadata/"
   ],
   "deploymentTransaction": {
     "_type": "TransactionResponse",
@@ -43,6 +43,6 @@
     "owner": "0x9817253D86c09496A886bedBc4DDDC5bAe6ea215",
     "royaltyReceiver": "0x9817253D86c09496A886bedBc4DDDC5bAe6ea215",
     "royaltyFeeNumerator": 500,
-    "baseMetadataURI": "http://localhost:3001/api/metadata/"
+    "baseMetadataURI": "https://nft-patents-backend.vercel.app/api/metadata/"
   }
 }

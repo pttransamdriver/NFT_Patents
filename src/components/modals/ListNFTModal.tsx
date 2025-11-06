@@ -163,9 +163,26 @@ const ListNFTModal: React.FC<ListNFTModalProps> = ({
                     <span className="text-gray-500 text-sm">ETH</span>
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  You'll receive {price ? `${(parseFloat(price) * 0.975).toFixed(4)} ETH` : '0 ETH'} after 2.5% platform fee
-                </p>
+                {/* Fee Breakdown */}
+                {price && parseFloat(price) > 0 && (
+                  <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Fee Breakdown:</p>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                        <span>Listing Price:</span>
+                        <span className="font-medium">{parseFloat(price).toFixed(4)} ETH</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                        <span>Platform Fee (2.5%):</span>
+                        <span className="font-medium text-red-600 dark:text-red-400">-{(parseFloat(price) * 0.025).toFixed(4)} ETH</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t border-gray-300 dark:border-gray-600">
+                        <span className="font-semibold text-gray-900 dark:text-white">You Receive:</span>
+                        <span className="font-semibold text-green-600 dark:text-green-400">{(parseFloat(price) * 0.975).toFixed(4)} ETH</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Info Box */}

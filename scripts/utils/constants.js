@@ -41,7 +41,10 @@ export const NETWORK_CONFIG = {
     blockExplorer: "http://localhost:8545",
     gasPrice: "auto",
     accounts: {
-      deployer: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+      // ⚠️ Uses Hardhat's default test account #0 (publicly known, local testing ONLY)
+      // This is the same account Hardhat provides automatically with 10,000 ETH
+      // NEVER use this key for testnet or mainnet!
+      deployer: process.env.LOCALHOST_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     }
   },
   
