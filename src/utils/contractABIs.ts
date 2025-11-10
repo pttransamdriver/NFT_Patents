@@ -3,7 +3,7 @@
 
 // PatentNFT Contract ABI (minimal interface for core functionality)
 export const PATENT_NFT_ABI = [
-  "function mintPatentNFT(address to, string memory patentNumber) external payable returns (uint256)",
+  "function mintPatentNFT(address to, string memory patentNumber, string memory ipfsHash) external payable returns (uint256)",
   "function getMintingPrice() external view returns (uint256)",
   "function setMintingPrice(uint256 newPrice) external",
   "function patentExists(string memory patentNumber) external view returns (bool)",

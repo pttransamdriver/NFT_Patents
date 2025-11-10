@@ -134,9 +134,12 @@ export class PatentPdfService {
 
     } catch (error) {
       console.error('❌ IPFS upload error:', error);
-      // For local testing without backend, return a placeholder hash
+      // For local testing without backend, return a valid 46-character placeholder hash
       console.log('📌 Fallback to placeholder IPFS hash');
-      const placeholderHash = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      // Generate valid CIDv0 format: Qm + 44 base58 characters
+      const placeholderHash = 'Qm' + Array.from({length: 44}, () =>
+        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(Math.random() * 58)]
+      ).join('');
       return placeholderHash;
     }
   }
@@ -173,9 +176,12 @@ export class PatentPdfService {
 
     } catch (error) {
       console.error('❌ Metadata upload error:', error);
-      // For local testing without backend, return a placeholder hash
+      // For local testing without backend, return a valid 46-character placeholder hash
       console.log('📌 Fallback to placeholder metadata hash');
-      const placeholderHash = `Qm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      // Generate valid CIDv0 format: Qm + 44 base58 characters
+      const placeholderHash = 'Qm' + Array.from({length: 44}, () =>
+        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(Math.random() * 58)]
+      ).join('');
       return placeholderHash;
     }
   }
