@@ -134,13 +134,9 @@ export class PatentPdfService {
 
     } catch (error) {
       console.error('❌ IPFS upload error:', error);
-      // For local testing without backend, return a valid 46-character placeholder hash
-      console.log('📌 Fallback to placeholder IPFS hash');
-      // Generate valid CIDv0 format: Qm + 44 base58 characters
-      const placeholderHash = 'Qm' + Array.from({length: 44}, () =>
-        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(Math.random() * 58)]
-      ).join('');
-      return placeholderHash;
+      throw new Error(
+        'Failed to upload file to IPFS. Please check your internet connection and try again. If the problem persists, contact support.'
+      );
     }
   }
 
@@ -176,13 +172,9 @@ export class PatentPdfService {
 
     } catch (error) {
       console.error('❌ Metadata upload error:', error);
-      // For local testing without backend, return a valid 46-character placeholder hash
-      console.log('📌 Fallback to placeholder metadata hash');
-      // Generate valid CIDv0 format: Qm + 44 base58 characters
-      const placeholderHash = 'Qm' + Array.from({length: 44}, () =>
-        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(Math.random() * 58)]
-      ).join('');
-      return placeholderHash;
+      throw new Error(
+        'Failed to upload metadata to IPFS. Please check your internet connection and try again. If the problem persists, contact support.'
+      );
     }
   }
 

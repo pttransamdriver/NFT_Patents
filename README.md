@@ -188,19 +188,39 @@ Access locally:
 
 The backend is deployed on **Vercel** at: `https://nft-patents-backend.vercel.app`
 
+### Architecture
+
+The backend is now **modular and streamlined** for Vercel deployment:
+
+* **Fully Decentralized**: All metadata stored on IPFS (no backend database needed)
+* **Modular Routes**: Organized into separate route files for maintainability
+* **Secure IPFS**: Pinata JWT stored only on backend - frontend never exposes it
+* **Rate Limiting**: Protects expensive operations (patent search, IPFS uploads)
+
 ### API Endpoints
 
-* **Patent Search**: `/api/patents/search?criteria=<query>` → returns Google Patents results via SerpAPI
-* **Patent Search (Legacy)**: `/api/uspto/search?criteria=<query>` → compatibility endpoint, same functionality
-* **Patent Verification**: `/api/patents/verify/:patentNumber` → verify and get full patent details
-* **Patent Details**: `/api/uspto/patent/:id` → get specific patent information
-* **NFT Metadata**: `/api/metadata/:patentNumber` → stores and serves rich NFT metadata with patent information
-* **PDF Processing**: `/api/pdf/process-patent` → handles patent PDF processing for IPFS
-* **Health Check**: `/api/health` → backend + SerpAPI status
+**Health & Status:**
+* `GET /api/health` → Backend health check
+* `GET /api/status` → Detailed service status with configuration info
 
-**CORS Proxy**: Handles frontend → Google Patents API requests server-side.
-**Enhanced Metadata**: Stores full patent information (title, inventor, assignee, etc.) for proper marketplace display.
-**Production URL**: Backend is deployed and accessible at `https://nft-patents-backend.vercel.app`
+**Patent Verification:**
+* `POST /api/patents/verify/:patentNumber` → Verify patent and get full details (title, inventor, assignee, etc.)
+* `GET /api/patents/:id` → Get specific patent information
+
+**IPFS Upload (Secure Backend Proxy):**
+* `POST /api/pinata/upload-file` → Upload patent PDF to IPFS
+* `POST /api/pinata/upload-json` → Upload NFT metadata JSON to IPFS
+
+**PDF Processing:**
+* `POST /api/pdf/process-patent` → Extract and compress first page of patent PDF
+* `POST /api/pdf/generate-placeholder` → Generate placeholder PDF when original unavailable
+
+**Key Features:**
+- ✅ **IPFS-First**: All NFT metadata stored on IPFS, not backend database
+- ✅ **Secure**: Pinata JWT never exposed to frontend
+- ✅ **Modular**: Clean separation of concerns with route files
+- ✅ **Rate Limited**: Protects against abuse and API quota exhaustion
+- ✅ **Vercel Ready**: Optimized for serverless deployment
 
 ---
 
@@ -371,44 +391,38 @@ NFT_Patents/
 
 ### Vercel Deployment (Frontend & Backend)
 
-**Backend Deployment (Critical: Set up Vercel KV first!):**
+**Backend Deployment (Streamlined - No Database Needed!):**
 
 1. **Install backend dependencies:**
    ```bash
    cd backend
-   npm install  # Installs @vercel/kv and other dependencies
+   npm install
    ```
 
-2. **Set up Vercel KV Storage (REQUIRED for production):**
-   - Go to https://vercel.com/dashboard
-   - Select your backend project (or create it first)
-   - Navigate to: **Storage** → **Create Database** → **KV**
-   - Create a new KV database (name it: `patent-nft-metadata`)
-   - Vercel automatically adds these environment variables to your project:
-     - `KV_REST_API_URL`
-     - `KV_REST_API_TOKEN`
-     - `KV_REST_API_READ_ONLY_TOKEN`
-
-3. **Configure additional environment variables in Vercel:**
-   - `SERPAPI_KEY` - Your SerpAPI key for patent search
+2. **Configure environment variables in Vercel dashboard:**
+   - `SERPAPI_KEY` - Your SerpAPI key for patent search (REQUIRED)
+   - `PINATA_JWT` - Your Pinata JWT token for IPFS uploads (REQUIRED)
    - `CORS_ORIGIN` - Your frontend URL (e.g., `https://nft-patents.vercel.app`)
    - `NODE_ENV=production`
 
-4. **Deploy backend:**
+3. **Deploy backend:**
    ```bash
    vercel --prod
    ```
 
-5. **Verify KV is working:**
+4. **Verify backend is working:**
    ```bash
    curl https://nft-patents-backend.vercel.app/api/health
    ```
    Should return:
    ```json
    {
-     "status": "OK",
-     "storage": "Vercel KV (persistent)",
-     "kvEnabled": true
+     "status": "ok",
+     "services": {
+       "patents": { "enabled": true },
+       "ipfs": { "enabled": true },
+       "pdf": { "enabled": true }
+     }
    }
    ```
 
@@ -416,20 +430,26 @@ NFT_Patents/
 1. Push to GitHub repository
 2. Import project in Vercel dashboard
 3. Configure environment variables in Vercel:
-   - All `VITE_*` variables from `.env`
-   - Contract addresses from deployment
+   - `VITE_CHAIN_ID=11155111` (Sepolia)
+   - `VITE_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com`
+   - `VITE_PATENT_NFT_ADDRESS=<your_contract_address>`
+   - `VITE_MARKETPLACE_ADDRESS=<your_contract_address>`
+   - `VITE_PSP_TOKEN_ADDRESS=<your_contract_address>`
+   - `VITE_SEARCH_PAYMENT_ADDRESS=<your_contract_address>`
    - `VITE_API_BASE_URL=https://nft-patents-backend.vercel.app`
+   - `VITE_IPFS_GATEWAY=https://ipfs.io/ipfs/`
 4. Deploy automatically on push to main branch
 
 **Deployment URLs:**
 - Frontend: `https://nft-patents.vercel.app`
 - Backend: `https://nft-patents-backend.vercel.app`
 
-**⚠️ Important Notes:**
-- **Vercel KV is FREE** for the starter tier (256 MB storage, 30,000 commands/month)
-- Without KV, metadata is stored in-memory and **lost on server restarts**
-- This causes "My NFTs" modal and marketplace to show generic names instead of real patent titles
-- After enabling KV, **re-mint any existing NFTs** to store their metadata persistently
+**✅ Key Improvements:**
+- **No Database Required**: All metadata stored on IPFS
+- **Fully Decentralized**: No backend state to manage
+- **Secure**: Pinata JWT never exposed to frontend
+- **Scalable**: Serverless architecture handles traffic spikes
+- **Cost-Effective**: No database costs, only IPFS storage fees
 
 ---
 

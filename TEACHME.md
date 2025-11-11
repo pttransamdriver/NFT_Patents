@@ -211,8 +211,11 @@ NFT_Patents/                                    # 🏛️ Root directory
 - **Utils**: Helper functions and utilities used throughout the application
 
 **🔧 Backend (`backend/`)**
-- **server.js**: Express API server that handles CORS proxy, metadata storage, and PDF processing
-- **metadata.js**: Manages NFT metadata storage with rich patent information
+- **server.js**: Express API server entry point with route registration and middleware
+- **routes/patents.js**: Patent verification and search endpoints
+- **routes/ipfs.js**: Secure IPFS upload endpoints (Pinata proxy)
+- **routes/pdf.js**: PDF processing and placeholder generation
+- **routes/health.js**: Health check and service status endpoints
 
 **⛓️ Smart Contracts (`contracts/`)**
 - **PatentNFT.sol**: Core NFT contract with payable minting and metadata management
@@ -644,63 +647,97 @@ app.get('/api/patents/search', async (req, res) => {
 });
 ```
 
-#### 2. **NFT Minting with IPFS Flow**
+#### 2. **NFT Minting with IPFS Flow (Streamlined)**
 
 ```typescript
 // Frontend (MintingService.ts)
 async mintPatentNFT(params) {
-  // 1. Process patent PDF → image → IPFS
+  // 1. Process patent PDF and upload to IPFS
   const pdfData = await patentPdfService.processPatentForNFT(params.patentNumber);
-  
-  // 2. Store rich metadata in backend with full patent data
-  await fetch(`${API_BASE_URL}/api/metadata/${params.patentNumber}`, {
+
+  // 2. Create rich metadata with full patent data
+  const nftMetadata = {
+    name: params.patentData?.title || `Patent NFT - ${params.patentNumber}`,
+    description: params.patentData?.abstract || `NFT representing patent ${params.patentNumber}`,
+    image: pdfData.imageUrl, // IPFS URL
+    external_url: `https://patents.google.com/patent/${params.patentNumber}`,
+    attributes: [
+      { trait_type: "Patent Number", value: params.patentNumber },
+      { trait_type: "Title", value: params.patentData?.title || "Unknown" },
+      { trait_type: "Inventor", value: params.patentData?.inventor || "Unknown" },
+      { trait_type: "Assignee", value: params.patentData?.assignee || "Unknown" },
+      { trait_type: "Filing Date", value: params.patentData?.filingDate || new Date().toISOString() },
+      { trait_type: "Country", value: params.patentData?.country || "Unknown" },
+      { trait_type: "Status", value: params.patentData?.status || "Active" },
+      { trait_type: "Storage", value: "IPFS" },
+      { trait_type: "Minted", value: new Date().toISOString() }
+    ]
+  };
+
+  // 3. Upload metadata to IPFS via backend proxy
+  const metadataResponse = await fetch(`${API_BASE_URL}/api/pinata/upload-json`, {
     method: 'POST',
     body: JSON.stringify({
-      pdfHash: pdfData.pdfHash,
-      imageHash: pdfData.imageHash,
-      imageUrl: pdfData.imageUrl,
-      patentData: params.patentData // Full patent info from search
+      json: nftMetadata,
+      filename: `patent-${params.patentNumber}-metadata.json`
     })
   });
-  
-  // 3. Mint NFT on blockchain
+  const { ipfsHash: metadataHash } = await metadataResponse.json();
+
+  // 4. Mint NFT on blockchain with IPFS metadata URI
   const contract = getPatentNFTContract(signer);
-  const tx = await contract.mintPatentNFT(userAddress, patentNumber, { value: price });
-  
-  return { success: true, txHash: tx.hash };
+  const tx = await contract.mintPatentNFT(
+    userAddress,
+    params.patentNumber,
+    `ipfs://${metadataHash}`, // Store IPFS URI on-chain
+    { value: price }
+  );
+
+  return { success: true, txHash: tx.hash, metadataHash };
 }
 
-// Backend stores rich patent metadata
-app.post('/api/metadata/:patentNumber', (req, res) => {
-  const { patentNumber } = req.params;
-  const { pdfHash, imageHash, imageUrl, patentData } = req.body;
-  
-  metadataStore.storeMetadata(patentNumber, { 
-    pdfHash, imageHash, imageUrl, 
-    patentData: patentData // Full patent information
-  });
-  res.json({ success: true });
+// Backend proxy for secure IPFS uploads (Pinata JWT never exposed)
+app.post('/api/pinata/upload-json', async (req, res) => {
+  const { json, filename } = req.body;
+  const pinataJWT = process.env.PINATA_JWT;
+
+  if (!pinataJWT) {
+    return res.status(500).json({ error: 'Pinata not configured on server' });
+  }
+
+  // Upload to Pinata (backend keeps JWT safe)
+  const response = await axios.post(
+    'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+    { pinataContent: json, pinataMetadata: { name: filename } },
+    { headers: { 'Authorization': `Bearer ${pinataJWT}` } }
+  );
+
+  res.json({ success: true, ipfsHash: response.data.IpfsHash });
 });
 
-// Backend serves rich metadata when smart contract calls tokenURI
-app.get('/api/metadata/:patentNumber', (req, res) => {
-  const metadata = metadataStore.getMetadata(req.params.patentNumber);
-  const patentData = metadata.patentData || {};
-  
-  res.json({
-    name: patentData.title || `Patent NFT - ${patentNumber}`, // Real patent title
-    description: patentData.abstract || patentData.description || "Patent converted to NFT",
-    image: metadata.imageUrl, // IPFS URL
-    attributes: [
-      { trait_type: "Patent Number", value: patentNumber },
-      { trait_type: "Title", value: patentData.title || "Unknown" },
-      { trait_type: "Inventor", value: patentData.inventor || "Unknown" },
-      { trait_type: "Assignee", value: patentData.assignee || "Unknown" },
-      { trait_type: "Filing Date", value: patentData.filingDate || "Unknown" },
-      { trait_type: "Country", value: patentData.country || "Unknown" },
-      { trait_type: "Status", value: patentData.status || "Unknown" }
-    ]
-  });
+// Marketplace retrieves metadata directly from IPFS
+app.get('/api/marketplace/listings', async (req, res) => {
+  // Get listings from blockchain
+  const listings = await marketplaceContract.getListings();
+
+  // For each listing, fetch metadata from IPFS
+  for (const listing of listings) {
+    const metadataUri = await patentNFTContract.tokenURI(listing.tokenId);
+
+    // Convert IPFS URI to HTTP gateway URL
+    const ipfsHash = metadataUri.replace('ipfs://', '');
+    const metadataUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
+
+    // Fetch metadata from IPFS
+    const metadata = await fetch(metadataUrl).then(r => r.json());
+
+    // Extract patent data from attributes
+    listing.title = metadata.name;
+    listing.inventor = metadata.attributes?.find(a => a.trait_type === 'Inventor')?.value;
+    listing.imageUrl = metadata.image;
+  }
+
+  res.json(listings);
 });
 ```
 
@@ -918,12 +955,12 @@ ETHERSCAN_API_KEY=[your_etherscan_api_key]
 
 #### Vercel Deployment (Frontend & Backend)
 
-**Backend Deployment to Vercel (with KV Storage):**
+**Backend Deployment to Vercel (Streamlined - No Database Needed!):**
 
 ```bash
 1. Backend Setup
    ├── Navigate to backend directory
-   ├── Install dependencies (including @vercel/kv):
+   ├── Install dependencies:
    │   cd backend
    │   npm install
    │
@@ -934,42 +971,40 @@ ETHERSCAN_API_KEY=[your_etherscan_api_key]
    │     "routes": [{ "src": "/(.*)", "dest": "server.js" }]
    │   }
    │
-   └── Set up Vercel KV Storage (CRITICAL for production):
-       ├── Go to https://vercel.com/dashboard
-       ├── Select your backend project
-       ├── Navigate to: Storage → Create Database → KV
-       ├── Create a new KV database (e.g., "patent-nft-metadata")
-       ├── Vercel will automatically add these environment variables:
-       │   ├── KV_REST_API_URL
-       │   ├── KV_REST_API_TOKEN
-       │   └── KV_REST_API_READ_ONLY_TOKEN
+   └── Configure environment variables in Vercel dashboard:
+       ├── SERPAPI_KEY (REQUIRED - for patent search)
+       ├── PINATA_JWT (REQUIRED - for IPFS uploads)
+       ├── CORS_ORIGIN (set to your frontend URL)
+       ├── NODE_ENV=production
        │
-       └── Configure additional environment variables in Vercel dashboard:
-           ├── SERPAPI_KEY=your_serpapi_key_here
-           ├── CORS_ORIGIN=https://nft-patents.vercel.app
-           └── NODE_ENV=production
+       └── Why no database?
+           ├── All metadata stored on IPFS (decentralized)
+           ├── No backend state to manage
+           ├── Fully serverless architecture
+           └── Cost-effective and scalable
 
 2. Deploy Backend
    ├── vercel --prod (or push to GitHub for auto-deploy)
    ├── Deployment URL: https://nft-patents-backend.vercel.app
-   └── Verify KV is working:
+   └── Verify backend is working:
        curl https://nft-patents-backend.vercel.app/api/health
-       (Should show: "storage": "Vercel KV (persistent)", "kvEnabled": true)
+       (Should show: "status": "ok", all services enabled)
 ```
 
-**Why Vercel KV is Required:**
+**Why IPFS-First Architecture:**
 
-Vercel is a **serverless platform**, meaning your backend server can restart frequently (cold starts). Without persistent storage:
-- ❌ In-memory Map gets wiped on every restart
-- ❌ NFT metadata is lost
-- ❌ "My NFTs" modal shows no data
-- ❌ Marketplace shows "Untitled Patent NFT #X"
+Traditional approach (with database):
+- ❌ Backend database required for metadata storage
+- ❌ Cold starts cause data loss
+- ❌ Scaling requires database management
+- ❌ Additional costs for storage
 
-With Vercel KV:
-- ✅ Metadata persists across restarts
-- ✅ NFTs show real patent titles
-- ✅ Fast key-value lookups
-- ✅ Free tier: 256 MB storage, 30,000 commands/month
+IPFS-First approach:
+- ✅ All metadata stored on decentralized IPFS
+- ✅ No backend state to manage
+- ✅ Fully serverless and scalable
+- ✅ Lower operational costs
+- ✅ Metadata persists forever on IPFS
 
 **Frontend Deployment to Vercel:**
 
@@ -990,13 +1025,19 @@ With Vercel KV:
 
 **Backend Project:**
 - `SERPAPI_KEY` - Required for patent search
+- `PINATA_JWT` - Required for IPFS uploads
 - `CORS_ORIGIN` - Frontend URL for CORS
 - `NODE_ENV` - Set to "production"
 
 **Frontend Project:**
-- All `VITE_*` variables from your `.env`
+- `VITE_CHAIN_ID` - 11155111 (Sepolia)
+- `VITE_RPC_URL` - Ethereum RPC endpoint
+- `VITE_PATENT_NFT_ADDRESS` - Deployed contract address
+- `VITE_MARKETPLACE_ADDRESS` - Deployed contract address
+- `VITE_PSP_TOKEN_ADDRESS` - Deployed contract address
+- `VITE_SEARCH_PAYMENT_ADDRESS` - Deployed contract address
 - `VITE_API_BASE_URL` - Backend URL
-- Contract addresses from blockchain deployment
+- `VITE_IPFS_GATEWAY` - IPFS gateway URL
 
 #### Alternative: Legacy All-at-Once Deployment
 

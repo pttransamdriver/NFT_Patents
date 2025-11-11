@@ -124,20 +124,6 @@ export class MintingService extends BaseSingleton {
         metadataIpfsHash = await patentPdfService.storeMetadataOnIPFS(nftMetadata, `${params.patentNumber}-metadata.json`);
         console.log('✅ Metadata uploaded to IPFS:', metadataIpfsHash);
 
-        // Store IPFS hash in backend for redirection
-        try {
-          await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...nftMetadata,
-              ipfsHash: metadataIpfsHash  // Store IPFS hash for backend to redirect
-            })
-          });
-        } catch (backendError) {
-          console.warn('Failed to store metadata in backend (non-critical):', backendError);
-        }
-
       } catch (pdfError) {
         console.error('PDF processing failed, using fallback:', pdfError);
 
@@ -194,20 +180,6 @@ export class MintingService extends BaseSingleton {
           console.log('📤 Uploading fallback metadata to IPFS...');
           metadataIpfsHash = await patentPdfService.storeMetadataOnIPFS(fallbackMetadata, `${params.patentNumber}-metadata.json`);
           console.log('✅ Fallback metadata uploaded to IPFS:', metadataIpfsHash);
-
-          // Store IPFS hash in backend for redirection
-          try {
-            await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/metadata/${params.patentNumber}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                ...fallbackMetadata,
-                ipfsHash: metadataIpfsHash
-              })
-            });
-          } catch (backendError) {
-            console.warn('Failed to store fallback metadata in backend (non-critical):', backendError);
-          }
         } catch (metadataError) {
           console.error('Failed to upload metadata to IPFS:', metadataError);
           throw new Error('Failed to create NFT metadata. Please try again.');
@@ -263,7 +235,7 @@ export class MintingService extends BaseSingleton {
       
       // Automatically add NFT to MetaMask
       if (tokenId) {
-        await this.addNFTToMetaMask(tokenId.toString(), params.patentNumber);
+        await this.addNFTToMetaMask(tokenId.toString(), params.patentNumber, params.patentData);
       }
       
       return {
@@ -341,7 +313,7 @@ export class MintingService extends BaseSingleton {
     }
   }
 
-  async addNFTToMetaMask(tokenId: string, patentNumber: string): Promise<void> {
+  async addNFTToMetaMask(tokenId: string, patentNumber: string, patentData?: Patent): Promise<void> {
     try {
       if (!window.ethereum) {
         return;
@@ -365,7 +337,7 @@ export class MintingService extends BaseSingleton {
             options: {
               address: contractAddress,
               tokenId: tokenId,
-              name: `Patent NFT #${tokenId}`,
+              name: patentData?.title || `Patent ${patentNumber}`,
               description: `Patent ${patentNumber} - Tokenized Patent NFT`,
               image: `https://via.placeholder.com/300x300.png?text=Patent+${tokenId}`, // Placeholder image URL
             },
