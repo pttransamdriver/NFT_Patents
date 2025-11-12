@@ -58,6 +58,48 @@ function extractCountryFromPatentNumber(patentNumber) {
   return countryMap[prefix] || 'Unknown';
 }
 
+// Search patents using Google Patents API
+router.get('/search', async (req, res) => {
+  try {
+    const { criteria, start = 0, rows = 20 } = req.query;
+
+    if (!criteria) {
+      return res.status(400).json({ error: 'Search criteria required' });
+    }
+
+    const serpApiKey = process.env.SERPAPI_KEY;
+    if (!serpApiKey) {
+      return res.status(500).json({ error: 'Patents API not configured' });
+    }
+
+    console.log('🔍 Searching patents for:', criteria);
+
+    // SerpApi Google Patents requires num to be between 10-100
+    const numResults = Math.max(10, Math.min(100, parseInt(rows)));
+
+    const response = await axios.get('https://serpapi.com/search', {
+      params: {
+        engine: 'google_patents',
+        q: criteria,
+        start: parseInt(start),
+        num: numResults,
+        api_key: serpApiKey
+      },
+      timeout: 30000
+    });
+
+    console.log('✅ Patents API response received');
+    res.json(response.data);
+
+  } catch (error) {
+    console.error('❌ Patent search error:', error.message);
+    res.status(500).json({
+      error: 'Patent search failed',
+      details: error.message
+    });
+  }
+});
+
 // Verify patent existence and get details
 router.post('/verify/:patentNumber', async (req, res) => {
   try {

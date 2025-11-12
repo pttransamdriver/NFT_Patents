@@ -1,14 +1,17 @@
-import hre from 'hardhat';
 import dotenv from 'dotenv';
-
 dotenv.config();
+
+import hre from 'hardhat';
+import { ethers } from 'ethers';
+import { createWallet } from './utils/deployment-utils.js';
 
 async function main() {
   console.log('🔧 Updating PatentNFT Base Metadata URI...\n');
 
-  // Get deployer
-  const [deployer] = await hre.ethers.getSigners();
-  console.log('👤 Deployer:', deployer.address);
+  const networkName = 'sepolia';
+  const { provider, wallet } = createWallet(networkName);
+
+  console.log('👤 Deployer:', wallet.address);
 
   // Get contract address
   const patentNFTAddress = process.env.VITE_PATENT_NFT_ADDRESS;
@@ -22,9 +25,13 @@ async function main() {
   console.log('📍 Contract Address:', patentNFTAddress);
   console.log('🔗 New Base URI:', newBaseURI);
 
-  // Get contract instance
-  const PatentNFT = await hre.ethers.getContractFactory('PatentNFT');
-  const contract = PatentNFT.attach(patentNFTAddress);
+  // Get contract artifact and create instance
+  const PatentNFTArtifact = await hre.artifacts.readArtifact('PatentNFT');
+  const contract = new ethers.Contract(
+    patentNFTAddress,
+    PatentNFTArtifact.abi,
+    wallet
+  );
 
   // Check current base URI
   try {
@@ -40,8 +47,9 @@ async function main() {
   console.log('📤 Transaction sent:', tx.hash);
 
   // Wait for confirmation
-  await tx.wait();
+  const receipt = await tx.wait();
   console.log('✅ Base URI updated successfully!');
+  console.log('⛽ Gas used:', receipt.gasUsed.toString());
 
   // Verify the update
   const updatedBaseURI = await contract.baseMetadataURI();
