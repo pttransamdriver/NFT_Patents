@@ -267,10 +267,15 @@ const NFTDetailModal: React.FC<NFTDetailModalProps> = ({
                     </div>
 
                     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <button className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium">
+                      <a
+                        href={`https://patents.google.com/patent/${nft.patentNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
+                      >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         View Original Patent
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>

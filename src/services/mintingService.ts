@@ -33,7 +33,7 @@ export interface MintingParams {
   patentNumber: string;
   price: number;
   userAddress: string;
-  patentData?: Patent;
+  patentData: Patent; // Required - no longer optional
 }
 
 export interface MintingResult {
@@ -47,6 +47,29 @@ export class MintingService extends BaseSingleton {
 
   async mintPatentNFT(params: MintingParams): Promise<MintingResult> {
     try {
+      // Validate patent data before proceeding
+      if (!params.patentData) {
+        return {
+          success: false,
+          error: 'Patent data is required for minting. Please search and select a patent first.'
+        };
+      }
+
+      // Validate required patent fields
+      if (!params.patentData.title || params.patentData.title.includes('Untitled')) {
+        return {
+          success: false,
+          error: 'Cannot mint: Patent title is missing. Please try searching for a different patent.'
+        };
+      }
+
+      if (!params.patentData.inventor || params.patentData.inventor === 'Unknown') {
+        return {
+          success: false,
+          error: 'Cannot mint: Patent inventor information is missing.'
+        };
+      }
+
       // Check if MetaMask is connected
       const { connected, error: connectionError } = await web3Utils.isConnected();
       if (!connected) {
@@ -73,10 +96,10 @@ export class MintingService extends BaseSingleton {
         const pdfData = await patentPdfService.processPatentForNFT(params.patentNumber);
         imageUrl = pdfData.imageUrl;
 
-        // Create proper NFT metadata format
+        // Create proper NFT metadata format with guaranteed patent data
         const nftMetadata = {
-          name: params.patentData?.title || `Patent NFT - ${params.patentNumber}`,
-          description: params.patentData?.abstract || `NFT representing patent ${params.patentNumber}`,
+          name: params.patentData.title,
+          description: params.patentData.abstract || `NFT representing patent ${params.patentNumber}`,
           image: imageUrl,
           external_url: `https://patents.google.com/patent/${params.patentNumber}`,
           attributes: [
@@ -86,27 +109,27 @@ export class MintingService extends BaseSingleton {
             },
             {
               trait_type: "Title",
-              value: params.patentData?.title || "Unknown"
+              value: params.patentData.title
             },
             {
               trait_type: "Inventor",
-              value: params.patentData?.inventor || "Unknown"
+              value: params.patentData.inventor
             },
             {
               trait_type: "Assignee",
-              value: params.patentData?.assignee || "Unknown"
+              value: params.patentData.assignee || "Unassigned"
             },
             {
               trait_type: "Filing Date",
-              value: params.patentData?.filingDate || new Date().toISOString()
+              value: params.patentData.filingDate || new Date().toISOString()
             },
             {
               trait_type: "Country",
-              value: params.patentData?.country || "Unknown"
+              value: params.patentData.country || "Unknown"
             },
             {
               trait_type: "Status",
-              value: params.patentData?.status || "Active"
+              value: params.patentData.status || "Active"
             },
             {
               trait_type: "Storage",
@@ -130,10 +153,10 @@ export class MintingService extends BaseSingleton {
         // Continue with minting even if PDF processing fails
         imageUrl = `https://via.placeholder.com/400x600.png?text=Patent+${params.patentNumber}`;
 
-        // Still create metadata even if PDF processing failed
+        // Still create metadata even if PDF processing failed - use guaranteed patent data
         const fallbackMetadata = {
-          name: params.patentData?.title || `Patent NFT - ${params.patentNumber}`,
-          description: params.patentData?.abstract || `NFT representing patent ${params.patentNumber}`,
+          name: params.patentData.title,
+          description: params.patentData.abstract || `NFT representing patent ${params.patentNumber}`,
           image: imageUrl,
           external_url: `https://patents.google.com/patent/${params.patentNumber}`,
           attributes: [
@@ -143,27 +166,27 @@ export class MintingService extends BaseSingleton {
             },
             {
               trait_type: "Title",
-              value: params.patentData?.title || "Unknown"
+              value: params.patentData.title
             },
             {
               trait_type: "Inventor",
-              value: params.patentData?.inventor || "Unknown"
+              value: params.patentData.inventor
             },
             {
               trait_type: "Assignee",
-              value: params.patentData?.assignee || "Unknown"
+              value: params.patentData.assignee || "Unassigned"
             },
             {
               trait_type: "Filing Date",
-              value: params.patentData?.filingDate || new Date().toISOString()
+              value: params.patentData.filingDate || new Date().toISOString()
             },
             {
               trait_type: "Country",
-              value: params.patentData?.country || "Unknown"
+              value: params.patentData.country || "Unknown"
             },
             {
               trait_type: "Status",
-              value: params.patentData?.status || "Active"
+              value: params.patentData.status || "Active"
             },
             {
               trait_type: "Storage",

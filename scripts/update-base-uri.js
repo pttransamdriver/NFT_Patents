@@ -17,7 +17,7 @@ async function main() {
   }
 
   // New base URI (production backend)
-  const newBaseURI = 'https://nft-patents-backend.vercel.app/api/metadata/';
+  const newBaseURI = 'https://nft-patents-backend.vercel.app/api/nft/';
 
   console.log('📍 Contract Address:', patentNFTAddress);
   console.log('🔗 New Base URI:', newBaseURI);

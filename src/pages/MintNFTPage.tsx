@@ -110,7 +110,7 @@ const MintNFTPage: React.FC = () => {
         console.error('Backend connection error:', fetchError);
         setVerificationResult({
           isValid: false,
-          error: `Backend server not running. Please start the backend server on port 3001. Error: ${fetchError.message}`
+          error: `Unable to verify patent at this time. Please try again later. If the problem persists, please contact support.`
         });
       }
       
@@ -160,7 +160,7 @@ const MintNFTPage: React.FC = () => {
       
       const result = await mintingService.mintPatentNFT({
         patentNumber: verificationResult.patent.patentNumber,
-        price: 0.1, // Default price in ETH
+        price: 0.05, // Default price in ETH
         userAddress: account || '',
         patentData: verificationResult.patent
       });

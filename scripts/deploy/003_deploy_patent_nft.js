@@ -40,10 +40,10 @@ export async function deployPatentNFT(networkName = "localhost", options = {}) {
     const royaltyReceiver = wallet.address; // Deploy with deployer as royalty receiver
     const royaltyFeeNumerator = 500; // 5% royalty fee (500 basis points)
 
-    // Base metadata URI - use environment variable or default to localhost
+    // Base metadata URI - use environment variable or default to production backend
     const baseMetadataURI = process.env.VITE_API_BASE_URL
       ? `${process.env.VITE_API_BASE_URL}/api/metadata/`
-      : "http://localhost:3001/api/metadata/";
+      : "https://nft-patents-backend.vercel.app/api/metadata/";
 
     console.log(`   👑 Royalty Receiver: ${royaltyReceiver}`);
     console.log(`   💎 Royalty Fee: ${royaltyFeeNumerator / 100}%`);

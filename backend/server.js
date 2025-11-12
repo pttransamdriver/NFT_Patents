@@ -39,11 +39,7 @@ const searchLimiter = rateLimit({
 
 // Middleware
 app.use(cors({
-  origin: [
-    process.env.CORS_ORIGIN || 
-    /\.vercel\.app$/,
-    'https://nft-patents-backend.vercel.app'
-  ],
+  origin: process.env.CORS_ORIGIN || 'https://nft-patents.vercel.app',
   credentials: true
 }));
 app.use(express.json());
