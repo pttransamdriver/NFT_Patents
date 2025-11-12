@@ -135,7 +135,11 @@ export const checkPatentExists = async (provider: BrowserProvider | JsonRpcProvi
 // Create a read-only provider for contract state queries
 export const createReadOnlyProvider = (): JsonRpcProvider | null => {
   try {
-    const rpcUrl = import.meta.env.VITE_RPC_URL || 'http://127.0.0.1:8545';
+    const rpcUrl = import.meta.env.VITE_RPC_URL;
+    if (!rpcUrl) {
+      console.warn('VITE_RPC_URL not configured');
+      return null;
+    }
     return new JsonRpcProvider(rpcUrl);
   } catch (error) {
     console.warn('Failed to create read-only provider:', error);

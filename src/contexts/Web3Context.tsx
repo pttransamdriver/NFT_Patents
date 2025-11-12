@@ -12,7 +12,6 @@ interface Web3ContextType {
   disconnectWallet: () => void;
   isConnected: boolean;
   isConnecting: boolean;
-  switchToLocalNetwork: () => Promise<void>;
 }
 
 const Web3Context = createContext<Web3ContextType>({
@@ -24,7 +23,6 @@ const Web3Context = createContext<Web3ContextType>({
   disconnectWallet: () => {},
   isConnected: false,
   isConnecting: false,
-  switchToLocalNetwork: async () => {},
 });
 
 export const useWeb3 = () => useContext(Web3Context);
@@ -133,51 +131,6 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.success('Wallet disconnected successfully!');
   };
 
-  const switchToLocalNetwork = async () => {
-    if (!window.ethereum) {
-      toast.error('No Ethereum wallet detected');
-      return;
-    }
-
-    try {
-      // Try to switch to local network (chainId 31337)
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x7A69' }], // 31337 in hex
-      });
-      toast.success('Switched to local network!');
-    } catch (error: any) {
-      console.error('Error switching network:', error);
-      
-      // If network doesn't exist, add it
-      if (error.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: '0x7A69', // 31337 in hex
-                chainName: 'Hardhat Local',
-                rpcUrls: ['http://127.0.0.1:8545'],
-                nativeCurrency: {
-                  name: 'Ether',
-                  symbol: 'ETH',
-                  decimals: 18,
-                },
-              },
-            ],
-          });
-          toast.success('Added and switched to local network!');
-        } catch (addError) {
-          console.error('Error adding network:', addError);
-          toast.error('Failed to add local network');
-        }
-      } else {
-        toast.error('Failed to switch network');
-      }
-    }
-  };
-
   useEffect(() => {
     let mounted = true;
     
@@ -257,7 +210,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <Web3Context.Provider value={{ provider, signer, account, chainId, connectWallet, disconnectWallet, isConnected, isConnecting, switchToLocalNetwork }}>
+    <Web3Context.Provider value={{ provider, signer, account, chainId, connectWallet, disconnectWallet, isConnected, isConnecting }}>
       {children}
     </Web3Context.Provider>
   );

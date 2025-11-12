@@ -123,37 +123,10 @@ export class Web3Utils {
       return { success: true };
     } catch (error: any) {
       if (error.code === 4902) {
-        // Network not added, try to add it
-        return await this.addLocalNetwork();
+        return { success: false, error: 'Network not found in wallet. Please add the network manually.' };
       } else {
         return { success: false, error: error.message };
       }
-    }
-  }
-
-  /**
-   * Add local Hardhat network to MetaMask
-   */
-  async addLocalNetwork(): Promise<{ success: boolean; error?: string }> {
-    try {
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [{
-          chainId: '0x7A69', // 31337 in hex
-          chainName: 'Hardhat Local',
-          nativeCurrency: {
-            name: 'ETH',
-            symbol: 'ETH',
-            decimals: 18
-          },
-          rpcUrls: ['http://127.0.0.1:8545'],
-          blockExplorerUrls: null
-        }]
-      });
-      
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
     }
   }
 
