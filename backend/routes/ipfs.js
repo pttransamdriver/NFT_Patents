@@ -2,6 +2,16 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 
+// Debug endpoint to check Pinata configuration
+router.get('/debug', (req, res) => {
+  const pinataJWT = process.env.PINATA_JWT;
+  res.json({
+    pinataConfigured: !!pinataJWT,
+    jwtLength: pinataJWT ? pinataJWT.length : 0,
+    jwtPrefix: pinataJWT ? pinataJWT.substring(0, 20) + '...' : 'NOT SET'
+  });
+});
+
 /**
  * Pinata IPFS proxy endpoints (secure - JWT never exposed to frontend)
  * All IPFS operations go through this backend to keep Pinata JWT safe
@@ -13,6 +23,7 @@ router.post('/upload-file', async (req, res) => {
     const pinataJWT = process.env.PINATA_JWT;
 
     if (!pinataJWT) {
+      console.error('❌ PINATA_JWT not configured');
       return res.status(500).json({ error: 'Pinata not configured on server' });
     }
 
@@ -23,6 +34,8 @@ router.post('/upload-file', async (req, res) => {
     }
 
     console.log('📤 Uploading file to Pinata:', filename);
+    console.log('   JWT configured:', !!pinataJWT);
+    console.log('   JWT length:', pinataJWT.length);
 
     // Convert base64 to buffer
     const buffer = Buffer.from(file, 'base64');
@@ -55,10 +68,15 @@ router.post('/upload-file', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Pinata file upload error:', error.response?.data || error.message);
+    console.error('❌ Pinata file upload error:');
+    console.error('   Status:', error.response?.status);
+    console.error('   Data:', error.response?.data);
+    console.error('   Message:', error.message);
+    console.error('   Full error:', error);
     res.status(500).json({
       error: 'Failed to upload file to Pinata',
-      details: error.response?.data || error.message
+      details: error.response?.data || error.message,
+      status: error.response?.status
     });
   }
 });
@@ -103,10 +121,15 @@ router.post('/upload-json', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Pinata JSON upload error:', error.response?.data || error.message);
+    console.error('❌ Pinata JSON upload error:');
+    console.error('   Status:', error.response?.status);
+    console.error('   Data:', error.response?.data);
+    console.error('   Message:', error.message);
+    console.error('   Full error:', error);
     res.status(500).json({
       error: 'Failed to upload JSON to Pinata',
-      details: error.response?.data || error.message
+      details: error.response?.data || error.message,
+      status: error.response?.status
     });
   }
 });
