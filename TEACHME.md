@@ -718,6 +718,45 @@ Browser → Our Backend → Google Patents API ✅ WORKS
 - IPFS uploads (large files)
 - Patent data transformation
 
+### Redis/Upstash Database Integration
+
+**What is Redis?**
+Redis is an in-memory database used for fast caching and temporary data storage. Upstash provides Redis as a managed service on Vercel.
+
+**What We Use It For:**
+1. **Search Result Caching** - Cache patent search results to reduce API calls to SerpAPI
+2. **Session Management** - Store user session data temporarily
+3. **Rate Limiting** - Track API calls per user to prevent abuse
+4. **Temporary Data** - Store in-progress minting data, payment states
+5. **Performance** - Reduce database queries and external API calls
+
+**Environment Variables (Vercel):**
+```
+KV_URL                      # Redis connection URL (primary)
+KV_REST_API_TOKEN          # Authentication token for REST API
+KV_REST_API_READ_ONLY_TOKEN # Read-only token for queries
+REDIS_URL                   # Alternative Redis connection URL
+KV_REST_API_URL            # REST API endpoint for HTTP requests
+```
+
+**Example Use Cases:**
+```javascript
+// Cache patent search results for 1 hour
+await redis.setex(`patents:${searchQuery}`, 3600, JSON.stringify(results));
+
+// Track user search count for rate limiting
+await redis.incr(`user:${userId}:searches`);
+
+// Store temporary minting state
+await redis.setex(`mint:${tokenId}`, 300, JSON.stringify(mintData));
+```
+
+**Benefits:**
+- ⚡ **Fast:** In-memory storage (microseconds vs milliseconds)
+- 💰 **Cost-effective:** Reduces expensive external API calls
+- 🔒 **Secure:** Temporary data doesn't persist permanently
+- 📊 **Scalable:** Handles thousands of concurrent users
+
 ### Backend API Routes
 
 ```javascript
