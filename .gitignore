@@ -35,15 +35,17 @@ coverage/
 .env
 .env.production
 .env.sepolia
+.env.vercel
 .env.production.backup
 .env.sepolia.backup
 .env.local
 .env.*.local
 backend/.env
 backend/.env.local
+backend/.env.vercel
 
 # ONLY .env.example should be committed
-# .env.production and .env.sepolia should NOT be committed if they contain real keys
+# .env.production, .env.sepolia, and .env.vercel should NOT be committed if they contain real keys
 
 # MacOS files
 .DS_Store
