@@ -35,16 +35,12 @@
     "deploy-pages": "npm run build && gh-pages -d docs"
   },
   "dependencies": {
-    "@helia/unixfs": "^5.1.0",
     "@openzeppelin/contracts": "^5.4.0",
     "axios": "^1.10.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.1",
-    "helia": "^5.5.1",
-    "html2canvas": "^1.4.1",
     "lucide-react": "^0.542.0",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.4.149",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",

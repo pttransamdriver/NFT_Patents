@@ -1,9 +1,4 @@
 import { PDFDocument } from 'pdf-lib';
-// Temporarily disable Helia imports to fix ESM issues
-// import { getDocument } from 'pdfjs-dist';
-// import { createHelia } from 'helia';
-// import { unixfs } from '@helia/unixfs';
-// import html2canvas from 'html2canvas';
 
 /**
  * Service for handling patent PDF processing and IPFS storage

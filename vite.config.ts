@@ -24,13 +24,11 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      'react', 
-      'react-dom', 
+      'react',
+      'react-dom',
       'react-router-dom',
-      'eventemitter3',
       'pdf-lib'
     ],
-    exclude: ['helia', '@helia/unixfs', 'pdfjs-dist'],
     esbuildOptions: {
       target: 'esnext'
     }
