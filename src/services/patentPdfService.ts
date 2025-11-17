@@ -103,6 +103,7 @@ export class PatentPdfService {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
 
       console.log('📌 Using backend proxy for IPFS storage');
+      console.log('   URL:', `${apiBaseUrl}/api/pinata/upload-file`);
 
       // Convert blob to base64
       const arrayBuffer = await file.arrayBuffer();
@@ -118,8 +119,12 @@ export class PatentPdfService {
         })
       });
 
+      console.log('   Response status:', response.status);
+      console.log('   Response ok:', response.ok);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('   Error response:', errorData);
         throw new Error(errorData.error || 'Failed to upload to IPFS');
       }
 
@@ -129,6 +134,7 @@ export class PatentPdfService {
 
     } catch (error) {
       console.error('❌ IPFS upload error:', error);
+      console.error('   Error details:', error instanceof Error ? error.message : String(error));
       throw new Error(
         'Failed to upload file to IPFS. Please check your internet connection and try again. If the problem persists, contact support.'
       );
@@ -146,6 +152,7 @@ export class PatentPdfService {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
 
       console.log('📌 Uploading metadata JSON via backend proxy');
+      console.log('   URL:', `${apiBaseUrl}/api/pinata/upload-json`);
 
       const response = await fetch(`${apiBaseUrl}/api/pinata/upload-json`, {
         method: 'POST',
@@ -156,8 +163,12 @@ export class PatentPdfService {
         })
       });
 
+      console.log('   Response status:', response.status);
+      console.log('   Response ok:', response.ok);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('   Error response:', errorData);
         throw new Error(errorData.error || 'Failed to upload metadata to IPFS');
       }
 
@@ -167,6 +178,7 @@ export class PatentPdfService {
 
     } catch (error) {
       console.error('❌ Metadata upload error:', error);
+      console.error('   Error details:', error instanceof Error ? error.message : String(error));
       throw new Error(
         'Failed to upload metadata to IPFS. Please check your internet connection and try again. If the problem persists, contact support.'
       );
