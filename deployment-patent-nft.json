@@ -1,0 +1,11 @@
+{
+  "address": "0x760B3924401bae1f031a5A927abd251B8Db85229",
+  "deployer": "0x0dA75134705699b34fDC1eFb5821C904265dda62",
+  "chainId": 11155111,
+  "timestamp": "2025-11-17T18:23:41.563Z",
+  "constructor": {
+    "royaltyReceiver": "0x9817253D86c09496A886bedBc4DDDC5bAe6ea215",
+    "royaltyFeeNumerator": 500,
+    "baseMetadataURI": "https://nft-patents-backend.vercel.app/api/metadata/"
+  }
+}
