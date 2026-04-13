@@ -88,3 +88,6 @@ desktop.ini
 # Build outputs that might contain sensitive info
 docs/assets/
 /docs
+
+# Localhost deployment records (ephemeral - reset on every hardhat node restart)
+deployments/localhost/
