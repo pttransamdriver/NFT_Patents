@@ -15,10 +15,11 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
     // Bit-packed state variables - all fit in one 32-byte storage slot
     uint96 private _nextTokenId;                // 12 bytes - supports 79+ octillion tokens
     uint96 public mintingPrice = 0.05 ether;    // 12 bytes - supports up to 79 billion ETH
-    uint64 public platformFeePercentage = 250;  // 8 bytes - (250 = 2.5%)
+    uint64 public platformFeePercentage = 250;  // 8 bytes - (250 = 2.5%) NOTE: stored for reference but not currently used in contract logic
 
-    // Base URI for metadata - kept for backward compatibility and admin minting
-    // Note: Public minting now uses IPFS URIs directly for full decentralization
+    // Base URI for metadata - stored for administrative reference and potential future use.
+    // NOTE: This value is NOT used by tokenURI() or any minting function; it does not affect
+    // on-chain token URIs. Public minting uses IPFS URIs passed directly to mintPatentNFT().
     string public baseMetadataURI;
 
     // mapping from normalized patent hash → tokenId
@@ -36,8 +37,8 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
         // Set default royalty (e.g. 500 = 5%)
         _setDefaultRoyalty(royaltyReceiver, royaltyFeeNumerator);
 
-        // Set base metadata URI (optional, kept for backward compatibility)
-        // Public minting now uses IPFS URIs directly
+        // Store the base metadata URI (informational/administrative only;
+        // it is not used by tokenURI() or current minting functions)
         baseMetadataURI = _baseMetadataURI;
     }
 
@@ -114,8 +115,10 @@ contract PatentNFT is ERC721URIStorage, ERC721Enumerable, ERC2981, Ownable, Reen
         emit MintingPriceUpdated(oldPrice, newPrice);
     }
 
-    /// @notice Update base metadata URI (owner only)
-    /// @param newBaseURI New base URI for metadata (e.g., "https://your-backend.vercel.app/api/metadata/")
+    /// @notice Update base metadata URI (owner only).
+    ///         Note: changing this value does NOT affect existing token URIs — those are stored
+    ///         individually per token via ERC721URIStorage and point to IPFS.
+    /// @param newBaseURI New base URI string (informational/administrative)
     function setBaseMetadataURI(string memory newBaseURI) external onlyOwner {
         string memory oldURI = baseMetadataURI;
         baseMetadataURI = newBaseURI;

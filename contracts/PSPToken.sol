@@ -8,8 +8,10 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title PSPToken (Patent Search Pennies)
- * @dev ERC20 token for AI patent search payments
- * 1 PSP = $0.01 USD, so 500 PSP = $5.00 for one AI search
+ * @dev ERC20 token for AI patent search payments.
+ *      The intended peg is 1 PSP = $0.01 USD (so ~500 PSP per $5 search), but this
+ *      is a business convention only — the on-chain price is set by the owner and
+ *      can change at any time via updateTokenPrice().
  */
 contract PSPToken is ERC20, ERC20Burnable, Ownable, Pausable {
     // Events
@@ -91,15 +93,17 @@ contract PSPToken is ERC20, ERC20Burnable, Ownable, Pausable {
     }
     
     /**
-     * @dev Spend tokens on behalf of user (only authorized contracts)
-     * Requires user approval - uses transferFrom model for security
+     * @dev Spend tokens on behalf of user (only authorized contracts).
+     *      Uses the internal _transfer() directly — does NOT consume an ERC20 allowance.
+     *      The caller must be a trusted contract added via setAuthorizedSpender(); the
+     *      user does not need to call approve() first.
      * @param user User whose tokens to spend
      * @param amount Amount of tokens to spend
      */
     function spendTokensFor(address user, uint256 amount) external {
         require(authorizedSpenders[msg.sender], "Not authorized to spend tokens");
-        
-        // Transfer from user to this contract (requires user approval)
+
+        // Move tokens from user to this contract using internal transfer (no allowance required)
         _transfer(user, address(this), amount);
         
         // Burn the tokens from this contract
@@ -181,7 +185,8 @@ contract PSPToken is ERC20, ERC20Burnable, Ownable, Pausable {
     }
     
     /**
-     * @dev Override transfer to check pause status
+     * @dev Override _update (the core hook for all ERC20 state changes) to enforce
+     *      the pause check on transfers, mints, and burns.
      */
     function _update(address from, address to, uint256 value) internal override whenNotPaused {
         super._update(from, to, value);

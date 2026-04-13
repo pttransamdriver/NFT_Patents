@@ -8,10 +8,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // The name of the contract is NFTMarketplace and "is" ReentrancyGuard and Ownable which come from OpenZeppelin
 contract NFTMarketplace is ReentrancyGuard, Ownable {
     // Bit-packed state variables - fit in one 32-byte storage slot
-    uint128 private _listingIds;            // 16 bytes - supports 340 undecillion listings
-    uint128 public platformFeePercent = 250; // 16 bytes - 2.5% (250 basis points)
+    uint128 private _listingIds;             // 16 bytes - supports 340 undecillion listings
+    uint128 public platformFeePercent = 250; // 16 bytes - 2.5% fee (250 basis points out of 10 000)
 
-    // Bit-packed struct - optimized from 5 slots to 3 slots (40% reduction)
+    // Bit-packed struct - optimized from 6 slots (naive all-uint256 layout) to 3 slots (50% reduction)
     struct Listing {
         uint96 listingId;       // 12 bytes - supports 79+ octillion listings
         address nftContract;    // 20 bytes - NFT contract address
@@ -29,7 +29,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
     // Mapping from user address to pending withdrawal amount so it can pull funds from the contract
     mapping(address => uint256) public pendingWithdrawals;
 
-    address public feeRecipient; // Address to receive platform fees. This is the address of the person who deployed the contract
+    address public feeRecipient; // Address to receive platform fees. Set at deployment via constructor argument; can be any address
 
     // These events are emitted when an NFT is listed. These return the listing ID, the NFT contract address, the token ID, the seller's address, and the price of the NFT
     event NFTListed(
@@ -55,7 +55,6 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
     event FundsDeposited(address indexed recipient, uint256 amount);
     // This event is emitted when funds are withdrawn from the contract account. It returns the recipient's address and the amount withdrawn
     event FundsWithdrawn(address indexed recipient, uint256 amount);
-    // This event is emitted when the platform fee is updated. It returns the old fee and the new fee
     constructor(address _feeRecipient) Ownable(msg.sender) {
         require(_feeRecipient != address(0), "Fee recipient cannot be zero address");
         feeRecipient = _feeRecipient;
@@ -65,7 +64,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
         address nftContract,
         uint256 tokenId,
         uint256 price
-        // "external" means that this function can only be called from outside the contract. It keeps the function from being called from within the contract which is needed for se
+        // "external" means this function can only be called from outside the contract (not from other functions within it)
     ) external nonReentrant {
         require(price > 0, "Price must be greater than 0");
         require(IERC721(nftContract).ownerOf(tokenId) == msg.sender, "Not the owner");

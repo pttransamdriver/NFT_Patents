@@ -32,10 +32,11 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
     IERC20 public usdcToken; // USDC token contract
 
     // Bit-packed search prices - all fit in one 32-byte storage slot
-    // All equivalent to $5 USD
+    // Intended to each represent equivalent value (e.g. ~$5 USD), but prices are set
+    // independently by the owner via updateSearchPrice() and are not enforced to be equivalent.
     uint88 public searchPriceInETH;   // 11 bytes - Price in ETH (wei) for 1 search
     uint88 public searchPriceInUSDC;  // 11 bytes - Price in USDC (6 decimals) for 1 search
-    uint80 public searchPriceInPSP;   // 10 bytes - Price in PSP tokens for 1 search (500 PSP = $5)
+    uint80 public searchPriceInPSP;   // 10 bytes - Price in PSP tokens for 1 search
 
     uint256 public constant SEARCHES_PER_PAYMENT = 1;
 
@@ -49,7 +50,7 @@ contract SearchPayment is Ownable, ReentrancyGuard, Pausable {
      * @param _usdcToken Address of the USDC token contract
      * @param _initialPriceInETH Initial price in ETH (wei) for 1 search
      * @param _initialPriceInUSDC Initial price in USDC (6 decimals) for 1 search
-     * @param _initialPriceInPSP Initial price in PSP tokens for 1 search (500 PSP)
+     * @param _initialPriceInPSP Initial price in PSP tokens for 1 search
      */
     constructor(
         address _pspToken,
