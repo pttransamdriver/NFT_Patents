@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/NFT_Patents/',
+  base: '/',
   build: {
     outDir: 'dist',
     copyPublicDir: true,
