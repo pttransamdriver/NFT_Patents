@@ -34,14 +34,11 @@ const PatentSearchPage: React.FC = () => {
     if (!searchQuery.trim()) return;
     
     setIsLoading(true);
-    console.log('🎯 Starting patent search for:', searchQuery);
-    
     try {
       const results = await patentApi.searchPatents({
         query: searchQuery,
         rows: 20
       });
-      console.log('🎉 Search completed, results:', results.length);
       setSearchResults(results);
       
       if (results.length === 0) {

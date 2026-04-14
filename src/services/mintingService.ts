@@ -143,9 +143,7 @@ export class MintingService extends BaseSingleton {
         };
 
         // Upload metadata JSON to IPFS
-        console.log('📤 Uploading metadata to IPFS...');
         metadataIpfsHash = await patentPdfService.storeMetadataOnIPFS(nftMetadata, `${params.patentNumber}-metadata.json`);
-        console.log('✅ Metadata uploaded to IPFS:', metadataIpfsHash);
 
       } catch (pdfError) {
         console.error('PDF processing failed, using fallback:', pdfError);
@@ -200,9 +198,7 @@ export class MintingService extends BaseSingleton {
         };
 
         try {
-          console.log('📤 Uploading fallback metadata to IPFS...');
           metadataIpfsHash = await patentPdfService.storeMetadataOnIPFS(fallbackMetadata, `${params.patentNumber}-metadata.json`);
-          console.log('✅ Fallback metadata uploaded to IPFS:', metadataIpfsHash);
         } catch (metadataError) {
           console.error('Failed to upload metadata to IPFS:', metadataError);
           throw new Error('Failed to create NFT metadata. Please try again.');
@@ -221,14 +217,8 @@ export class MintingService extends BaseSingleton {
       // Get contract instance
       const contract = getPatentNFTContract(signer);
       
-      // Debug: Log signer network
-      const signerNetwork = await signer.provider.getNetwork();
-      console.log('Signer network:', signerNetwork);
-      
       // Get current minting price from contract
-      console.log('About to call getMintingPrice...');
       const mintingPrice = await contract.getMintingPrice();
-      console.log('Got minting price from contract:', mintingPrice.toString());
       
       // Validate that we have IPFS hash and it's in valid CID format
       if (!metadataIpfsHash) {
@@ -239,8 +229,6 @@ export class MintingService extends BaseSingleton {
         console.error('Invalid IPFS hash received:', metadataIpfsHash);
         throw new Error('Invalid IPFS hash format. Please try minting again or contact support.');
       }
-
-      console.log('✅ IPFS hash validation passed:', metadataIpfsHash);
 
       // Call mint function on contract (payable) with IPFS hash
       const tx = await contract.mintPatentNFT(
@@ -298,31 +286,16 @@ export class MintingService extends BaseSingleton {
       
       // If MetaMask provider fails, try direct JSON-RPC provider
       if (!provider) {
-        console.log('MetaMask provider not available, using direct RPC...');
         provider = new JsonRpcProvider(import.meta.env.VITE_RPC_URL);
       }
-      
+
       if (!provider) {
         console.error('No provider available');
         return 0.05; // Default price from contract
       }
-      
-      // Debug: Check network
-      const network = await provider.getNetwork();
-      console.log('Provider network:', network);
-      
+
       const contract = getPatentNFTContract(provider);
-      
-      // Debug: Check contract address
-      const contractAddress = import.meta.env.VITE_PATENT_NFT_ADDRESS;
-      console.log('Contract address:', contractAddress);
-      
-      // Debug: Check if contract exists
-      const code = await provider.getCode(contractAddress);
-      console.log('Contract code exists:', code !== '0x');
-      
       const priceInWei = await contract.getMintingPrice();
-      console.log('Got minting price:', priceInWei.toString());
       return parseFloat(ethers.formatEther(priceInWei));
       
     } catch (error: any) {

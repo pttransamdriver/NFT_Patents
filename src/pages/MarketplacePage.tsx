@@ -47,9 +47,7 @@ const MarketplacePage: React.FC = () => {
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as any).cleanupDuplicates = async (patentNumber: string) => {
-        console.log(`Starting cleanup for patent: ${patentNumber}`);
         const result = await marketplaceService.cancelDuplicateListings(patentNumber);
-        console.log(`Cleanup result:`, result);
         
         if (result.success && result.canceledCount > 0) {
           alert(`Successfully canceled ${result.canceledCount} duplicate listings for ${patentNumber}`);
@@ -63,10 +61,7 @@ const MarketplacePage: React.FC = () => {
       };
       
       (window as any).findDuplicates = async () => {
-        console.log('Finding duplicate patents...');
-        const duplicates = await marketplaceService.getDuplicatePatents();
-        console.log('Duplicate patents found:', duplicates);
-        return duplicates;
+        return marketplaceService.getDuplicatePatents();
       };
     }
   }, []);
@@ -101,8 +96,6 @@ const MarketplacePage: React.FC = () => {
         try {
           const contract = getPatentNFTContract(signer);
           const balance = await contract.balanceOf(account);
-          console.log(`Found ${balance} NFTs in PatentNFT contract`);
-          
           // Get actual patent data for each NFT
           for (let i = 0; i < Number(balance); i++) {
             try {
@@ -181,7 +174,6 @@ const MarketplacePage: React.FC = () => {
         
         // Try to detect NFTs using Transfer events (more reliable method)
         try {
-          console.log('Attempting to detect NFTs via Transfer events...');
           const provider = await signer.provider;
           
           // Standard ERC721 Transfer event signature
@@ -198,8 +190,6 @@ const MarketplacePage: React.FC = () => {
               '0x' + toAddress // to this account
             ]
           });
-          
-          console.log(`Found ${logs.length} Transfer events to account`);
           
           // Group by contract address and get unique tokens
           const contractTokens = new Map();
@@ -266,9 +256,9 @@ const MarketplacePage: React.FC = () => {
                     }
                   } catch {}
                   
-                  // For external NFTs, we can't easily check marketplace status with different contract addresses
-                  // So we'll default to false but this could be enhanced later
-                  const isListed = false; // TODO: Implement cross-contract listing check
+                  // Cross-contract listing checks require each external contract to share
+                  // the same marketplace ABI. Defaulting to false for external NFTs.
+                  const isListed = false;
                   
                   formattedNFTs.push({
                     id: `${contractAddress}-${tokenId}`,
@@ -306,7 +296,6 @@ const MarketplacePage: React.FC = () => {
           console.warn('Could not detect NFTs via events:', eventError);
         }
         
-        console.log(`Total NFTs found: ${formattedNFTs.length}`);
         setRealNFTs(formattedNFTs);
       } catch (error) {
         console.error('Error fetching user NFTs:', error);
@@ -323,9 +312,7 @@ const MarketplacePage: React.FC = () => {
     const fetchMarketplaceListings = async () => {
       setMarketplaceLoading(true);
       try {
-        console.log('Fetching marketplace listings for page:', currentPage);
         const result = await marketplaceService.getMarketplaceListings(currentPage, 20);
-        console.log('Marketplace listings result:', result);
         setMarketplaceListings(result.listings);
         setTotalPages(result.totalPages);
         setTotalListings(result.totalListings);
@@ -355,8 +342,6 @@ const MarketplacePage: React.FC = () => {
     if (!selectedNFT) return;
     
     try {
-      console.log('Listing NFT with ID:', selectedNFT.id, 'for price:', listingPrice);
-      
       // Use the marketplace service to actually list the NFT
       const result = await marketplaceService.listNFT(selectedNFT.id, listingPrice);
       
@@ -369,13 +354,11 @@ const MarketplacePage: React.FC = () => {
         // Add a small delay before refreshing to allow blockchain to process
         setTimeout(async () => {
           try {
-            console.log('Refreshing marketplace listings after successful listing...');
-            const updatedListings = await marketplaceService.getMarketplaceListings(1, 20); // Start from page 1 to see new listings
+            const updatedListings = await marketplaceService.getMarketplaceListings(1, 20);
             setMarketplaceListings(updatedListings.listings);
             setTotalPages(updatedListings.totalPages);
             setTotalListings(updatedListings.totalListings);
-            setCurrentPage(1); // Reset to page 1 to show the new listing
-            console.log(`Found ${updatedListings.totalListings} total listings after refresh`);
+            setCurrentPage(1);
           } catch (refreshError) {
             console.error('Error refreshing marketplace after listing:', refreshError);
           }
@@ -396,8 +379,6 @@ const MarketplacePage: React.FC = () => {
 
   const handleSellNFTFromModal = async (nft: any, price: string) => {
     try {
-      console.log('Listing NFT from modal with token ID:', nft.tokenId, 'for price:', price);
-      
       // Use the marketplace service to actually list the NFT
       const result = await marketplaceService.listNFT(nft.tokenId, price);
       
@@ -413,13 +394,11 @@ const MarketplacePage: React.FC = () => {
         // Add a small delay before refreshing marketplace to allow blockchain to process
         setTimeout(async () => {
           try {
-            console.log('Refreshing marketplace listings after successful listing from modal...');
-            const updatedListings = await marketplaceService.getMarketplaceListings(1, 20); // Start from page 1 to see new listings
+            const updatedListings = await marketplaceService.getMarketplaceListings(1, 20);
             setMarketplaceListings(updatedListings.listings);
             setTotalPages(updatedListings.totalPages);
             setTotalListings(updatedListings.totalListings);
-            setCurrentPage(1); // Reset to page 1 to show the new listing
-            console.log(`Found ${updatedListings.totalListings} total listings after refresh`);
+            setCurrentPage(1);
           } catch (refreshError) {
             console.error('Error refreshing marketplace after listing from modal:', refreshError);
           }
@@ -746,13 +725,11 @@ const MarketplacePage: React.FC = () => {
               onClick={async () => {
                 setMarketplaceLoading(true);
                 try {
-                  console.log('Manual refresh of marketplace listings...');
                   const result = await marketplaceService.getMarketplaceListings(1, 20);
                   setMarketplaceListings(result.listings);
                   setTotalPages(result.totalPages);
                   setTotalListings(result.totalListings);
                   setCurrentPage(1);
-                  console.log(`Manual refresh found ${result.totalListings} total listings`);
                 } catch (error) {
                   console.error('Manual refresh error:', error);
                 } finally {

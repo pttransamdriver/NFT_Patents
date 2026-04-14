@@ -117,7 +117,6 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
         return;
       }
 
-      console.log('Starting PSP payment process...');
       const result = await pspTokenService.payWithPSP(account);
 
       if (result.success) {
@@ -146,7 +145,6 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
 
     setIsProcessingPayment(true);
     try {
-      console.log('Starting ETH payment process...');
       const result = await paymentService.payWithETH(account);
 
       if (result.success) {
@@ -196,7 +194,6 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
 
     setIsProcessingPayment(true);
     try {
-      console.log('Starting PSP token purchase...');
       // Calculate ETH needed for required PSP tokens
       const ethNeeded = parseFloat(searchPriceInPSP) * 0.000005; // PSP price is 0.000005 ETH per token
       

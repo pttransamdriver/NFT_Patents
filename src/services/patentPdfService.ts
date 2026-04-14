@@ -18,7 +18,6 @@ export class PatentPdfService {
   private async initializeIPFS() {
     try {
       // Temporarily disable Helia to fix ESM import issues
-      console.log('📌 IPFS initialization skipped - using Pinata only');
       this.helia = null;
       this.fs = null;
     } catch (error: unknown) {
@@ -102,9 +101,6 @@ export class PatentPdfService {
     try {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
 
-      console.log('📌 Using backend proxy for IPFS storage');
-      console.log('   URL:', `${apiBaseUrl}/api/pinata/upload-file`);
-
       // Convert blob to base64
       const arrayBuffer = await file.arrayBuffer();
       const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
@@ -119,22 +115,17 @@ export class PatentPdfService {
         })
       });
 
-      console.log('   Response status:', response.status);
-      console.log('   Response ok:', response.ok);
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('   Error response:', errorData);
+        console.error('IPFS upload error response:', errorData);
         throw new Error(errorData.error || 'Failed to upload to IPFS');
       }
 
       const result = await response.json();
-      console.log('✅ File uploaded to IPFS via backend:', result.ipfsHash);
       return result.ipfsHash;
 
     } catch (error) {
-      console.error('❌ IPFS upload error:', error);
-      console.error('   Error details:', error instanceof Error ? error.message : String(error));
+      console.error('IPFS upload error:', error instanceof Error ? error.message : String(error));
       throw new Error(
         'Failed to upload file to IPFS. Please check your internet connection and try again. If the problem persists, contact support.'
       );
@@ -151,9 +142,6 @@ export class PatentPdfService {
     try {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
 
-      console.log('📌 Uploading metadata JSON via backend proxy');
-      console.log('   URL:', `${apiBaseUrl}/api/pinata/upload-json`);
-
       const response = await fetch(`${apiBaseUrl}/api/pinata/upload-json`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -163,22 +151,17 @@ export class PatentPdfService {
         })
       });
 
-      console.log('   Response status:', response.status);
-      console.log('   Response ok:', response.ok);
-
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('   Error response:', errorData);
+        console.error('Metadata upload error response:', errorData);
         throw new Error(errorData.error || 'Failed to upload metadata to IPFS');
       }
 
       const result = await response.json();
-      console.log('✅ Metadata uploaded to IPFS via backend:', result.ipfsHash);
       return result.ipfsHash;
 
     } catch (error) {
-      console.error('❌ Metadata upload error:', error);
-      console.error('   Error details:', error instanceof Error ? error.message : String(error));
+      console.error('Metadata upload error:', error instanceof Error ? error.message : String(error));
       throw new Error(
         'Failed to upload metadata to IPFS. Please check your internet connection and try again. If the problem persists, contact support.'
       );
@@ -225,7 +208,6 @@ export class PatentPdfService {
           }
           pdfBlob = new Blob([uint8Array], { type: 'application/pdf' });
           
-          console.log('✅ PDF processing stats:', result.stats);
         } else {
           throw new Error('Backend PDF processing failed');
         }
@@ -386,8 +368,7 @@ export class PatentPdfService {
    * Cleanup IPFS connection
    */
   async dispose() {
-    // Temporarily disabled
-    console.log('📌 IPFS cleanup skipped');
+    // IPFS connection cleanup - Helia disabled, nothing to dispose
   }
 }
 

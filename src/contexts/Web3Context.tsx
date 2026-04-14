@@ -36,70 +36,55 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
 
   const connectWallet = async () => {
-    console.log('Connect wallet clicked');
-    
     // Prevent multiple simultaneous connection attempts
     if (isConnecting) {
-      console.log('Already connecting, returning');
       toast.error('Connection already in progress...');
       return;
     }
 
     // Check if already connected
     if (isConnected) {
-      console.log('Already connected, returning');
       toast.success('Wallet already connected!');
       return;
     }
 
     // Check if MetaMask is available and select it specifically
     if (!window.ethereum) {
-      console.log('No ethereum object found');
       toast.error('No Ethereum wallet detected. Please install MetaMask.');
       return;
     }
-    
+
     // If multiple wallets are installed, try to use MetaMask specifically
     let ethereum = window.ethereum;
     if (window.ethereum.providers) {
       ethereum = window.ethereum.providers.find((provider: any) => provider.isMetaMask) || window.ethereum;
-      console.log('Using specific MetaMask provider');
     }
 
-    console.log('Starting connection process');
     setIsConnecting(true);
-    
+
     try {
-      console.log('Requesting accounts...');
-      
       // Request account access using the selected provider
       const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      console.log('Accounts received:', accounts);
-      
+
       if (!accounts || accounts.length === 0) {
-        console.log('No accounts found');
         toast.error('No accounts found. Please check your wallet.');
         return;
       }
 
-      console.log('Initializing provider...');
       // Initialize provider and signer using the selected ethereum provider
       const browserProvider = new BrowserProvider(ethereum);
       const web3Signer = await browserProvider.getSigner();
       const network = await browserProvider.getNetwork();
-      
-      console.log('Network:', network);
-      
+
       // Update state
       setProvider(browserProvider);
       setSigner(web3Signer);
       setAccount(accounts[0]);
       setChainId(Number(network.chainId));
       setIsConnected(true);
-      
-      console.log('Connection successful');
+
       toast.success('Wallet connected successfully!');
-      
+
     } catch (error: any) {
       console.error('Error connecting to wallet:', error);
       
@@ -114,7 +99,6 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.error(`Failed to connect wallet: ${error.message}`);
       }
     } finally {
-      console.log('Setting isConnecting to false');
       setIsConnecting(false);
     }
   };
@@ -162,7 +146,6 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
             setAccount(accounts[0]);
             setChainId(Number(network.chainId));
             setIsConnected(true);
-            console.log('✅ Web3 initialized successfully');
           }
         }
       } catch (error) {

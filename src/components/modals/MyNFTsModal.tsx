@@ -47,7 +47,6 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
     try {
       const contract = getPatentNFTContract(provider);
       const balance = await contract.balanceOf(account);
-      console.log(`User has ${balance} NFTs`);
 
       const userNFTs: UserNFT[] = [];
 
@@ -60,7 +59,7 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
           try {
             tokenURI = await contract.tokenURI(tokenId);
           } catch (error) {
-            console.log(`Could not get tokenURI for token ${tokenId}`);
+            // tokenURI not available for this token
           }
 
           // Get patent details from metadata
@@ -93,7 +92,6 @@ const MyNFTsModal: React.FC<MyNFTsModalProps> = ({ isOpen, onClose, onSellNFT, r
               throw new Error('No tokenURI available');
             }
           } catch (error) {
-            console.log(`Could not get metadata for token ${tokenId}, using defaults`);
             patentData = {
               title: `Patent NFT #${tokenId}`,
               inventor: 'Unknown',

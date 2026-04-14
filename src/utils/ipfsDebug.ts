@@ -19,8 +19,6 @@ export async function testPinataConnection(): Promise<boolean> {
     });
 
     if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Pinata connection successful:', data.message);
       return true;
     } else {
       const errorText = await response.text();

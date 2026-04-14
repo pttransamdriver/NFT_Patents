@@ -34,9 +34,6 @@ export class PatentApiService extends BaseSingleton {
   async searchPatents(params: PatentSearchParams): Promise<Patent[]> {
     try {
       const backendUrl = import.meta.env.VITE_API_BASE_URL || 'https://nft-patents-backend.vercel.app';
-      console.log('🔍 Searching patents with params:', params);
-      console.log('🌐 Using backend URL:', backendUrl);
-      
       const response = await axios.get(`${backendUrl}/api/patents/search`, {
         params: {
           criteria: params.query,
@@ -47,20 +44,13 @@ export class PatentApiService extends BaseSingleton {
         timeout: 30000
       });
 
-      console.log('📡 Raw API response status:', response.status);
-      console.log('📊 Raw response data keys:', Object.keys(response.data || {}));
-      
       const results = response.data?.organic_results || response.data?.results || response.data || [];
-      
+
       if (!Array.isArray(results) || results.length === 0) {
-        console.warn('⚠️ No patent results found for query:', params.query);
-        console.log('📄 Full response data:', response.data);
         return [];
       }
-      
-      console.log('✅ Found', results.length, 'patent results');
+
       const patents = this.transformPatentData(results);
-      console.log('🔄 Transformed to', patents.length, 'patent objects');
       
       // Check blockchain for each patent's availability
       return await this.checkPatentAvailability(patents);
