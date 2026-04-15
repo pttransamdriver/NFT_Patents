@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { BaseSingleton } from '../utils/baseSingleton';
 
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-const OPENAI_BASE_URL = 'https://api.openai.com/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export interface AISearchRequest {
   naturalLanguageQuery: string;
@@ -24,132 +23,38 @@ export interface AISearchResponse {
 export class AISearchService extends BaseSingleton {
 
   async convertNaturalLanguageToSearch(request: AISearchRequest): Promise<AISearchResponse> {
-    // Check if any AI API key is available (OpenAI or Gemini)
-    const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const hasValidApiKey = (OPENAI_API_KEY && OPENAI_API_KEY !== 'your_openai_api_key_here') ||
-                          (geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here');
-
-    if (!hasValidApiKey) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/ai/search`, {
+        query: request.naturalLanguageQuery
+      });
+      return this.parseAIResponse(response.data.result);
+    } catch (error: any) {
+      // Backend has no AI key configured, or provider failed — use local fallback
+      if (error?.response?.status === 503 || error?.response?.status === 502) {
+        console.info('AI provider unavailable, using rule-based fallback');
+      } else {
+        console.error('AI Search Error:', error);
+      }
       return this.getEnhancedFallbackSearchResponse(request.naturalLanguageQuery);
     }
+  }
+
+  async generateSearchSuggestions(partialQuery: string): Promise<string[]> {
+    if (partialQuery.length < 3) return [];
 
     try {
-      // Try OpenAI first
-      if (OPENAI_API_KEY && OPENAI_API_KEY !== 'your_openai_api_key_here') {
-        return await this.searchWithOpenAI(request.naturalLanguageQuery);
-      }
-      
-      // Try Gemini as fallback
-      if (geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here') {
-        return await this.searchWithGemini(request.naturalLanguageQuery);
-      }
-      
-      throw new Error('No valid AI API keys available');
+      const response = await axios.post(`${API_BASE_URL}/api/ai/suggestions`, {
+        partialQuery
+      });
+      return response.data.suggestions ?? [];
     } catch (error) {
-      console.error('AI Search Error:', error);
-      // Enhanced fallback to rule-based search
-      return this.getEnhancedFallbackSearchResponse(request.naturalLanguageQuery);
+      console.error('AI Suggestions Error:', error);
+      return this.fallbackSuggestions(partialQuery);
     }
-  }
-
-  private async searchWithOpenAI(query: string): Promise<AISearchResponse> {
-    const prompt = this.buildSearchPrompt(query);
-
-    const response = await axios.post(
-      `${OPENAI_BASE_URL}/chat/completions`,
-      {
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a patent search expert specializing in Google Patents search. Convert natural language queries into effective search terms for Google Patents database and provide helpful context.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 500,
-        temperature: 0.3
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    return this.parseAIResponse(response.data.choices[0].message.content);
-  }
-
-  private async searchWithGemini(query: string): Promise<AISearchResponse> {
-    const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const prompt = `As a patent search expert, convert this natural language query into effective Google Patents search terms:
-    
-"${query}"
-
-Provide optimized search terms that work well with Google Patents database, brief explanation, and confidence level 0-100.
-
-Respond in JSON format:
-{
-  "searchTerms": "optimized search string",
-  "explanation": "brief explanation of search strategy",
-  "confidence": 85
-}`;
-
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
-      {
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ]
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const aiResponse = response.data.candidates[0].content.parts[0].text;
-    return this.parseAIResponse(aiResponse);
-  }
-
-  private buildSearchPrompt(query: string): string {
-    return `
-Convert this natural language patent search query into Google Patents search terms:
-"${query}"
-
-Please provide:
-1. Optimized search terms for Google Patents database (supports boolean operators, quotes, wildcards)
-2. Brief explanation of the search strategy
-3. Confidence level (0-100)
-4. Suggested filters (category, date range, status)
-
-Format your response as JSON:
-{
-  "searchTerms": "optimized search string using Google Patents syntax",
-  "explanation": "brief explanation of search approach",
-  "confidence": 85,
-  "suggestedFilters": {
-    "category": "Technology",
-    "dateRange": "2020-2024",
-    "status": "active"
-  }
-}
-`;
   }
 
   private parseAIResponse(aiResponse: string): AISearchResponse {
     try {
-      // Try to parse JSON response
       const parsed = JSON.parse(aiResponse);
       return {
         searchTerms: parsed.searchTerms || '',
@@ -158,7 +63,6 @@ Format your response as JSON:
         suggestedFilters: parsed.suggestedFilters || {}
       };
     } catch (error) {
-      // If JSON parsing fails, extract search terms from text
       const searchTerms = this.extractSearchTermsFromText(aiResponse);
       return {
         searchTerms,
@@ -170,52 +74,13 @@ Format your response as JSON:
   }
 
   private extractSearchTermsFromText(text: string): string {
-    // Extract search terms from unstructured AI response
     const lines = text.split('\n');
     for (const line of lines) {
       if (line.toLowerCase().includes('search') && line.includes(':')) {
         return line.split(':')[1].trim().replace(/['"]/g, '');
       }
     }
-    return text.substring(0, 100); // Fallback
-  }
-
-
-  async generateSearchSuggestions(partialQuery: string): Promise<string[]> {
-    if (partialQuery.length < 3) return [];
-
-    try {
-      const response = await axios.post(
-        `${OPENAI_BASE_URL}/chat/completions`,
-        {
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'Generate 5 patent search suggestions based on the partial query. Return only a JSON array of strings.'
-            },
-            {
-              role: 'user',
-              content: `Partial query: "${partialQuery}"`
-            }
-          ],
-          max_tokens: 200,
-          temperature: 0.7
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      const suggestions = JSON.parse(response.data.choices[0].message.content);
-      return Array.isArray(suggestions) ? suggestions : [];
-    } catch (error) {
-      console.error('AI Suggestions Error:', error);
-      return this.fallbackSuggestions(partialQuery);
-    }
+    return text.substring(0, 100);
   }
 
   private getEnhancedFallbackSearchResponse(query: string): AISearchResponse {
@@ -225,7 +90,6 @@ Format your response as JSON:
     let confidence = 60;
     let category = 'Other';
 
-    // Enhanced rule-based conversion with more sophisticated patterns
     if (lowerQuery.includes('renewable energy') || lowerQuery.includes('solar') || lowerQuery.includes('wind') || lowerQuery.includes('photovoltaic')) {
       searchTerms = '"renewable energy" OR "solar cell" OR "wind turbine" OR photovoltaic OR "clean energy"';
       explanation = 'Converted to comprehensive renewable energy search terms with Google Patents syntax';
@@ -267,7 +131,6 @@ Format your response as JSON:
       confidence = 75;
       category = 'Technology';
     } else {
-      // Extract key technical terms and enhance with quotes for exact matches
       const words = query.split(' ').filter(word => word.length > 3);
       if (words.length > 1) {
         searchTerms = `"${query}" OR ${words.join(' OR ')}`;
@@ -283,7 +146,6 @@ Format your response as JSON:
       suggestedFilters: { category }
     };
   }
-
 
   private fallbackSuggestions(partialQuery: string): string[] {
     const suggestions = [

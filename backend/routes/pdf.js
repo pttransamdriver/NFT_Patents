@@ -8,6 +8,27 @@ const router = express.Router();
  * Handles patent PDF extraction and placeholder generation
  */
 
+// Allowlist of hostnames from which patent PDFs may be fetched.
+// This prevents SSRF attacks where an attacker could direct the server
+// to fetch arbitrary internal or metadata URLs.
+const ALLOWED_PDF_HOSTS = new Set([
+  'patentimages.storage.googleapis.com',
+  'patents.google.com',
+  'worldwide.espacenet.com',
+  'pdfpiw.uspto.gov',
+  'lh3.googleusercontent.com',
+]);
+
+function isAllowedPdfUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:') return false;
+    return ALLOWED_PDF_HOSTS.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 // Process patent PDF - extract first page
 router.post('/process-patent', async (req, res) => {
   try {
@@ -15,6 +36,10 @@ router.post('/process-patent', async (req, res) => {
 
     if (!patentNumber || !pdfUrl) {
       return res.status(400).json({ error: 'Patent number and PDF URL required' });
+    }
+
+    if (!isAllowedPdfUrl(pdfUrl)) {
+      return res.status(400).json({ error: 'Invalid PDF URL: host not permitted' });
     }
 
     console.log('📄 Processing patent PDF:', patentNumber);

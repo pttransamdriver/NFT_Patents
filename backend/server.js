@@ -8,6 +8,7 @@ const patentsRouter = require('./routes/patents');
 const ipfsRouter = require('./routes/ipfs');
 const pdfRouter = require('./routes/pdf');
 const healthRouter = require('./routes/health');
+const aiRouter = require('./routes/ai');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -62,6 +63,9 @@ app.use('/api/pinata', strictLimiter, ipfsRouter);
 
 // PDF processing endpoints (strict rate limiting)
 app.use('/api/pdf', strictLimiter, pdfRouter);
+
+// AI search proxy (keys stay server-side, never in the browser bundle)
+app.use('/api/ai', strictLimiter, aiRouter);
 
 // ============================================================================
 // ERROR HANDLING

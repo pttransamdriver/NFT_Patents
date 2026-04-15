@@ -281,24 +281,26 @@ The project includes advanced AI search capabilities with automatic fallback:
 
 **To Enable Real AI Search**:
 
+AI API keys are stored **backend-only** and never shipped to the browser bundle.
+
 1. **Option A: Google Gemini (Free)**
    - Get free API key: https://makersuite.google.com/app/apikey
-   - Add to `.env`:
+   - Add to `backend/.env`:
      ```bash
-     VITE_GEMINI_API_KEY=your_key_here
+     GEMINI_API_KEY=your_key_here
      ```
 
 2. **Option B: OpenAI GPT-3.5 (Paid)**
    - Get API key: https://platform.openai.com/api-keys
    - Costs ~$0.002 per search
-   - Add to `.env`:
+   - Add to `backend/.env`:
      ```bash
-     VITE_OPENAI_API_KEY=sk-proj-your_key_here
+     OPENAI_API_KEY=sk-proj-your_key_here
      ```
 
-3. **Restart frontend**: `npm run dev`
+3. **Restart backend**: `cd backend && npm start`
 
-The system automatically detects API keys and switches from rule-based to AI-powered search. This demonstrates **graceful degradation** - users can choose between free basic search or enhanced AI search based on their needs.
+The frontend calls `POST /api/ai/search` on the backend, which proxies to the AI provider. This demonstrates the correct **secrets management pattern** — API keys never appear in client-side JavaScript. The system falls back to rule-based search automatically when no key is configured.
 
 ---
 
