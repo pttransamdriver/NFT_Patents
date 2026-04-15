@@ -87,7 +87,18 @@ desktop.ini
 
 # Build outputs that might contain sensitive info
 docs/assets/
-/docs
 
 # Localhost deployment records (ephemeral - reset on every hardhat node restart)
 deployments/localhost/
+
+# Claude Code agent configs
+.claude/
+
+# Internal/operational docs that aren't needed in the repo
+FAQ_100_QUESTIONS.md
+MAINNET_DEPLOYMENT_ROADMAP.md
+MAINNET_READINESS_CHECKLIST.md
+SECURITY_AUDIT_REPORT.md
+SECURITY_FIXES_QUICK_START.md
+MINTING_ERROR_DIAGNOSTIC.md
+MINTING_FLOW_VERIFICATION.md

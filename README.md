@@ -103,7 +103,7 @@ The Patent NFT Marketplace consists of three main components and two external de
 
 ```bash
 # Clone repository
-git clone <your-repo-url>
+git clone https://github.com/your-username/NFT_Patents.git
 cd NFT_Patents
 
 # Install root dependencies
@@ -157,7 +157,7 @@ Access locally:
 - List, buy, and sell NFTs
 - 2.5% platform fee on sales
 - Supports ETH, USDC, PSP payments
-- Display user NFTs and marketplace listingss
+- Display user NFTs and marketplace listings
 
 ### PatentNFT Contract
 
