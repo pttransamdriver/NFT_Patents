@@ -88,10 +88,7 @@ router.post('/process-patent', async (req, res) => {
     
   } catch (error) {
     console.error('❌ PDF processing error:', error.message);
-    res.status(500).json({ 
-      error: 'PDF processing failed',
-      details: error.message 
-    });
+    res.status(500).json({ error: 'PDF processing failed' });
   }
 });
 
@@ -172,10 +169,7 @@ router.post('/generate-placeholder', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Placeholder generation error:', error.message);
-    res.status(500).json({
-      error: 'Failed to generate placeholder PDF',
-      details: error.message
-    });
+    res.status(500).json({ error: 'Failed to generate placeholder PDF' });
   }
 });
 

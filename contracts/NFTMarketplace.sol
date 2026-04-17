@@ -216,7 +216,7 @@ contract NFTMarketplace is ReentrancyGuard, Ownable {
         emit FundsWithdrawn(msg.sender, amount);
     }
 
-    function emergencyWithdraw() external onlyOwner {
+    function emergencyWithdraw() external onlyOwner nonReentrant {
         uint256 balance = address(this).balance;
         require(balance > 0, "No funds to withdraw");
         

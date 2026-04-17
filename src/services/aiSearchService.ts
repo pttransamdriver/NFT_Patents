@@ -3,10 +3,55 @@ import { BaseSingleton } from '../utils/baseSingleton';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
+// ── New LangChain-powered types ───────────────────────────────────────────────
+
+export interface PatentAnalysis {
+  title: string;
+  patent_number: string;
+  technology_class: string;
+  novelty_assessment: string;
+  key_claims: string[];
+  potential_applications: string[];
+  prior_art_risk: 'LOW' | 'MEDIUM' | 'HIGH';
+  investment_potential: 'LOW' | 'MEDIUM' | 'HIGH';
+  summary: string;
+}
+
+export interface PriorArtCandidate {
+  patent_number: string;
+  title: string;
+  similarity_score: 'HIGH' | 'MEDIUM' | 'LOW';
+  relevant_aspects: string;
+}
+
+export interface PriorArtResult {
+  query_summary: string;
+  candidates: PriorArtCandidate[];
+  overall_risk: 'LOW' | 'MEDIUM' | 'HIGH';
+  recommendation: string;
+}
+
+export interface AgentStep {
+  tool: string;
+  input: string;
+  output: string;
+}
+
+export interface AgentResponse {
+  answer: string;
+  steps: AgentStep[];
+  session_id?: string;
+}
+
+// ── Existing types ────────────────────────────────────────────────────────────
+
 export interface AISearchRequest {
   naturalLanguageQuery: string;
   context?: string;
   maxResults?: number;
+  /** Optional user-supplied OpenAI API key. Sent only in the Authorization header
+   *  of this single request — never stored server-side or in localStorage. */
+  userApiKey?: string;
 }
 
 export interface AISearchResponse {
@@ -24,9 +69,19 @@ export class AISearchService extends BaseSingleton {
 
   async convertNaturalLanguageToSearch(request: AISearchRequest): Promise<AISearchResponse> {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/ai/search`, {
-        query: request.naturalLanguageQuery
-      });
+      // If the user supplied their own OpenAI key, forward it via a custom header.
+      // The backend reads X-User-Api-Key and uses it in place of its own server key.
+      // The key is never written to localStorage or sessionStorage.
+      const headers: Record<string, string> = {};
+      if (request.userApiKey) {
+        headers['X-User-Api-Key'] = request.userApiKey;
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/ai/search`,
+        { query: request.naturalLanguageQuery },
+        { headers }
+      );
       return this.parseAIResponse(response.data.result);
     } catch (error: any) {
       // Backend has no AI key configured, or provider failed — use local fallback
@@ -145,6 +200,42 @@ export class AISearchService extends BaseSingleton {
       confidence,
       suggestedFilters: { category }
     };
+  }
+
+  // ── LangChain-powered methods ───────────────────────────────────────────────
+
+  /** Run the PatentAnalysisChain on any patent text, abstract, or claims. */
+  async analyzePatent(patentText: string): Promise<PatentAnalysis> {
+    const response = await axios.post(`${API_BASE_URL}/api/ai/analyze`, {
+      patent_text: patentText,
+    });
+    return response.data.analysis as PatentAnalysis;
+  }
+
+  /** Run the PriorArtChain — find similar patents ranked by prior art risk. */
+  async findPriorArt(claimsText: string): Promise<PriorArtResult> {
+    const response = await axios.post(`${API_BASE_URL}/api/ai/prior-art`, {
+      claims_text: claimsText,
+    });
+    return response.data.prior_art as PriorArtResult;
+  }
+
+  /** One-shot ReAct agent query — no session memory. */
+  async queryAgent(query: string): Promise<AgentResponse> {
+    const response = await axios.post(`${API_BASE_URL}/api/ai/agent/query`, { query });
+    return response.data as AgentResponse;
+  }
+
+  /**
+   * Multi-turn agent chat with persistent session memory.
+   * Pass the returned session_id back in subsequent calls to maintain context.
+   */
+  async chatWithAgent(query: string, sessionId?: string): Promise<AgentResponse> {
+    const response = await axios.post(`${API_BASE_URL}/api/ai/agent/chat`, {
+      query,
+      session_id: sessionId,
+    });
+    return response.data as AgentResponse;
   }
 
   private fallbackSuggestions(partialQuery: string): string[] {

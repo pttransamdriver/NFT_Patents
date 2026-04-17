@@ -1,0 +1,28 @@
+# =============================================================================
+# Backend .gitignore
+# =============================================================================
+# This file protects secrets if git is ever run from within the backend/
+# directory. The root .gitignore already covers these paths from the repo root,
+# but git uses the nearest .gitignore, so this file is the safety net.
+# =============================================================================
+
+# Environment files — NEVER commit these
+.env
+.env.local
+.env.vercel
+.env.production
+.env.*.local
+
+# Only the template should be committed
+# .env.example  ← intentionally NOT ignored
+
+# Runtime / build artefacts
+node_modules/
+dist/
+build/
+logs/
+*.log
+
+# OS noise
+.DS_Store
+Thumbs.db

@@ -2,16 +2,6 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 
-// Debug endpoint to check Pinata configuration
-router.get('/debug', (req, res) => {
-  const pinataJWT = process.env.PINATA_JWT;
-  res.json({
-    pinataConfigured: !!pinataJWT,
-    jwtLength: pinataJWT ? pinataJWT.length : 0,
-    jwtPrefix: pinataJWT ? pinataJWT.substring(0, 20) + '...' : 'NOT SET'
-  });
-});
-
 /**
  * Pinata IPFS proxy endpoints (secure - JWT never exposed to frontend)
  * All IPFS operations go through this backend to keep Pinata JWT safe
@@ -73,11 +63,7 @@ router.post('/upload-file', async (req, res) => {
     console.error('   Data:', error.response?.data);
     console.error('   Message:', error.message);
     console.error('   Full error:', error);
-    res.status(500).json({
-      error: 'Failed to upload file to Pinata',
-      details: error.response?.data || error.message,
-      status: error.response?.status
-    });
+    res.status(500).json({ error: 'Failed to upload file to IPFS' });
   }
 });
 
@@ -126,11 +112,7 @@ router.post('/upload-json', async (req, res) => {
     console.error('   Data:', error.response?.data);
     console.error('   Message:', error.message);
     console.error('   Full error:', error);
-    res.status(500).json({
-      error: 'Failed to upload JSON to Pinata',
-      details: error.response?.data || error.message,
-      status: error.response?.status
-    });
+    res.status(500).json({ error: 'Failed to upload JSON to IPFS' });
   }
 });
 

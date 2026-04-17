@@ -72,10 +72,13 @@ const PatentSearchPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Use real AI to convert natural language to patent search terms
+      // Use real AI to convert natural language to patent search terms.
+      // userApiKey is forwarded via X-User-Api-Key header inside the service —
+      // it is never written to localStorage or sessionStorage.
       const aiResponse = await aiSearchService.convertNaturalLanguageToSearch({
         naturalLanguageQuery: query,
-        maxResults: 20
+        maxResults: 20,
+        userApiKey
       });
 
       setAiExplanation(aiResponse.explanation);
@@ -103,11 +106,9 @@ const PatentSearchPage: React.FC = () => {
   };
 
   const handleSearchWithUserKey = async (apiKey: string) => {
-    // Store user's API key temporarily for this search
-    // Note: In production, you might want to encrypt this
-    sessionStorage.setItem('temp_openai_key', apiKey);
+    // Pass the key directly to executeAISearch — it flows through to the
+    // backend via a request header, never touching storage.
     await executeAISearch(pendingAIQuery, apiKey);
-    sessionStorage.removeItem('temp_openai_key');
   };
 
   const handleSearchWithPayment = async () => {

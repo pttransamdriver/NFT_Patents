@@ -20,14 +20,26 @@ export class SecurityUtils {
   }
 
   /**
-   * Validate patent number format
+   * Validate patent number format.
+   * Supports: US, EP, WO, CN, JP, KR, GB, DE, FR, CA, AU and other two-letter
+   * country-code prefixes used by Google Patents / SerpApi.
+   *
+   * Accepted shapes (after whitespace normalisation):
+   *   US1234567A  US1234567A1  US-1234567-A1   (US grants & publications)
+   *   EP1234567B1                               (European)
+   *   WO2023012345A1                            (PCT)
+   *   CN1234567A  JP1234567    KR1234567B1      (Asian offices)
+   *   Any two-letter ISO 3166-1 prefix + digits + optional kind code
    */
   static validatePatentNumber(patentNumber: string): boolean {
     if (!patentNumber || typeof patentNumber !== 'string') return false;
-    
-    // Basic patent number format validation
-    const patentRegex = /^US-?\d{7,8}-?[A-Z]\d?$/i;
-    return patentRegex.test(patentNumber.replace(/\s/g, ''));
+
+    // Normalise: strip whitespace and dashes (the blockchain normaliser does the same)
+    const normalised = patentNumber.replace(/[\s-]/g, '').toUpperCase();
+
+    // Two-letter country code, 5–12 digits, optional kind code (1–2 alpha + optional digit)
+    const patentRegex = /^[A-Z]{2}[0-9]{5,12}([A-Z]{1,2}[0-9]?)?$/;
+    return patentRegex.test(normalised);
   }
 
   /**
@@ -155,22 +167,27 @@ export class SecurityUtils {
    * Content Security Policy helpers
    */
   static setupCSP(): void {
-    // Add meta tag for CSP if not already present
+    // Add meta tag for CSP if not already present.
+    // NOTE: 'unsafe-inline' and 'unsafe-eval' are intentionally omitted from
+    // script-src. Vite/React bundles do not require them in production.
+    // If you see console CSP errors during local development, start the dev
+    // server normally — this meta tag is only injected at runtime (not at build
+    // time) and Vite's HMR works without these directives in modern browsers.
     if (!document.querySelector('meta[http-equiv="Content-Security-Policy"]')) {
       const meta = document.createElement('meta');
       meta.httpEquiv = 'Content-Security-Policy';
       meta.content = [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Needed for React dev
-        "style-src 'self' 'unsafe-inline'",
+        "script-src 'self'",                      // no unsafe-inline / unsafe-eval
+        "style-src 'self' 'unsafe-inline'",       // inline styles needed by Tailwind/framer-motion
         "img-src 'self' data: https:",
-        "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com https://api.anthropic.com https://*.infura.io wss://*.infura.io",
+        "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com https://api.anthropic.com https://*.infura.io wss://*.infura.io https://nft-patents-backend.vercel.app",
         "font-src 'self' data:",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'"
       ].join('; ');
-      
+
       document.head.appendChild(meta);
     }
   }

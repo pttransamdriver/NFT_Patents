@@ -93,10 +93,7 @@ router.get('/search', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Patent search error:', error.message);
-    res.status(500).json({
-      error: 'Patent search failed',
-      details: error.message
-    });
+    res.status(500).json({ error: 'Patent search failed' });
   }
 });
 
@@ -177,10 +174,7 @@ router.post('/verify/:patentNumber', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Patent verification error:', error.message);
-    res.status(500).json({
-      error: 'Patent verification failed',
-      details: error.message
-    });
+    res.status(500).json({ error: 'Patent verification failed' });
   }
 });
 
@@ -231,11 +225,44 @@ router.get('/:id', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Patent details error:', error.message);
-    res.status(500).json({
-      error: 'Failed to get patent details',
-      details: error.message
-    });
+    res.status(500).json({ error: 'Failed to get patent details' });
   }
+});
+
+// ── Minted NFT endpoints (used by the Python agent's CheckMintedNFTs tool) ──
+
+const patentsDb = require('../patents-db.json');
+
+/**
+ * GET /api/patents/minted
+ * Returns every patent that has already been minted as an NFT.
+ * In production this would query the PatentNFT smart contract via ethers.js.
+ * For now it reads the isAvailableForMinting flag from patents-db.json as a
+ * faithful stand-in (false = minted, true = still available).
+ */
+router.get('/minted', (req, res) => {
+  const minted = patentsDb.patents
+    .filter(p => p.isAvailableForMinting === false)
+    .map(p => ({ patentNumber: p.patentNumber, title: p.title }));
+  res.json({ minted, total: minted.length });
+});
+
+/**
+ * GET /api/patents/minted/:patentNumber
+ * Check whether a specific patent has been minted.
+ */
+router.get('/minted/:patentNumber', (req, res) => {
+  const { patentNumber } = req.params;
+  const patent = patentsDb.patents.find(p => p.patentNumber === patentNumber);
+  if (!patent) {
+    return res.status(404).json({ minted: false, patentNumber, found: false });
+  }
+  res.json({
+    patentNumber,
+    title: patent.title,
+    minted: patent.isAvailableForMinting === false,
+    availableForMinting: patent.isAvailableForMinting,
+  });
 });
 
 module.exports = router;

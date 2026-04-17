@@ -114,6 +114,9 @@ app.listen(PORT, () => {
   if (!process.env.PINATA_JWT) {
     console.warn('⚠️  WARNING: PINATA_JWT not configured - IPFS uploads disabled');
   }
+  const aiUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+  console.log(`🤖 LangChain AI service expected at: ${aiUrl}`);
+  console.log(`   Start with: cd ai_service && uvicorn main:app --reload --port 8000`);
 });
 
 module.exports = app;

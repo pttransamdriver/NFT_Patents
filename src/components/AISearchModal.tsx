@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CreditCard, Key, Brain, Shield, Zap, DollarSign, Sparkles, Lock, Wallet, Coins } from 'lucide-react';
+import { X, CreditCard, Key, Brain, Shield, Zap, DollarSign, Sparkles, Lock, Wallet, Coins, Bot } from 'lucide-react';
+import { AgentChatPanel } from './AgentChatPanel';
 import { useWeb3 } from '../contexts/Web3Context';
 import { paymentService } from '../services/paymentService';
 import { pspTokenService, PSPTokenInfo } from '../services/pspTokenService';
@@ -20,7 +21,7 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
   onSearchWithPayment,
   searchQuery
 }) => {
-  const [activeTab, setActiveTab] = useState<'integrated' | 'user-key'>('integrated');
+  const [activeTab, setActiveTab] = useState<'integrated' | 'user-key' | 'agent'>('integrated');
   const [userApiKey, setUserApiKey] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [searchCredits, setSearchCredits] = useState(0);
@@ -278,28 +279,41 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
             <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button
                 onClick={() => setActiveTab('integrated')}
-                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                   activeTab === 'integrated'
                     ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-2">
+                <div className="flex items-center justify-center space-x-1.5">
                   <Sparkles className="w-4 h-4" />
-                  <span>Integrated AI Search</span>
+                  <span>AI Search</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('agent')}
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === 'agent'
+                    ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-1.5">
+                  <Bot className="w-4 h-4" />
+                  <span>Agent Research</span>
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab('user-key')}
-                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                   activeTab === 'user-key'
                     ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
-                <div className="flex items-center justify-center space-x-2">
+                <div className="flex items-center justify-center space-x-1.5">
                   <Key className="w-4 h-4" />
-                  <span>Use Your Own AI API Key</span>
+                  <span>Own Key</span>
                 </div>
               </button>
             </div>
@@ -512,6 +526,31 @@ export const AISearchModal: React.FC<AISearchModalProps> = ({
                       )}
                     </div>
                   </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'agent' && (
+                <motion.div
+                  key="agent"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="mb-3 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-purple-800 dark:text-purple-200">
+                          LangChain ReAct Agent
+                        </h4>
+                        <p className="text-xs text-purple-700 dark:text-purple-300 mt-0.5">
+                          Multi-step research: searches patents, checks NFT status, analyses claims, and reasons across multiple tools to answer complex questions.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <AgentChatPanel initialQuery={searchQuery} />
                 </motion.div>
               )}
 

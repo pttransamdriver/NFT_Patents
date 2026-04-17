@@ -10,7 +10,21 @@ export default defineConfig({
     commonjsOptions: {
       transformMixedEsModules: true,
       include: [/node_modules/]
-    }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core — small, cached aggressively by browsers
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // ethers.js is large (~500 kB) — split so the app shell loads fast
+          'vendor-ethers': ['ethers'],
+          // UI extras — only loaded when animated components mount
+          'vendor-ui': ['framer-motion', 'lucide-react'],
+          // PDF generation — only needed on the mint/patent-detail pages
+          'vendor-pdf': ['pdf-lib'],
+        },
+      },
+    },
   },
   server: {
     port: 5173,

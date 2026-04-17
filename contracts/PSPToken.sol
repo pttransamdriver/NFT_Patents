@@ -18,6 +18,12 @@ contract PSPToken is ERC20, ERC20Burnable, Ownable, Pausable {
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 ethPaid);
     event TokensRedeemed(address indexed user, uint256 amount, uint256 ethReceived);
     event PriceUpdated(uint256 oldPrice, uint256 newPrice);
+    /// @notice Emitted whenever an authorizedSpender calls spendTokensFor().
+    /// @dev Allows off-chain tooling and block explorers to surface these implicit
+    ///      transfers, since they bypass the standard ERC20 Approval/Transfer path.
+    event SpentFor(address indexed spender, address indexed user, uint256 amount);
+    /// @notice Emitted when the authorized-spender registry is changed.
+    event AuthorizedSpenderSet(address indexed spender, bool authorized);
     
     // State variables
     uint256 public tokenPriceInWei; // Price of 1 PSP token in wei
@@ -84,30 +90,45 @@ contract PSPToken is ERC20, ERC20Burnable, Ownable, Pausable {
     }
     
     /**
-     * @dev Set authorized spender (like SearchPayment contract)
-     * @param spender Address to authorize
-     * @param authorized Whether to authorize or deauthorize
+     * @dev Set authorized spender (like SearchPayment contract).
+     * @notice SECURITY: Authorized spenders can transfer tokens from ANY holder without
+     *         an ERC20 allowance. Only grant this privilege to audited, immutable contracts
+     *         you fully control. Emits AuthorizedSpenderSet for off-chain monitoring.
+     * @param spender Address to authorize or deauthorize
+     * @param authorized Whether to authorize (true) or revoke (false)
      */
     function setAuthorizedSpender(address spender, bool authorized) external onlyOwner {
+        require(spender != address(0), "Spender cannot be zero address");
         authorizedSpenders[spender] = authorized;
+        emit AuthorizedSpenderSet(spender, authorized);
     }
-    
+
     /**
-     * @dev Spend tokens on behalf of user (only authorized contracts).
-     *      Uses the internal _transfer() directly — does NOT consume an ERC20 allowance.
-     *      The caller must be a trusted contract added via setAuthorizedSpender(); the
-     *      user does not need to call approve() first.
-     * @param user User whose tokens to spend
-     * @param amount Amount of tokens to spend
+     * @dev Spend tokens on behalf of a user (only authorized contracts).
+     *
+     * @notice SECURITY WARNING — BYPASSES ERC20 ALLOWANCE MODEL:
+     *         This function uses _transfer() internally and does NOT require the user
+     *         to call approve() first. Any address registered via setAuthorizedSpender()
+     *         can move tokens out of ANY holder's wallet without their per-transaction
+     *         consent. Only add fully audited, immutable contracts to the authorized list.
+     *         A SpentFor event is emitted for every call so block explorers and monitoring
+     *         tools can surface these implicit transfers.
+     *
+     * @param user   Holder whose tokens are being spent.
+     * @param amount Number of tokens (in base units) to spend and burn.
      */
     function spendTokensFor(address user, uint256 amount) external {
         require(authorizedSpenders[msg.sender], "Not authorized to spend tokens");
+        require(user != address(0), "User cannot be zero address");
+        require(amount > 0, "Amount must be greater than zero");
 
-        // Move tokens from user to this contract using internal transfer (no allowance required)
+        // Move tokens from user to this contract using internal transfer (no allowance required).
         _transfer(user, address(this), amount);
-        
-        // Burn the tokens from this contract
+
+        // Burn the tokens held by this contract.
         _burn(address(this), amount);
+
+        emit SpentFor(msg.sender, user, amount);
     }
     
     /**
